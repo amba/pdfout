@@ -1,0 +1,81 @@
+/* DEF_COMMAND ("name",
+                type, (REGULAR or DEBUG)
+                function,
+		"description" (empty string for non regular commands)
+                ) */		
+
+DEF_COMMAND ("getoutline",
+	     REGULAR,
+	     pdfout_command_getoutline,
+	     "Dump outline. Produces either YAML or WYSIWYG format."
+	     )
+
+DEF_COMMAND ("setoutline",
+	     REGULAR,
+	     pdfout_command_setoutline,
+	     "Modify outline. Accepts either YAML or WYSIWYG format." 
+	     )
+
+DEF_COMMAND ("getinfo",
+	     REGULAR,
+	     pdfout_command_getinfo,
+	     "Dump the document information dictionary."
+	     )
+
+DEF_COMMAND ("setinfo",
+	     REGULAR,
+	     pdfout_command_setinfo,
+	     "Modify the document information dictionary."
+	     )
+
+DEF_COMMAND ("getpagelabels",
+	     REGULAR,
+	     pdfout_command_getpagelabels,
+	     "Dump page labels."
+	     )
+
+DEF_COMMAND ("setpagelabels",
+	     REGULAR,
+	     pdfout_command_setpagelabels,
+	     "Modify page labels."
+	     )
+
+DEF_COMMAND ("pagecount",
+	     REGULAR,
+	     pdfout_command_pagecount,
+	     "Print the number of pages."
+	     )
+
+DEF_COMMAND ("gettxt",
+	     REGULAR,
+	     pdfout_command_gettxt,
+	     "Dump the content of the documents text-streams."
+	     )
+
+DEF_COMMAND ("create",
+	     REGULAR,
+	     pdfout_command_create,
+	     "Create an empty PDF file"
+	     )
+
+DEF_COMMAND ("convert-outline",
+	     REGULAR,
+	     pdfout_command_convert_outline,
+	     "Convert outline format"
+	     )
+
+DEF_COMMAND ("repair",
+	     REGULAR,
+	     pdfout_command_repair,
+	     "Repair broken files"
+	     )
+
+DEF_COMMAND ("debug",
+	     DEBUG,
+	     pdfout_command_debug,
+	     ""
+	     )
+
+/* Local Variables: */
+/* mode: c */
+/* End: */

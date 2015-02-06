@@ -1,0 +1,46 @@
+* pdfout
+
+** Install  
+
+*** install prequisites
+
+*dpkg-based: e.g. Trisquel, Debian*
+ : $ apt-get install gcc make pkg-config libyaml-dev libunistring-dev libssl-dev
+*rpm-based: e.g. Fedora*
+ : $ dnf install tar pkgconfig gcc make libyaml-devel libunistring-devel openssl-devel
+
+*Cygwin*
+
+run setup*.exe and select the packages =gcc-core, make, pkg-config, libyaml-devel, libunistring2, libunistring-devel, openssl-devel=
+
+*** download and build
+#+BEGIN_EXAMPLE
+ $ wget FIXME!
+ $ tar -xzf pdfout-0.1.tar.gz
+ $ cd pdfout-0.1
+ $ ./configure --prefix=/usr/local
+ $ make
+ $ make install
+#+END_EXAMPLE
+
+Now run
+: $ pdfout --describe-commands
+to list the available subcommands.
+** Copying
+License: GPL Version 3 or (at your option) any later version.
+
+Copyright (C) 2015 AUTHORS
+
+*** Used Libraries
+| Library    | Copyright Owner | License                 |
+|------------+-----------------+-------------------------|
+| mupdf      | Artifex Inc.    | AGPL Version 3 or later |
+| libyaml    | Kirill Simonov  | X11                     |
+| GNU Gnulib | FSF             | GPL Version 3 or later  |
+
+# FIXME: list mupdf libraries
+
+#+STARTUP: showall
+# Local Variables:
+# mode: org
+# End:

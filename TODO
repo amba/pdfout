@@ -1,0 +1,112 @@
+ - [ ] write up README in org-mode
+
+ - [ ] git rebase and compress
+
+ - [X] test on:
+   - [X] debian sid
+   - [X] debian wheezy
+   - [X] debian GNU/hurd sid
+   - [X] trisquel
+   - [X] freebsd
+   - [X] fedora
+   - [X] w32 cygwin
+
+ - [ ] upload tarball to github.io with md5 and gpg signatures
+
+ - [ ] apply to GNU Savannah
+
+ - [ ] thirdparty:
+   - [ ] glibc:
+     - [ ] fix argp bug 18719
+     - [ ] posix_spawn: always use 'vfork' instead of 'fork' if possible
+
+   - [ ] gnulib 
+     - [ ] fix 'verify' module test failure on freebsd with 'make check -j4'
+     - [ ] cygwin test fails
+     - [ ] memory leak in gnulib 'copy-file' module?
+   - [ ] contrib .pc file for GNU libunistring
+   - [ ] comment on argp book
+   - [ ] mupdf:
+     - [ ] prefix warnings with program name
+     - [ ] u16 -> u8
+     - [ ] incremental update with xref: Syscall param write(buf) points to
+ uninitialised byte(s)
+
+   - [ ] libyaml non-BMP escaping
+
+
+
+ - [ ] use minimal includes to speed up compilation
+   - [ ] forward declaration of mupdf / libyaml struct pointers? (C11 feature)
+
+ - [ ] use gnulib xlist module in outline-wysiwyg.c instead of manually using
+   x2nrealloc ?
+
+ - [ ] tests: read from stderr in pipe and test batch mode
+
+
+ - [ ] AC_SUBST AM_CPPFLAGS?
+
+ - [X] gettxt: allow page range
+
+ - [ ] texinfo:
+   - [ ] basic usage tutorial with valgrind manual?
+   - [ ] outline format specification
+   - [ ] page labels format
+   - [ ] info dict format
+
+ - [ ] grep command, showing page numbers of results, various regex
+ flavors & options, allow multi line matches
+
+ - [ ] commands case-insensitive, aliases: set-outline ... 
+
+ - [ ] use own gcc attribute macros PDFOUT_UNUSED, PRINTF, WUR 
+   - [ ] WUR for pdfout_load_yaml and all others that return int?
+
+ - [ ] tests: write grep replacements ?
+
+ - [-] cleanup namespaces:
+   - [ ] arguments use bool from stdbool.h
+   - [ ] remove FROM arg of pdfout_get_default_filename (always ".pdf")
+   - [ ] cleanup namespace to pdfout_(outline|pagelabels|info|text)_(get|set)
+   - [ ] cleanup yaml convenience namespace
+   - [ ] naming of output FILE * streams and filenames. name all 'output(_filename)'?
+   - [ ] enum types use '_e' suffix typedefs?
+   - [X] *_set take NULL input to remove
+   - [ ] pdfout_prog namespace?
+
+ - [X] pdfout_float_sequence macro
+
+
+ - [ ] prevent input pdf file == output pdf file
+      (at the moment we just check filenames) patch mupdf to accept streams?
+      Maybe refuse operation if output file exists?
+
+ - [ ] downstream:
+   - [ ] configure option to use existing mupdf build
+   - [ ] build with Debian stretch libmupdf-dev
+
+
+ - [X] merge s2yout and y2sout in convert-outline command? (--from=X --too=Y)
+ - [ ] YAML configuration file
+ - [ ] metadata set/get commands
+ - [ ] gettext l10n
+ - [ ] command extensibility: YAML file containing for each command:
+   - command name
+   - command function
+   - description
+   - source files
+   - pass/fail tests 
+
+ - [ ] get page labels: differentiate between empty and broken page labels.
+ - [ ] get info: differentiate between empty and broken info dict.
+ - [ ] convert-outline check yaml-outlines
+ - [ ] option to update producer in info dict
+
+
+
+#+STARTUP: showall
+
+# Local Variables:
+# mode: org
+# End:
