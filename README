@@ -1,10 +1,10 @@
 * pdfout
-Fast PDF modification and analysis tool based on the mupdf library and the YAML data serialization language.
+Fast PDF modification and analysis tool based on the [[http://mupdf.com/][mupdf library]] and the [[http://yaml.org/][YAML data serialization standard]].
 
 pdfout can
  - dump and modify outlines, page labels, keys of the information dictionary
  - extract text
- - repair broken files
+ - repair broken cross-reference tables
 
 ** Install  
 
