@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([pdfout], [0.1], [github.com/simon0x5b/pdfout/issues])
+AC_INIT([pdfout], [0.1], [github.com/amba/pdfout/issues])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign])
 AM_MAINTAINER_MODE
