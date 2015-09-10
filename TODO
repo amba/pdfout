@@ -1,7 +1,3 @@
- - [ ] write up README in org-mode
-
- - [ ] git rebase and compress
-
  - [X] test on:
    - [X] debian sid
    - [X] debian wheezy
@@ -11,7 +7,9 @@
    - [X] fedora
    - [X] w32 cygwin
 
- - [ ] upload tarball to github.io with md5 and gpg signatures
+ - [ ] tag 0.1 and create 0.1 branch
+
+ - [ ] README: testing and tested platforms
 
  - [ ] apply to GNU Savannah
 
