@@ -6,8 +6,9 @@ AM_CPPFLAGS += -I$(top_srcdir)/mupdf/include
 AM_CFLAGS = $(WARN_CFLAGS)
 
 LIBS = $(MUPDF_REQUIRED_LIBS)
-noinst_PROGRAMS = bug-xref-incremental
+
 bin_PROGRAMS = pdfout
+
 pdfout_SOURCES = \
   pdfout.c \
   commands.def \
