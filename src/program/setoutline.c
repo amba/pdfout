@@ -22,7 +22,7 @@ static char usage[] = "PDF_FILE [OUTLINE]";
 static char doc[] = "Modify the outline\n";
 
 static struct argp_option options[] = {
-  {"output", 'o', PDFOUT_NO_INCREMENTAL},
+  {"output", 'o', "FILE", 0, PDFOUT_NO_INCREMENTAL},
   {PDFOUT_OUTLINE_FORMAT_OPTION},
   {"default-filename", 'd', 0, 0, "read input from PDF_FILE.outline.FORMAT"},
   {"default-view", 'v', "DEST", 0, "set default outline destination"},
