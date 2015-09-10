@@ -48,20 +48,20 @@ Copyright (C) 2015 Simon Reinhardt
 #+END_EXAMPLE
 
 *** Used Libraries
-| Library    | Copyright Owner | License          |
-|------------+-----------------+------------------|
-| mupdf      | Artifex Inc.    | AGPL V3 or later |
-| GNU Gnulib | FSF             | GPL V3 or later  |
-| libyaml    | Kirill Simonov  | X11              |
+| Library    | Copyright Owner | License                 |
+|------------+-----------------+-------------------------|
+| mupdf      | Artifex Inc.    | AGPL Version 3 or later |
+| GNU Gnulib | FSF             | GPL Version 3 or later  |
+| libyaml    | Kirill Simonov  | X11                     |
 
 *** further libraries required by mupdf
-| Library  | Copyright Owner                                  | License                                    |
-|----------+--------------------------------------------------+--------------------------------------------|
-| freetype | David Turner, Robert Wilhelm, and Werner Lemberg | GPL V2 or later / Freetype Project License |
-| jbig2dec | Artifex Inc.                                     | AGPL V3 or later                           |
-| libjpeg  | Thomas G. Lane, Guido Vollbeding                 | Independent JPEG Group License             |
-| OpenJPEG | various                                          | 2-clause BSD                               |
-| zlib     | Jean-loup Gailly and Mark Adler                  | zlib-license                               |
+| Library  | Copyright Owner                                  | License                                           |
+|----------+--------------------------------------------------+---------------------------------------------------|
+| freetype | David Turner, Robert Wilhelm, and Werner Lemberg | GPL Version 2 or later / Freetype Project License |
+| jbig2dec | Artifex Inc.                                     | AGPL Version 3 or later                           |
+| libjpeg  | Thomas G. Lane, Guido Vollbeding                 | Independent JPEG Group License                    |
+| OpenJPEG | various                                          | 2-clause BSD                                      |
+| zlib     | Jean-loup Gailly and Mark Adler                  | zlib-license                                      |
 
 #+STARTUP: showall
 # Local Variables:
