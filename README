@@ -55,13 +55,14 @@ Copyright (C) 2015 Simon Reinhardt
 | libyaml    | Kirill Simonov  | X11                     |
 
 *** further libraries required by mupdf
-| Library  | Copyright Owner                                  | License                                           |
-|----------+--------------------------------------------------+---------------------------------------------------|
-| freetype | David Turner, Robert Wilhelm, and Werner Lemberg | GPL Version 2 or later / Freetype Project License |
-| jbig2dec | Artifex Inc.                                     | AGPL Version 3 or later                           |
-| libjpeg  | Thomas G. Lane, Guido Vollbeding                 | Independent JPEG Group License                    |
-| OpenJPEG | various                                          | 2-clause BSD                                      |
-| zlib     | Jean-loup Gailly and Mark Adler                  | zlib-license                                      |
+| Library   | Copyright Owner                                  | License                                           |
+|-----------+--------------------------------------------------+---------------------------------------------------|
+| freetype  | David Turner, Robert Wilhelm, and Werner Lemberg | GPL Version 2 or later / Freetype Project License |
+| zlib      | Jean-loup Gailly and Mark Adler                  | zlib-license                                      |
+| jbig2dec  | Artifex Inc.                                     | AGPL Version 3 or later                           |
+| libcrypto | The OpenSSL Project                              | OpenSSL license                                   |
+| libjpeg   | Thomas G. Lane, Guido Vollbeding                 | Independent JPEG Group License                    |
+| OpenJPEG  | various                                          | 2-clause BSD                                      |
 
 #+STARTUP: showall
 # Local Variables:
