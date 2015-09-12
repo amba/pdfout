@@ -122,8 +122,16 @@ pdfout_command_gettxt (int argc, char **argv)
   if (use_yaml == false)
     for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
       for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
-	  pdfout_print_txt_page (ctx, doc, i, output);
+	{
+	  char *text;
+	  size_t text_len;
+	  pdfout_text_get_page (&text, &text_len, ctx, doc, i);
 
+	  if (fwrite (text, text_len, 1, output) == 0)
+	    error (1, errno, "fwrite failed");
+	  
+	  free (text);
+	}
   else
     {
       pdfout_yaml_emitter_initialize (&emitter);

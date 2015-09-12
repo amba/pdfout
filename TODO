@@ -9,15 +9,21 @@
 
  - [ ] tag 0.1 and create 0.1 branch
 
- - [ ] README: testing and tested platforms
+ - [ ] README:
+   - [ ] testing info
+   - [ ] list openssl
+   - [ ] NEWS
+
+ - [ ] github.io:
+   - [ ] Name | Last modified | Size | gpg
 
  - [ ] apply to GNU Savannah
 
  - [ ] thirdparty:
    - [ ] glibc:
      - [ ] fix argp bug 18719
-     - [ ] posix_spawn: always use 'vfork' instead of 'fork' if possible
-
+     - [ ] manual
+         - [ ] fix argp examples
    - [ ] gnulib 
      - [ ] fix 'verify' module test failure on freebsd with 'make check -j4'
      - [ ] cygwin test fails

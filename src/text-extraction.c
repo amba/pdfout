@@ -17,6 +17,9 @@
 
 #include "common.h"
 
+
+/* FIXME: replace pdfout_float_sequence with pdfout_yaml_fz_rect_to_? ? */
+/* FIXME: use open_memstream */
 static void put_char (fz_context *ctx, char c, char **textbuf,
 		      size_t *textbuf_len, int *textbuf_pos);
 
@@ -27,11 +30,11 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   yaml_document_t yaml_doc;
   yaml_document_t *doc = &yaml_doc;
   char buffer[256];
-  fz_page *page = fz_load_page (ctx, (fz_document *) pdf_doc, page_number - 1);
+  fz_page *page = fz_load_page (ctx, &pdf_doc->super, page_number - 1);
   fz_text_sheet *text_sheet = fz_new_text_sheet (ctx);
   fz_text_page *text_page = fz_new_text_page (ctx);
   fz_device *dev = fz_new_text_device (ctx, text_sheet, text_page);
-  fz_matrix transform = fz_identity;
+  fz_matrix transform = fz_identity; /* FIXME: required?? */
   fz_rect bbox, mbox;
   fz_device *bbox_dev = fz_new_bbox_device (ctx, &bbox);
   int value, mapping, block_n, lines;
@@ -66,6 +69,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
       switch (text_page->blocks[block_n].type)
 	{
 	case FZ_PAGE_BLOCK_TEXT:
+	  /* FIXME: put the following into separate function?  */
 	  {
 	    fz_text_block *block = text_page->blocks[block_n].u.text;
 	    fz_text_line *line;
@@ -160,7 +164,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   fz_drop_text_page (ctx, text_page);
   fz_drop_text_sheet (ctx, text_sheet);
 }
-
+/* FIXME: use size_t for textbuf_pos */
 static void
 put_char (fz_context *ctx, char c, char **textbuf, size_t *textbuf_len,
 	  int *textbuf_pos)
@@ -171,62 +175,73 @@ put_char (fz_context *ctx, char c, char **textbuf, size_t *textbuf_len,
   (*textbuf)[(*textbuf_pos)++] = c;
 }
 
-void
-pdfout_print_txt_page (fz_context *ctx, pdf_document *doc, int page_number,
-		       FILE *out)
+
+static void process_block (FILE *memstream, fz_text_block *block)
 {
-  fz_page *page = fz_load_page (ctx, (fz_document *) doc, page_number - 1);
-  ((pdf_page *) page)->ctm = fz_identity;
-  fz_text_sheet *text_sheet = fz_new_text_sheet (ctx);
-  fz_text_page *text_page = fz_new_text_page (ctx);
-  fz_device *dev = fz_new_text_device (ctx, text_sheet, text_page);
-  fz_matrix transform = fz_identity;
+  fz_text_line *line;
+  fz_text_char *ch;
+  char utf[4];
 
-  int block_n;
-
-  fz_run_page (ctx, page, dev, &transform, NULL);
-
-  for (block_n = 0; block_n < text_page->len; block_n++)
+  for (line = block->lines; line - block->lines < block->len;
+       line++)
     {
-      switch (text_page->blocks[block_n].type)
+      fz_text_span *span;
+      for (span = line->first_span; span; span = span->next)
 	{
-	case FZ_PAGE_BLOCK_TEXT:
-	  {
-	    fz_text_block *block = text_page->blocks[block_n].u.text;
-	    fz_text_line *line;
-	    fz_text_char *ch;
-	    char utf[4];
-	    int i, n;
-	    for (line = block->lines; line < block->lines + block->len;
-		 line++)
-	      {
-		fz_text_span *span;
-		for (span = line->first_span; span; span = span->next)
-		  {
-		    if (span != line->first_span)
-		      {
-			putc (' ', out);
-		      }
-		    for (ch = span->text; ch < span->text + span->len; ch++)
-		      {
-			n = fz_runetochar (utf, ch->c);
-			for (i = 0; i < n; i++)
-			  putc (utf[i], out);
-		      }
-		  }
-		putc ('\n', out);
-	      }
-	    break;
-	  }
-	case FZ_PAGE_BLOCK_IMAGE:
-	  break;
+	  if (span != line->first_span)
+	      putc (' ', memstream);
+	  for (ch = span->text; ch < span->text + span->len; ch++)
+	    fwrite (utf, fz_runetochar (utf, ch->c), 1, memstream);
 	}
+      putc ('\n', memstream);
     }
-  fprintf (out, "\f\n");
+}
+
+int
+pdfout_text_get_page (char **text, size_t *text_len, fz_context *ctx,
+		      pdf_document *doc, int page_number)
+{
+  fz_page *page;
+  fz_text_sheet *text_sheet;
+  fz_text_page *text_page;
+  fz_device *dev;
+  FILE *memstream;
+  fz_page_block *block;
+
+  memstream = open_memstream (text, text_len);
+  if (memstream == NULL)
+    {
+      pdfout_errno_msg (errno, "pdfout_text_get_page: open_memstream");
+      return 1;
+    }
+      
+  page = fz_load_page (ctx, &doc->super, page_number - 1);
+  ((pdf_page *) page)->ctm = fz_identity;
+  
+  text_sheet = fz_new_text_sheet (ctx);
+  text_page = fz_new_text_page (ctx);
+  dev = fz_new_text_device (ctx, text_sheet, text_page);
+  
+  fz_run_page (ctx, page, dev, &fz_identity, NULL);
+
+  for (block = text_page->blocks; block - text_page->blocks < text_page->len;
+       ++block)
+    if (block->type == FZ_PAGE_BLOCK_TEXT)
+      process_block (memstream, block->u.text);
+  
+  fprintf (memstream, "\f\n");
 
   /* cleanup */
   fz_drop_text_page (ctx, text_page);
   fz_drop_text_sheet (ctx, text_sheet);
   fz_drop_device (ctx, dev);
   fz_drop_page (ctx, page);
+  
+  if (fclose (memstream))
+    {
+      pdfout_errno_msg (errno, "pdfout_text_get_page: fclose");
+      return 1;
+    }
+  
+  return 0;
 }
