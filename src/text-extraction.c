@@ -197,24 +197,16 @@ static void process_block (FILE *memstream, fz_text_block *block)
     }
 }
 
-int
-pdfout_text_get_page (char **text, size_t *text_len, fz_context *ctx,
+void
+pdfout_text_get_page (FILE *stream, fz_context *ctx,
 		      pdf_document *doc, int page_number)
 {
   fz_page *page;
   fz_text_sheet *text_sheet;
   fz_text_page *text_page;
   fz_device *dev;
-  FILE *memstream;
   fz_page_block *block;
 
-  memstream = open_memstream (text, text_len);
-  if (memstream == NULL)
-    {
-      pdfout_errno_msg (errno, "pdfout_text_get_page: open_memstream");
-      return 1;
-    }
-      
   page = fz_load_page (ctx, &doc->super, page_number - 1);
   ((pdf_page *) page)->ctm = fz_identity;
   
@@ -227,21 +219,13 @@ pdfout_text_get_page (char **text, size_t *text_len, fz_context *ctx,
   for (block = text_page->blocks; block - text_page->blocks < text_page->len;
        ++block)
     if (block->type == FZ_PAGE_BLOCK_TEXT)
-      process_block (memstream, block->u.text);
+      process_block (stream, block->u.text);
   
-  fprintf (memstream, "\f\n");
+  fprintf (stream, "\f\n");
 
   /* cleanup */
   fz_drop_text_page (ctx, text_page);
   fz_drop_text_sheet (ctx, text_sheet);
   fz_drop_device (ctx, dev);
   fz_drop_page (ctx, page);
-  
-  if (fclose (memstream))
-    {
-      pdfout_errno_msg (errno, "pdfout_text_get_page: fclose");
-      return 1;
-    }
-  
-  return 0;
 }

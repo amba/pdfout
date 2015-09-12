@@ -120,18 +120,11 @@ pdfout_command_gettxt (int argc, char **argv)
   			      use_default_filename, ".txt");
 
   if (use_yaml == false)
-    for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
-      for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
-	{
-	  char *text;
-	  size_t text_len;
-	  pdfout_text_get_page (&text, &text_len, ctx, doc, i);
-
-	  if (fwrite (text, text_len, 1, output) == 0)
-	    error (1, errno, "fwrite failed");
-	  
-	  free (text);
-	}
+    {
+      for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
+	for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
+	  pdfout_text_get_page (output, ctx, doc, i);
+    }
   else
     {
       pdfout_yaml_emitter_initialize (&emitter);

@@ -68,9 +68,8 @@ void pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 			     int page_number, yaml_emitter_t *emitter,
 			     int mode);
 
-/* returns non-zero on failure and *text and *text_len are undefined */
-int pdfout_text_get_page (char **text, size_t *text_len, fz_context *ctx,
-			  pdf_document *doc, int page_number);
+void pdfout_text_get_page (FILE *stream, fz_context *ctx,
+			   pdf_document *doc, int page_number);
 
 /* on error, returns non-zero and *DOC is undefined */
 int pdfout_outline_load (yaml_document_t **doc, FILE *input,

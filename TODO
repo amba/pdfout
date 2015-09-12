@@ -9,9 +9,9 @@
 
  - [ ] tag 0.1 and create 0.1 branch
 
- - [ ] README:
+ - [-] README:
    - [ ] testing info
-   - [ ] list openssl
+   - [X] list openssl
    - [ ] NEWS
 
  - [ ] github.io:
@@ -23,7 +23,7 @@
    - [ ] glibc:
      - [ ] fix argp bug 18719
      - [ ] manual
-         - [ ] fix argp examples
+       - [ ] fix argp examples
    - [ ] gnulib 
      - [ ] fix 'verify' module test failure on freebsd with 'make check -j4'
      - [ ] cygwin test fails
