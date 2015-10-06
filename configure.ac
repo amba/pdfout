@@ -21,14 +21,13 @@ AC_PROG_RANLIB
 
 gl_MANYWARN_ALL_GCC([warnings])
 # Set up the list of the pointless, undesired warnings.
-nw="-Wdouble-promotion -Wshadow -Wvariadic-macros"
-nw="$nw -Wsuggest-attribute=noreturn -Wjump-misses-init"
+nw="-Wdouble-promotion -Wshadow -Wvariadic-macros \
+-Wsuggest-attribute=noreturn -Wjump-misses-init"
 # Enable all GCC warnings not in this list.
 gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 
-warnings="$warnings -Wno-error=unused-parameter"
-warnings="$warnings -Wno-missing-field-initializers"
-warnings="$warnings -Wno-error=clobbered"
+warnings="$warnings -Wno-error=unused-parameter \
+-Wno-missing-field-initializers"
 
 
 AC_ARG_ENABLE([warnings],

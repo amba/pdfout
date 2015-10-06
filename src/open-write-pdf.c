@@ -43,8 +43,9 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc,
 		       const char *pdf_filename, const char *output_filename)
 {
   fz_write_options opts = { 0 };
-  char *write_filename;
-  bool use_tmp = false;
+  /* Use volatile, because of the setjmp in fz_try.  */
+  char *volatile write_filename; 
+  volatile bool use_tmp = false;
   
   if (output_filename == NULL)
     {
