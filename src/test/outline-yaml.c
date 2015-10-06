@@ -21,12 +21,11 @@
 int
 main (int arg, char **argv)
 {
-  test_init ("outline-yaml");
+  test_init ();
 
 #define COMMAND "outline"
 #define INPUT OUTLINE_YAML_10_PAGES
 
-#define SUFFIX ".outline.yaml"
 #define BROKEN_INPUT							\
   "[{page: 1}]", /* no title */						\
     "[{title: title, page: 11}]", /* page number excceedes page count */ \

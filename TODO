@@ -7,18 +7,28 @@
    - [X] fedora
    - [X] w32 cygwin
 
- - [ ] tag 0.1 and create 0.1 branch
+ - [X] use __FILE__ and basename in test_init?
+ - [ ] test on document with xref streams. further test incremental update with
+   xref streams.
+ - [ ] test repeated incremental updates to the same file, with/without xref-streams
+ - [X] run gnulib tests after program tests (see gnulib manual, sec. 3.9)
+ - [ ] remove -o options, if command by default writes to stdout.
+ - [ ] gettxt: no spaces between spans? (broken ligatures when parsing tex output)
+ - [ ] Always use exit status exit_failure on error.
+ - [ ] Create libyaml structs with XMALLOC, not XZALLOC.
 
  - [-] README:
    - [ ] testing info
    - [X] list openssl
    - [ ] NEWS
 
- - [ ] github.io:
-   - [ ] Name | Last modified | Size | gpg
+ - [X] github.io:
+   - [X] Name | Last modified | Size | gpg
+
+ - [ ] comments: Use full sentences, terminated with double space.
 
  - [ ] apply to GNU Savannah
-
+ - [ ] page labels: rename 'first' to 'start', since the pdf name is called 'St' 
  - [ ] thirdparty:
    - [ ] glibc:
      - [ ] fix argp bug 18719
@@ -34,7 +44,9 @@
      - [ ] prefix warnings with program name
      - [ ] u16 -> u8
      - [ ] incremental update with xref: Syscall param write(buf) points to
- uninitialised byte(s)
+        uninitialised byte(s)
+     - [ ] -Wunused-parameter in fz_unread_byte and fz_sync_bits
+     - [ ] add to PDF_NAMES: "Pagelabels", "Nums", "St", "a", "r"  
 
    - [ ] libyaml non-BMP escaping
 
@@ -60,7 +72,9 @@
    - [ ] info dict format
 
  - [ ] grep command, showing page numbers of results, various regex
- flavors & options, allow multi line matches
+ flavors & options, allow multi line matches?
+
+ - [ ] grep: recursion
 
  - [ ] commands case-insensitive, aliases: set-outline ... 
 
@@ -82,7 +96,7 @@
  - [X] pdfout_float_sequence macro
 
 
- - [ ] prevent input pdf file == output pdf file
+ - [ ] prevent input pdf file == output pdf file, check inodes.
       (at the moment we just check filenames) patch mupdf to accept streams?
       Maybe refuse operation if output file exists?
 
@@ -90,17 +104,9 @@
    - [ ] configure option to use existing mupdf build
    - [ ] build with Debian stretch libmupdf-dev
 
-
  - [X] merge s2yout and y2sout in convert-outline command? (--from=X --too=Y)
- - [ ] YAML configuration file
  - [ ] metadata set/get commands
  - [ ] gettext l10n
- - [ ] command extensibility: YAML file containing for each command:
-   - command name
-   - command function
-   - description
-   - source files
-   - pass/fail tests 
 
  - [ ] get page labels: differentiate between empty and broken page labels.
  - [ ] get info: differentiate between empty and broken info dict.

@@ -123,7 +123,7 @@ pdfout_command_gettxt (int argc, char **argv)
     {
       for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
 	for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
-	  pdfout_text_get_page (output, ctx, doc, i);
+	  pdfout_text_get_page (output, ctx, doc, i - 1);
     }
   else
     {
@@ -132,7 +132,7 @@ pdfout_command_gettxt (int argc, char **argv)
 
       for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
 	for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
-	  pdfout_print_yaml_page (ctx, doc, i, &emitter, yaml_mode);
+	  pdfout_print_yaml_page (ctx, doc, i - 1, &emitter, yaml_mode);
     }
   
   pdfout_output_to_msg (txt_filename);

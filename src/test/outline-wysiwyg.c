@@ -24,12 +24,10 @@
 int
 main (int arg, char **argv)
 {
-  test_init ("outline-wysiwyg");
+  test_init ();
 
 #define COMMAND "outline" , "-fw"
 
-  
-#define SUFFIX ".outline.wysiwyg"
 #define BROKEN_INPUT 							\
   "title 11",			/* page number excceedes page count  */ \
     "title 0",			/* page number is 0 */			\

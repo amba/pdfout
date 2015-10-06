@@ -28,7 +28,8 @@
 #define test_memeq(string1, string2, n) \
   (memcmp (string1, string2, n) == 0)
 
-void test_init (char *test_name);
+#define test_init() _test_init (__FILE__)
+void _test_init (const char *file_name);
 
 /* generate and register a filename in the tests
    temporary directory.

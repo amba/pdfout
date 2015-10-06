@@ -17,19 +17,23 @@
 
 #include "common.h"
 #include "shared.h"
+#include "../page-labels.h"
 
-static char usage[] = "PDF_FILE [-o FILE]";
-static char doc[] = "Dump page labels\n";
+static char usage[] = "PDF_FILE > FILE]";
+static char doc[] = "Dump page labels\n\vReturn values:\n\
+0: PDF_FILE has valid page labels.\n\
+1: PDF_FILE has no page labels. No output is produced.\n\
+2: PDF_FILE's page labels are damaged, but part of them could be extracted.\n\
+3: PDF_FILE's page labels are damaged. No output is produced.";
+
 
 static struct argp_option options[] = {
   {"default-filename", 'd', 0, 0, "write output to PDF_FILE.pagelabels"},
-  {"output", 'o', "FILE", 0, "dump pagelabels to FILE"},
-    {0}
+  {0}
 };
 
 static char *pdf_filename;
-static char *output_filename;
-static bool use_default_filename;
+static bool use_default;
 
 
 static error_t
@@ -37,8 +41,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 {
   switch (key)
     {
-    case 'o': output_filename = arg; break;
-    case 'd': use_default_filename = true; break;
+    case 'd': use_default = true; break;
       
     case ARGP_KEY_ARG:
       switch (state->arg_num)
@@ -50,11 +53,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
-      
-    case ARGP_KEY_END:
-      if (output_filename && use_default_filename)
-	argp_error (state, "options -o and -d are mutually exclusive");
-      break;
       
     default:
       return ARGP_ERR_UNKNOWN;
@@ -73,27 +71,32 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_getpagelabels (int argc, char **argv)
 {
-  yaml_document_t *yaml_doc;
   fz_context *ctx;
   pdf_document *doc;
-  FILE *output;
+  pdfout_page_labels_t *labels;
+  yaml_emitter_t *emitter;
+  char *output = NULL;
+  int rv;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
   ctx = pdfout_new_context ();
   doc = pdfout_pdf_open_document (ctx, pdf_filename);
- 
-  if (pdfout_get_page_labels (&yaml_doc, ctx, doc))
+
+  rv = pdfout_page_labels_get (&labels, ctx, doc);
+  
+  if (labels == NULL)
     {
       pdfout_no_output_msg ();
-      exit (1);
+      exit (2 * rv + 1);
     }
 
-  output = pdfout_get_stream (&output_filename, 'w', pdf_filename,
-			      use_default_filename, ".pagelabels");
-      
-  pdfout_dump_yaml (output, yaml_doc);
-
-  pdfout_output_to_msg (output_filename);
-  exit (0);
+  emitter = yaml_emitter_new(pdfout_get_stream (&output, 'w', pdf_filename,
+						use_default, ".pagelabels"));
+  
+  if (pdfout_page_labels_to_yaml (emitter, labels))
+    exit (EX_IOERR);
+  
+  pdfout_output_to_msg (output);
+  exit (2 * rv);
 }

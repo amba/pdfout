@@ -21,9 +21,9 @@
 int
 main (void)
 {
-  test_init ("gettxt-plain");
+  test_init ();
 
-  char *pdf = test_data ("hello-world.pdf");
+  const char *pdf = test_data ("hello-world.pdf");
       
   {
     test_pdfout (0, HELLO_WORLD_TXT, "gettxt", pdf);
@@ -37,7 +37,7 @@ main (void)
   }
 
   /* invalid page ranges */
-  char *invalid_ranges[] = {
+  const char *invalid_ranges[] = {
     "",      /* empty token */
     ",1",    /* empty token */
     "1,",    /* empty token */
@@ -53,7 +53,7 @@ main (void)
   };
 
   {
-    char **invalid;
+    const char **invalid;
     for (invalid = invalid_ranges; *invalid; ++invalid)
       test_pdfout_status (EX_USAGE, 0, 0, "gettxt", pdf, "-p", *invalid);
   }

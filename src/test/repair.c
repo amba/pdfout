@@ -20,7 +20,7 @@
 int
 main (void)
 {
-  test_init ("repair");
+  test_init ();
   {
     char *pdf = test_cp ("broken.pdf", NULL);
   

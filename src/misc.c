@@ -16,6 +16,29 @@
 
 
 #include "common.h"
+#include <string.h>
+#include <xalloc.h>
+#include <exitfail.h>
+#include <c-ctype.h>
+#include <argmatch.h>
+
+int
+pdfout_strtoui (const char *s)
+{
+  char *tailptr;
+  long rv = strtol (s, &tailptr, 10);
+  if (rv < 0 || tailptr[0] != 0 || tailptr == s)
+    {
+      pdfout_msg ("not a positive int: '%s'", s);
+      return -1;
+    }
+  if (rv > INT_MAX)
+    {
+      pdfout_msg ("integer overflow: '%s'", s);
+      return -1;
+    }
+  return rv;
+}
 
 int
 pdfout_strtoint (const char *nptr, char **endptr)
@@ -81,17 +104,27 @@ pdfout_strtof_nan (const char *string)
 }
 
 int
-pdfout_snprintf (char *str, int size, const char *fmt, ...)
+pdfout_snprintf (char *str, size_t size, const char *fmt, ...)
 {
   va_list ap;
   int ret;
   va_start (ap, fmt);
+  errno = 0;
   ret = vsnprintf (str, size, fmt, ap);
-  va_end (ap);
-  if (ret >= size)
+  if (ret < 0)
+    {
+      pdfout_errno_msg (errno, "pdfout_snprintf: output error");
+      goto error;
+    }
+  if ((size_t) ret >= size)
     {
       pdfout_msg ("pdfout_snprintf: string truncated");
-      exit (1);
+      goto error;
     }
+  
   return ret;
+ error:
+  exit (exit_failure);
 }
+
+  

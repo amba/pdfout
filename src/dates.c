@@ -16,29 +16,21 @@
 
 
 #include "common.h"
+#include "pdfout-regex.h"
 
-#include <regex.h>
 #include <xalloc.h>
 #include <xmemdup0.h>
 
-/* We use posix Extended Regular Expressions as defined in
-   <pubs.opengroup.org/onlinepubs/9699919799/>.
-
-   The used GNU API is documented in
-   www.gnu.org/software/gnulib/manual/html_node/GNU-Regex-Functions.html
-*/
-
-static struct re_pattern_buffer *pattern_buffer;
-static struct re_registers *regs;
-
+static struct pdfout_re_pattern_buffer *pattern_buffer;
 
 static void
 setup_regexp (void)
 {
-  char *regex;
+  const char *regex;
   const char *error_string;
   
   if (pattern_buffer)
+    /* Already setup.  */
     return;
   
   regex =
@@ -54,13 +46,12 @@ setup_regexp (void)
     "('|'([0-9]{2})'?" /* minute offset to UT */
     ")?)?)?)?)?)?)?)?$";
   
-  re_set_syntax (RE_SYNTAX_POSIX_EXTENDED);
-  pattern_buffer = XZALLOC (struct re_pattern_buffer);
-  error_string  = re_compile_pattern (regex, strlen (regex), pattern_buffer);
+  pattern_buffer = XZALLOC (struct pdfout_re_pattern_buffer);
+  error_string = pdfout_re_compile_pattern (regex, strlen (regex),
+					    RE_SYNTAX_POSIX_EXTENDED, 0,
+					    pattern_buffer);
   if (error_string)
     error (1, 0, "re_compile_pattern: %s", error_string);
-
-  regs = XZALLOC (struct re_registers);
 }
 
 #define MSG(fmt, args...) pdfout_msg ("check date string: " fmt, ## args)
@@ -91,17 +82,19 @@ int
 pdfout_check_date_string (const char *date)
 {
   int error_code, number;
+  struct re_registers *regs;
   
   setup_regexp ();
   
-  error_code = re_match (pattern_buffer, date, strlen (date), 0, regs);
-
+  error_code = pdfout_re_match (pattern_buffer, date, strlen (date), 0);
+  
   if (error_code == -2)
     error (1, errno, "re_match");
 
   if (error_code == -1)
     return -1;
-  
+
+  regs = &pattern_buffer->regs;
   if (regs->start[MONTH] > 0)
     {
       number = get_number (date, regs->start[MONTH], regs->end[MONTH]);
@@ -164,7 +157,7 @@ pdfout_check_date_string (const char *date)
 	}
     }
   
-  if (regs->start[MINUTE] > 0)
+  if (regs->start[MINUTE_OFFSET] > 0)
     {
       number = get_number (date, regs->start[MINUTE_OFFSET],
 			   regs->end[MINUTE_OFFSET]);

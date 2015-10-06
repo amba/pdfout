@@ -14,10 +14,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-
-#include "common.h"
 #include "shared.h"
-
+#include "../page-labels.h"
 static char usage[] = "PDF_FILE [YAML]";
 static char doc[] = "Modify page labels\n";
 
@@ -77,9 +75,10 @@ void
 pdfout_command_setpagelabels (int argc, char **argv)
 {
   fz_context *ctx;
-  yaml_document_t *yaml_doc = NULL;
   pdf_document *doc;
   FILE *input;
+  yaml_parser_t *parser;
+  pdfout_page_labels_t *labels;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
@@ -90,14 +89,16 @@ pdfout_command_setpagelabels (int argc, char **argv)
     {
       input = pdfout_get_stream (&page_labels_filename, 'r', pdf_filename,
 				 use_default_filename, ".pagelabels");
-      
-      if (pdfout_load_yaml (&yaml_doc, input))
-	exit (1);
+      parser = yaml_parser_new (input);
+      if (pdfout_page_labels_from_yaml (&labels, parser))
+	exit (EX_DATAERR);
     }
-
-  if (pdfout_update_page_labels (ctx, doc, yaml_doc))
+  else
+    labels = NULL;
+  
+  if (pdfout_page_labels_set (ctx, doc, labels))
     exit (EX_DATAERR);
-      
+  
   pdfout_write_document (ctx, doc, pdf_filename, output_filename);
   exit (0);
 }

@@ -21,7 +21,7 @@
 int
 main (void)
 {
-  test_init ("gettxt-yaml");
+  test_init ();
 
   char *pdf = test_data ("hello-world.pdf");
   /* get lines */

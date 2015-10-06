@@ -20,7 +20,7 @@
 int
 main (int argc, char **argv)
 {
-  test_init ("top-level");
+  test_init ();
 
   test_pdfout_fgrep (0, "\n  -V, --version", "-h");
   test_pdfout_fgrep (0, "GPL", "-V");

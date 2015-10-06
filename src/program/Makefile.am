@@ -10,22 +10,29 @@ LIBS = $(MUPDF_REQUIRED_LIBS)
 bin_PROGRAMS = pdfout
 
 pdfout_SOURCES = \
-  pdfout.c \
-  commands.def \
-  shared.c \
-  shared.h \
-  getoutline.c \
-  setoutline.c \
-  convert-outline.c \
-  getinfo.c \
-  setinfo.c \
-  pagecount.c \
-  getpagelabels.c \
-  setpagelabels.c \
-  gettxt.c \
-  repair.c \
-  create.c \
-  debug.c
+pdfout.c \
+commands.def \
+shared.c \
+shared.h \
+getoutline.c \
+setoutline.c \
+convert-outline.c \
+getinfo.c \
+setinfo.c \
+pagecount.c \
+getpagelabels.c \
+setpagelabels.c \
+gettxt.c \
+repair.c \
+grep.c \
+create.c \
+debug.c \
+test.h \
+test.c \
+test-page-labels.c \
+libyaml-wrappers.h \
+libyaml-wrappers.c
+
 
 LDADD = \
 ../libcommon.a \

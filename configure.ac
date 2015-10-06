@@ -19,16 +19,31 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR]) dnl workaround for automake 1.11
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-AC_ARG_ENABLE([gcc-Wall],
-	[AS_HELP_STRING([--enable-gcc-Wall], [enable -Wall])],
-	[AS_IF([test "X$enableval" = "Xyes"], 
-	       [gl_WARN_ADD([-Wall], [WARN_CFLAGS])])])
+gl_MANYWARN_ALL_GCC([warnings])
+# Set up the list of the pointless, undesired warnings.
+nw="-Wdouble-promotion -Wshadow"
+nw="$nw -Wsuggest-attribute=noreturn -Wjump-misses-init"
+# Enable all GCC warnings not in this list.
+gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 
-AC_ARG_ENABLE([gcc-Werror],
-	[AS_HELP_STRING([--enable-gcc-Werror],
-			[enable -Wall and -Werror])],
+warnings="$warnings -Wno-error=unused-parameter"
+warnings="$warnings -Wno-missing-field-initializers"
+
+AC_ARG_ENABLE([warnings],
+	[AS_HELP_STRING([--enable-warnings],
+	[enable many compiler warnings])],
+	[AS_IF([test "X$enableval" = "Xyes"],
+	       [for w in $warnings;
+	          do gl_WARN_ADD([$w], [WARN_CFLAGS])
+		done
+	       ])])
+	       
+
+AC_ARG_ENABLE([Werror],
+	[AS_HELP_STRING([--enable-Werror],
+			[compile with -Werror])],
 	[AS_IF([test "X$enableval" = "Xyes"], 
-               [gl_WARN_ADD([-Wall -Werror], [WARN_CFLAGS])])])
+               [gl_WARN_ADD([-Werror], [WARN_CFLAGS])])])
 	      
 dnl Checks for libraries.
 dnl use pkg-config if possible
@@ -69,7 +84,7 @@ gl_INIT
 AC_SUBST([MUPDF_REQUIRED_LIBS], ["-lm $LIBYAML_LIBS $LIBCRYPTO_LIBS $LIBS"])
 LIBS=
 
-AC_CONFIG_FILES([Makefile gl/Makefile gl/tests/Makefile src/Makefile
+AC_CONFIG_FILES([Makefile gl/Makefile gl-tests/Makefile src/Makefile
 	         src/test/Makefile src/program/Makefile])
 
 AC_OUTPUT

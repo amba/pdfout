@@ -26,22 +26,14 @@ enum command_type {
   DEBUG,
 };
 
-typedef void command_func_t (int argc, char **argv);
-
 struct command {
-  char *name;
+  const char *name;
   enum command_type type;
   command_func_t *function;
-  char *description;
+  const char *description;
 };
 
-/* command function prototypes  */
-#define DEF_COMMAND(name, type, function, description)	\
-  command_func_t function;
-#include "commands.def"
-#undef DEF_COMMAND
-
-static const char *const command_name_list[] = {
+static const char * command_name_list[] = {
 #define DEF_COMMAND(name, type, function, description) \
   name,
 #include "commands.def"
@@ -49,7 +41,7 @@ static const char *const command_name_list[] = {
 };
 #undef DEF_COMMAND
 
-static struct command command_list[] = {
+static const struct command command_list[] = {
 #define DEF_COMMAND(name, type, function, description)	\
   {name, type, function, description},
 #include "commands.def"
@@ -81,7 +73,7 @@ static void describe_commands (char *prog_name);
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  char *try_help = "Try '%s --help' for more information.\n";
+  const char try_help[] = "Try '%s --help' for more information.\n";
   switch (key)
     {
     case 'l':
@@ -143,7 +135,7 @@ main (int argc, char **argv)
       exit (0);
     }
   
-  argmatch_result = ARGMATCH (argv[1], command_name_list, NULL);
+  argmatch_result = argcasematch (argv[1], command_name_list);
   
   if (argmatch_result < 0)
     error (EX_USAGE, 0, "invalid command '%s'.\n"
@@ -163,7 +155,7 @@ main (int argc, char **argv)
 static void
 list_commands (void)
 {
-  struct command *command;
+  const struct command *command;
   
   for (command = &command_list[0]; command->name != NULL; ++command)
       if (command->type == REGULAR)
@@ -173,7 +165,7 @@ list_commands (void)
 static void
 describe_commands (char *prog_name)
 {
-  struct command *command;
+  const struct command *command;
   printf ("This build of pdfout supports the following commands:\n");
   printf ("(Try '%s COMMAND --help' to learn more about COMMAND.)\n",
 	  prog_name);

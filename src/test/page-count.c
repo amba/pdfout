@@ -16,11 +16,10 @@
 
 
 #include <test.h>
-
 int
 main (void)
 {
-  test_init ("page-count");
+  test_init ();
 
   char *pdf = test_new_pdf ();
   test_pdfout (NULL, "10\n", "pagecount", pdf);

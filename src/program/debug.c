@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "shared.h"
+#include "pdfout-regex.h"
 #include <tmpdir.h>
 #include <tempname.h>
 
@@ -24,54 +25,22 @@ static char usage[] = "";
 static char doc[] = "Run checks, called by make check\v";
 
 enum {
-  incremental_update = CHAR_MAX + 1,
-  incremental_update_xref,
-  string_conversions,
-  pdfdoc_encoding_fail,
+  INCREMENTAL_UPDATE = CHAR_MAX + 1,
+  INCREMENTAL_UPDATE_XREF,
+  STRING_CONVERSIONS,
+  REGEX,
 };
 
 static struct argp_option options[] = {
-  {"incremental-update", incremental_update},
-  {"incremental-update-xref", incremental_update_xref},
-  {"string-conversions", string_conversions},
-  {"pdfdoc-encoding-fail", pdfdoc_encoding_fail},
+  {"incremental-update", INCREMENTAL_UPDATE},
+  {"incremental-update-xref", INCREMENTAL_UPDATE_XREF},
+  {"string-conversions", STRING_CONVERSIONS},
+  {"regex", REGEX},
   {0}
 };
 
-/* forward declarations */
-static void check_incremental_update (void);
-static void check_incremental_update_xref (void);
-static void check_string_conversions (void);
-static void check_pdfdoc_encoding_fail (void);
 
-static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
-{
-  switch (key)
-    {
-    case incremental_update: check_incremental_update (); break;
-    case incremental_update_xref: check_incremental_update_xref (); break;
-    case string_conversions: check_string_conversions (); break;
-    case pdfdoc_encoding_fail: check_pdfdoc_encoding_fail (); break;
-      
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
 
-static struct argp_child children[] = {
-  {&pdfout_general_argp, 0, NULL, 0},
-  {0}
-};
-
-static struct argp argp = { options, parse_opt, usage, doc, children };
-
-void
-pdfout_command_debug (int argc, char **argv)
-{
-  pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
-}
 
 #define test_assert(expr)					\
   do								\
@@ -85,7 +54,7 @@ pdfout_command_debug (int argc, char **argv)
     }								\
   while (0)
 
-#define test_streq(string1, string2) (strcmp (string1, string2) == 0)
+/* #define test_streq(string1, string2) (strcmp (string1, string2) == 0) */
 
 #define test_memeq(string1, string2, n) \
   (memcmp (string1, string2, n) == 0)
@@ -123,7 +92,7 @@ check_incremental_update (void)
   pdf_document *doc[3];
   pdf_obj *info;
   char *file;
-  char *subject = "check incremental update";
+  const char *subject = "check incremental update";
   int num;
 
   ctx = pdfout_new_context ();
@@ -172,7 +141,7 @@ check_incremental_update_xref (void)
   pdf_document *doc[3];
   pdf_obj *info;
   char *file;
-  char *subject = "check incremental update with xref";
+  const char *subject = "check incremental update with xref";
   int num;
 
   ctx = pdfout_new_context ();
@@ -215,7 +184,7 @@ static void
 check_string_conversions (void)
 {
   char *result;
-  int result_len, i;
+  size_t result_len, i;
 
   /* pdfdoc */
   {
@@ -224,7 +193,7 @@ check_string_conversions (void)
     
     for (i = 0; i < 256; ++i)
       string[i] = i;
-    result = pdfout_text_string_to_utf8 (string, 256, &result_len);
+    result = pdfout_str_to_utf8 (string, 256, &result_len);
     test_assert (result_len == sizeof expected - 1);
     test_assert (test_memeq (result, expected, sizeof expected));
     free (result);
@@ -235,7 +204,7 @@ check_string_conversions (void)
   {
     char string[] = "\xfe\xff\0a\0b\0c";
     char expected[] = "abc";
-    result = pdfout_text_string_to_utf8 (string, sizeof string - 1,
+    result = pdfout_str_to_utf8 (string, sizeof string - 1,
 					 &result_len);
     test_assert (test_memeq (result, expected, sizeof expected));
     free (result);
@@ -244,10 +213,9 @@ check_string_conversions (void)
   /* utf8 to utf16 */
 
   {
-    char string[] = "amhello's configure.ac Setup Explained";
-    char expected[] = "\xfe\xff\x00\x61\x00\x6d\x00\x68\x00\x65\x00\x6c\x00\x6c\x00\x6f\x00\x27\x00\x73\x00\x20\x00\x63\x00\x6f\x00\x6e\x00\x66\x00\x69\x00\x67\x00\x75\x00\x72\x00\x65\x00\x2e\x00\x61\x00\x63\x00\x20\x00\x53\x00\x65\x00\x74\x00\x75\x00\x70\x00\x20\x00\x45\x00\x78\x00\x70\x00\x6c\x00\x61\x00\x69\x00\x6e\x00\x65\x00\x64";
-    pdfout_text_string_mode = PDFOUT_TEXT_STRING_UTF16;
-    result = pdfout_utf8_to_text_string (string, strlen (string), &result_len);
+    char string[] = "αβγ";
+    char expected[] = "\xfe\xff" "\x03\xb1" "\x03\xb2" "\x03\xb3";
+    result = pdfout_utf8_to_str (string, strlen (string), &result_len);
     test_assert (result_len == sizeof expected - 1);
     test_assert (test_memeq (result, expected, sizeof expected - 1));
     free (result);
@@ -256,12 +224,54 @@ check_string_conversions (void)
   exit (0);
 }
 
-static void
-check_pdfdoc_encoding_fail (void)
+static void check_regex (void)
 {
-  char string[] = "\xce\xb1";		/* U+03B1 GREEK SMALL LETTER ALPHA */
-  int result_len;
-  pdfout_text_string_mode = PDFOUT_TEXT_STRING_PDFDOC_ERROR;
-  /* this should make the program die.  */
-  pdfout_utf8_to_text_string (string, sizeof string - 1, &result_len);
+  {
+    struct pdfout_re_pattern_buffer *
+      buff = XZALLOC (struct pdfout_re_pattern_buffer);
+    const char *pattern = "ab";
+    const char *string = "aaaab";
+    int len = strlen (string);
+    const char * error_string =
+      pdfout_re_compile_pattern (pattern, strlen (pattern),
+				 RE_SYNTAX_EGREP, 0, buff);
+    if (error_string)
+      error (1, errno, "pdfout_re_compile_pattern: %s", error_string);
+
+    test_assert (pdfout_re_search (buff, string, len, 0, len) == 3);
+    test_assert (buff->start - string == 3);
+    test_assert (buff->end - string == 5);
+    
+    pdfout_re_free (buff);
+  }
+  exit (0);
+}
+
+static error_t
+parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
+{
+  switch (key)
+    {
+    case INCREMENTAL_UPDATE: check_incremental_update (); break;
+    case INCREMENTAL_UPDATE_XREF: check_incremental_update_xref (); break;
+    case STRING_CONVERSIONS: check_string_conversions (); break;
+    case REGEX: check_regex (); break;
+      
+    default:
+      return ARGP_ERR_UNKNOWN;
+    }
+  return 0;
+}
+
+static struct argp_child children[] = {
+  {&pdfout_general_argp, 0, NULL, 0},
+  {0}
+};
+
+static struct argp argp = { options, parse_opt, usage, doc, children };
+
+void
+pdfout_command_debug (int argc, char **argv)
+{
+  pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 }

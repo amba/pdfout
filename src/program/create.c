@@ -18,12 +18,12 @@
 #include "common.h"
 #include "shared.h"
 
-static char usage[] = "[-o OUTPUT_PDF]";
-static char doc[] = "Create empty PDF file\n"
+static char usage[] = " > file.pdf";
+static char doc[] = "Create empty PDF file.\n"
+  "Redirect to a plain file to get a valid PDF."
   "Paper size defaults to A4\n";
 
 static struct argp_option options[] = {
-  {"output", 'o', "FILE", 0, "Write output to FILE (default: stdout)"},
   {"pages", 'p', "NUM", 0, "Create NUM pages (default: 1)"},
   {"paper-size", 's', "SIZE", 0, "use one of the following paper sizes:"},
   {"ISO 216: A0, A1, ..., A10, B0, ..., B10", 0, 0, OPTION_DOC, 0, 2},
@@ -40,20 +40,19 @@ static struct argp_option options[] = {
   {0}
 };
 
-static char *output_filename;
 static int page_count = 1;
 static float height, width;
 
-static void get_size (struct argp_state *state, char *paper_size,
+static void get_size (struct argp_state *state, const char *paper_size,
 		      float *width, float *height);
+
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  static char *paper_size;
+  static const char *paper_size;
   static bool landscape;
   switch (key)
     {
-    case 'o': output_filename = arg; break;
     case 's': paper_size = arg; break;
     case 'l': landscape = true; break;
       
@@ -85,7 +84,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 		    " or options 'height' and 'width'");
 
       if (height == 0 && paper_size == NULL)
-	/* set default */
+	/* Set to default.  */
 	paper_size = "A4";
       
       if (paper_size)
@@ -121,6 +120,7 @@ pdfout_command_create (int argc, char **argv)
 {
   fz_context *ctx;
   pdf_document *doc;
+  const char *output_filename = "/dev/stdout";
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
@@ -129,9 +129,6 @@ pdfout_command_create (int argc, char **argv)
 
   add_pages (ctx, doc, page_count);
 
-  if (output_filename == NULL)
-    output_filename = "/dev/stdout";
-  
   pdfout_write_document (ctx, doc, NULL, output_filename);
 
   exit (0);
@@ -184,10 +181,10 @@ static void get_ansi_paper_size (float width_in, float height_in,
 #define DIE(state, size) argp_error (state, "unknown paper size '%s'", size)
 
 static void
-get_size (struct argp_state *state, char *paper_size, float *width,
+get_size (struct argp_state *state, const char *paper_size, float *width,
 	  float *height)
 {
-  char *upcased = pdfout_upcase_ascii (paper_size);
+  char *upcased = upcase (xstrdup (paper_size));
 
   /* ISO 216 / 269 */
 

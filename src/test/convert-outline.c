@@ -23,7 +23,7 @@
 int
 main (int argc, char **argv)
 {
-  test_init ("convert-outline");
+  test_init ();
 
   {
     char *outline_yaml = test_tempname ();

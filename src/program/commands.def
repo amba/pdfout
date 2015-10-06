@@ -70,9 +70,21 @@ DEF_COMMAND ("repair",
 	     "Repair broken files"
 	     )
 
+DEF_COMMAND ("grep",
+	     REGULAR,
+	     pdfout_command_grep,
+	     "search text for patterns"
+	     )
+
 DEF_COMMAND ("debug",
 	     DEBUG,
 	     pdfout_command_debug,
+	     ""
+	     )
+
+DEF_COMMAND ("page_labels_test",
+	     DEBUG,
+	     pdfout_command_page_labels_test,
 	     ""
 	     )
 

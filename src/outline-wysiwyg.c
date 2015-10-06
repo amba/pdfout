@@ -18,11 +18,11 @@
 #include "common.h"
 
 #include "outline-wysiwyg.h"
+#include "pdfout-regex.h"
 
 #include <errno.h>
 #include <xmemdup0.h>
 #include <xalloc.h>
-#include <regex.h>
 #include <unistr.h>
 #include <limits.h>
 
@@ -50,7 +50,7 @@ get_line_table (line_entry_t *line_table, FILE *infile)
   char *line = NULL;
   size_t line_len = 0;
   size_t line_table_length = 1;
-  int i;
+  size_t i;
   ssize_t read;
 
   *line_table = XNMALLOC (line_table_length, struct line_entry);
@@ -85,20 +85,9 @@ get_line_table (line_entry_t *line_table, FILE *infile)
   return i;
 }
 
-/* We use posix Extended Regular Expressions as defined in
-   <pubs.opengroup.org/onlinepubs/9699919799/>.
+static struct pdfout_re_pattern_buffer *pattern_buffer[2];
 
-   The used GNU API is documented in
-   <www.gnu.org/software/gnulib/manual/gnulib.html#GNU-Regex-Functions>.
-*/
-
-
-static struct re_pattern_buffer *pattern_buffer[2];
-
-/* use one reg for each pattern to soothe Memcheck */
-static struct re_registers *regs[2];
-
-void
+static void
 setup_regexps (void)
 {
 #define BLANK "[ \t]"
@@ -106,7 +95,7 @@ setup_regexps (void)
 #define NUMBER "(-?[0-9]+)"
   int i;
   const char *error_string;
-  char *regex[2] = {
+  const char *regex[2] = {
     SEPARATOR "+"  NUMBER  BLANK "*" "$",
     "d=" NUMBER BLANK "*" "$"  /* offset number */
   };
@@ -115,21 +104,16 @@ setup_regexps (void)
     /* already setup */
     return;
 
-  re_set_syntax (RE_SYNTAX_POSIX_EXTENDED);
-  
   for (i = 0; i < 2; ++i)
     {
-      pattern_buffer[i] = XZALLOC (struct re_pattern_buffer);
-      error_string = re_compile_pattern (regex[i], strlen (regex[i]),
-					 pattern_buffer[i]);
+      pattern_buffer[i] = XZALLOC (struct pdfout_re_pattern_buffer);
+      error_string =
+	pdfout_re_compile_pattern (regex[i], strlen (regex[i]),
+				   RE_SYNTAX_POSIX_EXTENDED,
+				   0, pattern_buffer[i]);
       if (error_string)
 	error (1, errno, "setup outline-wysiwyg regex: %s", error_string);
-
-      regs[i] = XZALLOC (struct re_registers);
-
     }
-  
-  pattern_buffer[0]->fastmap = xcharalloc (256);
 }
 
 #define MSG(fmt, args...) pdfout_msg ("parsing WYSIWYG format: " fmt, ## args)
@@ -156,6 +140,7 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
       check = (char *) u8_check ((const uint8_t *) line, len);
       if (check)
 	{
+	  /* FIXME!: use proper pointer format specifier, not %lu.  */
 	  MSG ("invalid UTF-8 sequence in input line %d at column %lu", i + 1,
 	       check - line);
 	  return 1;
@@ -174,8 +159,8 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
       if (blanks == len)
 	continue;
       
-      error_code = re_search (pattern_buffer[0], line, len, indent, len,
-			      regs[0]);
+      error_code = pdfout_re_search (pattern_buffer[0], line, len, indent,
+				     len);
 
       if (error_code == -2)
 	/* internal error */
@@ -184,8 +169,7 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
       else if (error_code == -1)
 	{
 	  /* no match. check for page offset marker */
-	  error_code = re_match (pattern_buffer[1], line ,len, blanks,
-				 regs[1]);
+	  error_code = pdfout_re_match (pattern_buffer[1], line ,len, blanks);
 	  if (error_code == -2)
 	    /* internal error */
 	    error (1, errno, "re_match");
@@ -195,7 +179,8 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
 	      return 1;
 	    }
 	  /* match */
-	  offset = pdfout_strtoint (line + regs[1]->start[1], NULL);
+	  offset = pdfout_strtoint (line + pattern_buffer[1]->regs.start[1],
+				    NULL);
 	  if (offset > INT_MAX / 10 || offset < INT_MIN / 10)
 	    {
 	      MSG ("overflow in input line %d:\n%s", i + 1, line);
@@ -216,11 +201,11 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
 	  return 1;
 	}
 
-      bm->title_len = regs[0]->start[0] - indent;
+      bm->title_len = pattern_buffer[0]->regs.start[0] - indent;
 	  
       bm->title = xmemdup0 (line + indent, bm->title_len);
 
-      page = pdfout_strtoint (line + regs[0]->start[1], NULL);
+      page = pdfout_strtoint (line + pattern_buffer[0]->regs.start[1], NULL);
       if (page > INT_MAX / 10 || page < INT_MIN / 10)
 	{
 	  MSG ("overflow in input line %d:\n%s", i + 1, line);

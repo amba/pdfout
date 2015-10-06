@@ -16,10 +16,13 @@
 
 
 /* before inclusion, define:
-   COMMAND, e.g. "outline" or "outline", "-fw"
-   INPUT, e.g. outline10.yaml
-   EXPECTED e.g. "outline10.wysiwyg.expected" (optional)
-   BROKEN_INPUT comma-separated list of broken input files
+   COMMAND
+   INPUT
+   EXPECTED
+   BROKEN_INPUT
+   BROKEN_FILE
+   BROKEN_EXPECTED
+   REALLY_BROKEN_FILE
 */
 
 #ifndef COMMAND
@@ -34,15 +37,31 @@
 # define EXPECTED INPUT
 #endif
 
-/* compare after set and get */
+#ifndef BROKEN_INPUT
+# error BROKEN_INPUT undefined
+#endif
+
+#ifndef BROKEN_FILE
+# error BROKEN_FILE undefined
+#endif
+
+#ifndef BROKEN_EXPECTED
+# error BROKEN_EXPECTED undefined
+#endif
+
+#ifndef REALLY_BROKEN_FILE
+# error REALLY_BROKEN_FILE undefined
+#endif
+
+/* Compare after set and get.  */
 {
   char *pdf = test_new_pdf ();
   
-  test_pdfout (INPUT, NULL, "set" COMMAND, pdf);
-  test_pdfout (NULL, EXPECTED, "get" COMMAND, pdf);
+  test_pdfout (INPUT, 0, "set" COMMAND, pdf);
+  test_pdfout (0, EXPECTED, "get" COMMAND, pdf);
 }
 
-/* remove */
+/* Remove.  */
 {
   char *pdf = test_new_pdf ();
 
@@ -51,27 +70,30 @@
   test_pdfout_status (1, 0, 0, "get" COMMAND, pdf);
 }
 
-/* return value for getCOMMAND is 1 for empty pdf */
+/* Return value for getCOMMAND is 1 for empty pdf.  */
 {
   char *pdf = test_new_pdf ();
   test_pdfout_status (1, 0, 0, "get" COMMAND, pdf);
 }
 
-/* exit status is EX_DATAERR for all broken input files */
+/* Exit status is EX_DATAERR for BROKEN_INPUT.  */
 {
-  const char *broken_input_files[] = {
-    BROKEN_INPUT,
-    NULL
-  };
     
   char *pdf = test_new_pdf ();
-  const char **input_ptr;
-  for (input_ptr = broken_input_files; *input_ptr; ++input_ptr)
-    {
-      test_pdfout_status (EX_DATAERR, *input_ptr, 0, "set" COMMAND, pdf);
-      
-      /* pdf is untouched */
-      test_files_equal (pdf, test_data ("empty10.pdf"));
-    }
+  test_pdfout_status (EX_DATAERR, BROKEN_INPUT, 0, "set" COMMAND, pdf);
+  
+  /* pdf is untouched.  */
+  test_files_equal (pdf, test_data ("empty10.pdf"));
 }
 
+/* Return value is 2 for BROKEN_FILE.  */
+{
+  char *pdf = test_data (BROKEN_FILE);
+  test_pdfout_status (2, 0, BROKEN_EXPECTED, "get" COMMAND, pdf);
+}
+
+/* Return value is 3 for REALLY_BROKEN_FILE.  */
+{
+  char *pdf = test_data (REALLY_BROKEN_FILE);
+  test_pdfout_status (3, 0, 0, "get" COMMAND, pdf);
+}

@@ -23,6 +23,7 @@ check-bin: $(check_PROGRAMS)
 TESTS = $(check_PROGRAMS)
 
 check_PROGRAMS= \
+grep \
 outline-yaml \
 outline-wysiwyg \
 convert-outline \
@@ -38,10 +39,13 @@ top-level
 
 EXTRA_DIST = \
 set-get-template.c \
+set-get-template2.c \
 valgrind.supp \
 data/empty10.pdf \
 data/broken.pdf \
 data/hello-world.pdf \
+page-labels-broken.pdf \
+page-labels-really-broken.pdf \
 data/outline-yaml.h \
 data/outline-wysiwyg.h \
 data/gettxt.h

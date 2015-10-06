@@ -16,17 +16,31 @@
 
 
 #include "shared.h"
-#include <ctype.h>
+#include <c-ctype.h>
+#include <argmatch.h>
 
 char *
-pdfout_upcase_ascii (const char *string)
+upcase (char *s)
 {
-  char *p, *result;
-  p = result = xstrdup (string);
-  for (; *p; ++p)
-    *p = toupper (*p);
-  
-  return result;
+  char *p;
+  for (p = s; *p; ++p)
+    *p = c_toupper (*p);
+  return s;
+}
+
+char *
+lowercase (char *s)
+{
+  char *p;
+  for (p = s; *p; ++p)
+    *p = c_tolower (*p);
+  return s;
+}
+
+ptrdiff_t
+argcasematch (char *arg, const char *const *valid)
+{
+  return argmatch (lowercase (arg), valid, NULL, 0);
 }
 
 /* general options */
@@ -38,7 +52,8 @@ static struct argp_option general_options[] = {
 };
 
 static error_t
-general_parse_opt (int key, char *arg, struct argp_state *state)
+general_parse_opt (int key, _GL_UNUSED char *arg,
+		   _GL_UNUSED struct argp_state *state)
 {
   switch (key)
     {
@@ -63,46 +78,15 @@ static struct argp_option pdf_output_options[] = {
   /* {"no-info", PDFOUT_NO_INFO, 0, 0, */
   /*  "do not update the 'Producer' key in the information dictionary."}, */
   /* {0, 0, 0, 0, "options controlling encoding:"}, */
-  {"utf16-text-strings", 'u', 0, 0, "only use UTF-16BE encoded text strings"},
-  {"pdfdoc-text-strings", 'd' , "QUESTION-MARK | ERROR (default)",
-   OPTION_ARG_OPTIONAL, "only use PDFDoc encoded strings"},
   {0}
 };
 
 static error_t
-pdf_output_parse_opt (int key, char *arg, struct argp_state *state)
+pdf_output_parse_opt (int key, _GL_UNUSED char *arg,
+		      _GL_UNUSED struct argp_state *state)
 {
   switch (key)
     {
-    case 'u': pdfout_text_string_mode = PDFOUT_TEXT_STRING_UTF16; break;
-    case 'd':
-      if (arg)
-	{
-	  const char *const supported[] = {"QUESTION-MARK", "ERROR", NULL};
-	  char *upcased = pdfout_upcase_ascii (arg);
-	  ptrdiff_t result = ARGMATCH (upcased, supported, NULL);
-	  free (upcased);
-	  
-	  if (result < 0)
-	    argp_error (state, "valid formats for --force-pdfdoc are:"
-			" QUESTION-MARK,ERROR");
-	  switch (result)
-	    {
-	    case 0:
-	      pdfout_text_string_mode =
-		PDFOUT_TEXT_STRING_PDFDOC_QUESTION_MARK;
-	      break;
-	    case 1:
-	      pdfout_text_string_mode = PDFOUT_TEXT_STRING_PDFDOC_ERROR;
-	      break;
-	    default:
-	      argp_error (state, "pdf_output_parse_opt internal error");
-	    }
-	}
-      else
-	pdfout_text_string_mode = PDFOUT_TEXT_STRING_PDFDOC_ERROR;
-      break;
-      
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -127,6 +111,11 @@ static struct argp_option yaml_emitter_options[] = {
   {0}
 };
 
+
+extern int yaml_emitter_indent;
+extern int yaml_emitter_line_width;
+extern bool yaml_emitter_escape_unicode;
+
 static error_t
 yaml_emitter_parse_opt (int key, char *arg, struct argp_state *state)
 {
@@ -136,15 +125,15 @@ yaml_emitter_parse_opt (int key, char *arg, struct argp_state *state)
     i = pdfout_strtoint_null (arg);
     if (i <= 1 || i >= 10)
       argp_error (state, "value of '--yaml-indent' must be in range 2-10");
-    pdfout_yaml_emitter_indent = i;
+    yaml_emitter_indent = i;
     break;
     
   case 'w':
-    pdfout_yaml_emitter_line_width = pdfout_strtoint_null (arg);
+    yaml_emitter_line_width = pdfout_strtoint_null (arg);
     break;
     
   case 'e':
-    pdfout_yaml_emitter_escape_unicode = 1;
+    yaml_emitter_escape_unicode = true;
     break;
     
   default:
@@ -162,9 +151,9 @@ pdfout_xfopen (const char *path, const char *mode)
   FILE *result = fopen (path, mode);
   if (result == NULL)
     {
-      char *mode_string = strcmp (mode, "r") == 0 ? "for reading" :
+      const char *mode_string = strcmp (mode, "r") == 0 ? "for reading" :
 	strcmp (mode, "w") == 0 ? "for writing" :
-	xasprintf ("(mode \"%s\")", mode);
+	xasprintf ("(mode '%s')", mode);
       pdfout_errno_msg (errno, "cannot open file '%s' %s", path, mode_string);
       exit (EX_USAGE);
     }
@@ -198,19 +187,19 @@ pdfout_new_context (void)
 }
 
 FILE *
-pdfout_get_stream (char **output_filename, char mode,
-		   char *pdf_filename,
-		   bool use_default_filename, char *suffix)
+pdfout_get_stream (char **filename, char mode,
+		   const char *pdf_filename,
+		   bool use_default_filename, const char *suffix)
 {
   FILE *result = NULL;
 
   assert (mode == 'w' || mode == 'r');
   
-  if (*output_filename == NULL)
+  if (*filename == NULL)
     {
       if (use_default_filename)
 	{
-	  *output_filename =
+	  *filename =
 	    pdfout_append_suffix (pdf_filename, suffix);
 	}
       else
@@ -223,14 +212,14 @@ pdfout_get_stream (char **output_filename, char mode,
     }
 
   if (result == NULL)
-    result = pdfout_xfopen (*output_filename, mode == 'w' ? "w" : "r");
+    result = pdfout_xfopen (*filename, mode == 'w' ? "w" : "r");
   
   return result;
 }
 
 
 
-static const char *const outline_format_list[] = {"YAML", "WYSIWYG", NULL};
+static const char *const outline_format_list[] = {"yaml", "wysiwyg", NULL};
 
 static void list_formats (FILE *stream)
 {
@@ -248,15 +237,11 @@ enum pdfout_outline_format
 pdfout_outline_get_format (struct argp_state *state, char *format)
 {
   ptrdiff_t result;
-  char *upcased = pdfout_upcase_ascii (format);
   
-  result = ARGMATCH (upcased, outline_format_list, NULL);
+  result = argcasematch (format, outline_format_list);
 
   if (result >= 0)
-    {
-      free (upcased);
-      return result;
-    }
+    return result;
   
   if (result == -1)
     fprintf (state->err_stream, "%s: unknown outline format: '%s'\n",

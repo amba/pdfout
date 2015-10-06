@@ -41,7 +41,7 @@
 
 
 static struct temp_dir *temp_dir = NULL;
-static char *srcdir;
+static const char *srcdir;
 
 /* register PATH in the temporary directory */
 static char *register_temp (char *path);
@@ -55,11 +55,12 @@ cleanup (void)
 
 
 void
-test_init (char *test_name)
+_test_init (const char *file_name)
 {
   char *pdfout_valgrind_env;
-  set_program_name (test_name);
+  char *program_name = base_name (file_name);
 
+  set_program_name (program_name); /* Never free program_name!  */
   srcdir = TEST_STRINGIFY (TEST_DATA_DIR);
   error (0, 0, "srcdir: %s", srcdir);
 
@@ -69,7 +70,7 @@ test_init (char *test_name)
 }
 
 static void
-init_tempdir ()
+init_tempdir (void)
 {
   if (temp_dir == NULL)
     {

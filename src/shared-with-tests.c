@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <error.h>
-
+#include <assert.h>
 #include <xalloc.h>
 #include <progname.h>
 
@@ -46,13 +46,15 @@ pdfout_append_suffix (const char *filename, const char *suffix)
   return result;
 }
 
-char *
+const char *
 pdfout_outline_suffix (enum pdfout_outline_format format)
 {
   switch (format)
     {
     case 0: return ".outline.yaml";
     case 1: return ".outline.wysiwyg";
+    default:
+      assert (0);
     }
   error (1, 0, "pdfout_outline_suffix: invalid format");
   return NULL;

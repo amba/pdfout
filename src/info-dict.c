@@ -103,7 +103,8 @@ pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
   yaml_node_pair_t pair;
   yaml_node_t *key, *value, *mapping;
   char *text_string, *key_string, *value_string;
-  int length, i, text_string_len;
+  int length, i;
+  size_t text_string_len;
 
   if (yaml_doc && check_yaml_infodict (yaml_doc))
     {
@@ -165,9 +166,10 @@ pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
       else
 	{
 	  /* reencode and create string object */
-	  text_string =
-	    pdfout_utf8_to_text_string (value_string, strlen (value_string),
-					&text_string_len);
+	  text_string = pdfout_utf8_to_str (value_string,
+					    strlen (value_string),
+					    &text_string_len);
+	  /* FIXME: check for INT_MAX.  */
 	  pdf_dict_puts_drop (ctx, info, key_string,
 			      pdf_new_string (ctx, doc, text_string,
 					      text_string_len));
@@ -199,7 +201,7 @@ get_info_dict (yaml_document_t *yaml_doc, fz_context *ctx, pdf_document *doc)
   for (i = 0; i < len; ++i)
     {
       pdf_obj *key, *val;
-      int value_string_len;
+      size_t value_string_len;
       char *name, *value_string;
       
       key = pdf_dict_get_key (ctx, info, i);
@@ -224,10 +226,10 @@ get_info_dict (yaml_document_t *yaml_doc, fz_context *ctx, pdf_document *doc)
 	      continue;
 	    }
 
-	  value_string =
-	    pdfout_text_string_to_utf8 (pdf_to_str_buf (ctx, val),
-					pdf_to_str_len (ctx, val),
-					&value_string_len);
+	  value_string = pdfout_str_to_utf8 (pdf_to_str_buf (ctx, val),
+					     pdf_to_str_len (ctx, val),
+					     &value_string_len);
+	  /* FIXME: check INT_MAX overflow.  */
 
 	  if (strcmp (name, "CreationDate") == 0
 	      || strcmp (name, "ModDate") == 0)

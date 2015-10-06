@@ -16,12 +16,16 @@ enum pdfout_outline_format {
 };
 
 /* returns statically allocated string */
-char *pdfout_outline_suffix (enum pdfout_outline_format);
+const char *pdfout_outline_suffix (enum pdfout_outline_format);
 
 /* Shall be used for all status messages.  */
-#define pdfout_msg(format, args...)			\
-  if (pdfout_batch_mode == 0)				\
-    error (0, 0, format, ## args);			\
+#define pdfout_msg(format, args...)		\
+  do						\
+    {						\
+      if (pdfout_batch_mode == 0)		\
+	error (0, 0, format, ## args);		\
+    }						\
+  while (0)
 
 #define pdfout_errno_msg(errno, format, args...)	\
   if (pdfout_batch_mode == 0) \

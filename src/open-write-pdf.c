@@ -21,7 +21,7 @@
 #include <copy-file.h>
 
 pdf_document *
-pdfout_pdf_open_document (fz_context *ctx, char *file)
+pdfout_pdf_open_document (fz_context *ctx, const char *file)
 {
   pdf_document *rv;
 
@@ -39,8 +39,8 @@ pdfout_pdf_open_document (fz_context *ctx, char *file)
 }
 
 void
-pdfout_write_document (fz_context *ctx, pdf_document *doc, char *pdf_filename,
-		       char *output_filename)
+pdfout_write_document (fz_context *ctx, pdf_document *doc,
+		       const char *pdf_filename, const char *output_filename)
 {
   fz_write_options opts = { 0 };
   char *write_filename;
@@ -54,7 +54,7 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc, char *pdf_filename,
 	  exit (EX_IOERR);
 	}
       opts.do_incremental = 1;
-      write_filename = pdf_filename;
+      write_filename = (char *) pdf_filename;
     }
   else
     {
@@ -68,7 +68,7 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc, char *pdf_filename,
 	  
 	}
       else
-	write_filename = output_filename;
+	write_filename = (char *) output_filename;
     }
 
   /* pdf_write_filename can throw exceptions, so wrap around it */

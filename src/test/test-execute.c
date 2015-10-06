@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <regex.h>
+#include <limits.h>
 
 #include <xalloc.h>
 #include <progname.h>
@@ -114,7 +115,7 @@ static pid_t spawn (char *argv[], int fds[2], bool read_from_child,
 }
 
 static char **
-va_list_to_argv (char *command, va_list ap)
+va_list_to_argv (const char *command, va_list ap)
 {
   va_list ap_copy;
   int arg_num, i;
@@ -130,15 +131,24 @@ va_list_to_argv (char *command, va_list ap)
 
   argv = XNMALLOC (arg_num + 2, char *);
 
-  argv[0] = command;
+  argv[0] = xstrdup (command);
   
   for (i = 0; i < arg_num; ++i)
-    argv[i + 1] = va_arg (ap, char *);
+    argv[i + 1] = xstrdup (va_arg (ap, char *));
   
   argv[arg_num + 1] = NULL;
   va_end (ap);
   
   return argv;
+}
+
+static void
+argv_free (char **argv)
+{
+  char **p;
+  for (p = argv; *p; ++p)
+    free (*p);
+  free (argv);
 }
 
 /* returns child's exit status */
@@ -163,7 +173,7 @@ lsystem (char *argv[])
   return wait_child (pid);
 }
 
-static void print_header (char *source_file, int line_number)
+static void print_header (const char *source_file, int line_number)
 {
   char *source_file_base = base_name (source_file);
   fprintf (stderr, "------------------------------------------------------------------------------\n");
@@ -196,12 +206,11 @@ static int xopen (const char *file, int mode)
 static int fd_to_buffer (char buffer[IO_SIZE], int fd)
 {
   size_t count;
-
+  
+  errno = 0;
   count = full_read (fd, buffer, IO_SIZE);
-
   if (count == IO_SIZE)
     error (99, 0, "fd_to_buffer: result does not fit into buffer");
-
   if (errno)
     error (99, errno, "fd_to_buffer: read error");
   
@@ -253,7 +262,7 @@ pattern_search (const char *buffer, size_t buffer_len,
   
 }
 
-/* fails if the pipe's output excceedes IO_SIZE bytes */
+/* Fails if the pipe's output excceedes IO_SIZE bytes.  */
 static void
 pipe_output_matches_string (int pipe_fd, const char *expected,
 			    enum test_search_mode mode)
@@ -271,7 +280,7 @@ pipe_output_matches_string (int pipe_fd, const char *expected,
   
   counts[1] = strlen (expected);
   
-  /* compare */
+  /* Compare buffers.  */
 
   switch (mode)
     {
@@ -282,7 +291,7 @@ pipe_output_matches_string (int pipe_fd, const char *expected,
       
       error (0, 0, "not equal, running diff:");
 
-      /* write both buffers to files and run diff */
+      /* Write both buffers to files and run diff.  */
       for (i = 0; i < 2; ++i)
 	{
 	  int fd;
@@ -292,9 +301,10 @@ pipe_output_matches_string (int pipe_fd, const char *expected,
 	  xclose (fd);
 	}
 
-      char *argv[] = {"diff", files[0], files[1], NULL};
+      char *argv[] = {xstrdup ("diff"), xstrdup ("-C3"), files[0],
+		      files[1], NULL};
       if (lsystem (argv) == 0)
-	/* should never happen */
+	/* Should never happen.  */
 	error (99, 0, "diff returned 0 for different files");
       exit (1);
       
@@ -319,9 +329,9 @@ pipe_output_matches_string (int pipe_fd, const char *expected,
 }
   
 void
-_test_command (char *source_file, int source_line, int expected_status,
+_test_command (const char *source_file, int source_line, int expected_status,
 	       const char *input, const char *expected,
-	       enum test_search_mode mode, char *command, ...)
+	       enum test_search_mode mode, const char *command, ...)
 {
   va_list ap;
   char **argv;
@@ -334,10 +344,14 @@ _test_command (char *source_file, int source_line, int expected_status,
   argv = va_list_to_argv (command, ap);
 
   pid = spawn (argv, pipe_fds, expected != NULL, input != NULL);
-
+  
   if (input)
     {
-      buffer_to_fd (pipe_fds[1], input, strlen (input));
+      size_t len = strlen (input);
+      if (len > PIPE_BUF)
+	/* Avoid deadlock.  */
+	error (1, 0, "_test_command: input exceeds PIPE_BUF");
+      buffer_to_fd (pipe_fds[1], input, len);
       xclose (pipe_fds[1]);
     }
   
@@ -363,7 +377,7 @@ _test_command (char *source_file, int source_line, int expected_status,
     }
   
   /* cleanup */
-  free (argv);
+  argv_free (argv);
 }
 	       			   
 static int
@@ -382,7 +396,7 @@ file_fds_ok (int fds[2])
       for (i = 0; i < 2; ++i)
 	{
 	  count[i] = full_read (fds[i], buffers[i], IO_SIZE);
-	  if (count[i] < IO_SIZE && errno)
+	  if (count[i] < (size_t) IO_SIZE && errno)
 	    error (99, errno, "error in full_read");
 	}
       
@@ -443,7 +457,8 @@ test_files_equal (const char *file1, const char *file2)
   if (files_equal (file1, file2))
     {
       /* files differ. run diff to show the problem */
-      char *argv[] = {"diff", (char *) file1, (char *) file2, NULL};
+      char *argv[] = {xstrdup ("diff"), xstrdup (file1),
+		      xstrdup (file2), NULL};
       if (lsystem (argv) == 1)
 	exit (1);
       else

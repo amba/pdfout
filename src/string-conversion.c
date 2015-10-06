@@ -18,20 +18,18 @@
 #include "common.h"
 
 #include <unistr.h>
-
-enum pdfout_text_string_mode
-pdfout_text_string_mode = PDFOUT_TEXT_STRING_DEFAULT;
+#include <exitfail.h>
 
 static char *pdfdoc_to_utf8 (enum iconv_ilseq_handler handler, const char *src,
 			     size_t srclen, size_t *lengthp);
   
 char *
-pdfout_text_string_to_utf8 (char *inbuf, int inbuf_len, int *outbuf_len)
+pdfout_str_to_utf8 (const char *inbuf, size_t inbuf_len,
+		    size_t *outbuf_len)
 {
   assert (inbuf);
   char *utf8;
-  size_t utf8_len;
-  char *from;
+  const char *from;
 
   if (inbuf_len >= 2
       && (memcmp (inbuf, "\xfe\xff", 2) == 0
@@ -40,99 +38,71 @@ pdfout_text_string_to_utf8 (char *inbuf, int inbuf_len, int *outbuf_len)
       from = "UTF-16";
       utf8 = (char *) u8_conv_from_encoding (from, iconveh_question_mark,
 					     inbuf, inbuf_len, NULL, NULL,
-					     &utf8_len);
+					     outbuf_len);
     }
   else
     {
       from = "PDFDOC";
       utf8 = pdfdoc_to_utf8 (iconveh_question_mark, inbuf,
-			     inbuf_len, &utf8_len);
+			     inbuf_len, outbuf_len);
     }
-
-   
+  
   if (utf8 == NULL)
     error (1, errno, "conversion from %s to UTF-8 failed", from);
-  if (utf8_len > INT_MAX)
-    error (1, 0, "overflow in pdfout_text_string_to_utf8");
-
-  utf8 = xrealloc (utf8, utf8_len + 1);
-  utf8[utf8_len] = '\0';
-
-  *outbuf_len = utf8_len;
+  
+  utf8 = xrealloc (utf8, *outbuf_len + 1);
+  utf8[*outbuf_len] = '\0';
+  
   return utf8;
 }
 
-static char *utf8_to_pdfdoc (enum iconv_ilseq_handler handler, char *inbuf,
-			     size_t inbuf_len, size_t *outbuf_len);
-static char *utf8_to_utf16be (enum iconv_ilseq_handler handler, char *inbuf,
-			      size_t inbuf_len, size_t *outbuf_len);
+static char *utf8_to_pdfdoc (enum iconv_ilseq_handler handler,
+			     const char *inbuf, size_t inbuf_len,
+			     size_t *outbuf_len);
+static char *utf8_to_utf16be (enum iconv_ilseq_handler handler,
+			      const char *inbuf, size_t inbuf_len,
+			      size_t *outbuf_len);
 char *
-pdfout_utf8_to_text_string (char *inbuf, int inbuf_len, int *outbuf_len)
+pdfout_utf8_to_str (const char *inbuf, size_t inbuf_len,
+		    size_t *outbuf_len)
 {
+  /* First try pdfdoc encoding. If that fails, use UTF-16BE.  */
   char *result;
-  size_t result_len;
-  enum pdfout_text_string_mode mode = pdfout_text_string_mode;
-  
-  if (mode != PDFOUT_TEXT_STRING_UTF16)
-    {
-      enum iconv_ilseq_handler handler = iconveh_error;
-      
-      if (mode == PDFOUT_TEXT_STRING_PDFDOC_QUESTION_MARK)
-	handler = iconveh_question_mark;
-      
-      result = utf8_to_pdfdoc (handler, inbuf, inbuf_len, &result_len);
-  
-      if (result)
-	goto check_overflow;
-      else if (mode == PDFOUT_TEXT_STRING_PDFDOC_ERROR)
-	{
-	  pdfout_msg ("string '%s' cannot be converted to PDFDocEncoding",
-		      inbuf);
-	  exit (1);
-	}
-    }
+  result = utf8_to_pdfdoc (iconveh_error, inbuf, inbuf_len, outbuf_len);
+  if (result)
+    return result;
   
   /* The error handler should not matter, since libyaml and our wysiwyg parser
      already caught invalid UTF-8  */
-  
-  result = utf8_to_utf16be (iconveh_error, inbuf, inbuf_len, &result_len);
+  result = utf8_to_utf16be (iconveh_error, inbuf, inbuf_len, outbuf_len);
 
   if (result == NULL)
-    error (1, errno, "conversion from UTF8 to UTF-16BE failed for string '%s'",
+    error (99, errno,
+	   "conversion from UTF8 to UTF-16BE failed for string '%s'",
 	   inbuf);
-  
- check_overflow:
-  if (result_len > INT_MAX)
-    error (1, 0, "overflow in pdfout_utf8_to_text_string");
-
-  *outbuf_len = result_len;
   
   return result;
 }
 
 static char *
-utf8_to_utf16be (enum iconv_ilseq_handler handler, char *inbuf,
+utf8_to_utf16be (enum iconv_ilseq_handler handler, const char *inbuf,
 		 size_t inbuf_len, size_t *outbuf_len)
 {
-  size_t utf8_len = 3 + inbuf_len;
-  uint8_t *utf8 = xmalloc (utf8_len);
   char *outbuf;
   assert (inbuf);
-
-  /* UTF-8 BOM, will get translated into "\xfe\xff" */
-  utf8[0] = 0xef;
-  utf8[1] = 0xbb;
-  utf8[2] = 0xbf;
   
-  memcpy (&utf8[3], inbuf, inbuf_len);
-  
-  outbuf = u8_conv_to_encoding ("UTF-16BE", handler, utf8,
-				utf8_len, NULL, NULL, outbuf_len);
+  outbuf = u8_conv_to_encoding ("UTF-16BE", handler, (const uint8_t *) inbuf,
+				inbuf_len, NULL, NULL, outbuf_len);
   if (outbuf == NULL)
-    error (1, errno, "conversion from UTF-8 to UTF-16BE failed for string:"
-	   " '%s'", inbuf);
+    error (99, errno,
+	   "conversion from UTF-8 to UTF-16BE failed for string: '%s'", inbuf);
   
-  free (utf8);
+  /* Add UTF-16BE BOM.  */
+  outbuf = xrealloc (outbuf, *outbuf_len + 2);
+  memmove (outbuf + 2, outbuf, *outbuf_len);
+  *outbuf_len += 2;
+  outbuf[0] = '\xfe';
+  outbuf[1] = '\xff';
   return outbuf;
 }
 
@@ -140,7 +110,7 @@ static char *utf32_to_pdfdoc (enum iconv_ilseq_handler handler,
 			      const uint32_t *src, size_t srclen,
 			      size_t *lengthp);
 static char *
-utf8_to_pdfdoc (enum iconv_ilseq_handler handler, char *inbuf,
+utf8_to_pdfdoc (enum iconv_ilseq_handler handler, const char *inbuf,
 		size_t inbuf_len, size_t *outbuf_len)
 {
   char *outbuf;
@@ -160,8 +130,6 @@ utf8_to_pdfdoc (enum iconv_ilseq_handler handler, char *inbuf,
   return outbuf;
 }
 
-#define MSG(format, args...)					\
-  pdfout_msg ("pdfdoc to utf8 conversion: " format, ## args)
 
 static uint32_t *pdfdoc_to_utf32 (enum iconv_ilseq_handler handler,
 				  const char *src, size_t srclen,

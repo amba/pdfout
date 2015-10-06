@@ -37,10 +37,10 @@ enum test_search_mode {
 /* run COMMAND in a pipe. write string INPUT to the child's stdin and compare
    the child's stdout with string EXPECTED.
    compare child's exit status with EXPECTED_STATUS. */
-void _test_command (char *source_file, int source_line, int expected_status,
-		    const char *input, const char *expected,
-		    enum test_search_mode mode,
-		    char *command, ...);
+void _test_command (const char *source_file, int source_line,
+		    int expected_status, const char *input,
+		    const char *expected, enum test_search_mode mode,
+		    const char *command, ...);
 #define _test_pdfout_status(status, input, expected, search_mode, args...) \
   do									\
     {									\

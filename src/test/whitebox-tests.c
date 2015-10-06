@@ -23,9 +23,7 @@
 int
 main (int argc, char **argv)
 {
-  test_init ("whitebox");
-
-  test_pdfout_status (1, 0, 0, "debug", "--pdfdoc-encoding-fail");
+  test_init ();
 
   test_pdfout (0, 0, "debug", "--incremental-update");
 
@@ -33,6 +31,8 @@ main (int argc, char **argv)
 
   test_pdfout (0, 0, "debug", "--string-conversions");
 
+  test_pdfout (0, 0, "debug", "--regex");
+  
   test_assert (test_streq (pdfout_append_suffix ("abc", ".yaml"), "abc.yaml"));
   
   return 0;

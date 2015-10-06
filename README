@@ -1,5 +1,5 @@
 * pdfout
-Fast PDF modification and analysis tool based on the [[http://mupdf.com/][mupdf library]] and the [[http://yaml.org/][YAML data serialization standard]].
+Fast PDF modification and analysis tool based on the [[http://mupdf.com/][MuPDF library]] and the [[http://yaml.org/][YAML data serialization standard]].
 
 pdfout can
  - dump and modify outlines, page labels, keys of the information dictionary
@@ -50,7 +50,7 @@ Copyright (C) 2015 Simon Reinhardt
 *** Used Libraries
 | Library    | Copyright Owner | License                 |
 |------------+-----------------+-------------------------|
-| mupdf      | Artifex Inc.    | AGPL Version 3 or later |
+| MuPDF      | Artifex Inc.    | AGPL Version 3 or later |
 | GNU Gnulib | FSF             | GPL Version 3 or later  |
 | libyaml    | Kirill Simonov  | X11                     |
 

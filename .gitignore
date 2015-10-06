@@ -19,3 +19,4 @@ Makefile.in
 /ar-lib
 /build-aux/compile
 /gl/
+/gl-tests

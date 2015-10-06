@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "outline-wysiwyg.h"
+#include "libyaml-wrappers.h"
 
 static int fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
 			       yaml_document_t *doc, int sequence);
@@ -148,7 +149,8 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
   pdf_obj *dict, *value, *page_ref, *dest, *Kids_First, *Kids_Last,
     **ref_table, **dict_table;
   yaml_node_t *node;
-  int i, length, title_len, page, Count, mapping, kids;
+  int i, length, page, Count, mapping, kids;
+  size_t title_len;
   char *title;
   length = pdfout_sequence_length (yaml_doc, sequence);
   assert (length > 0);
@@ -173,9 +175,8 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
       node = pdfout_mapping_gets_node (yaml_doc, mapping, "title");
       assert (node && node->type == YAML_SCALAR_NODE
 	      && pdfout_scalar_value (node));
-      title =
-	pdfout_utf8_to_text_string (pdfout_scalar_value (node),
-				    node->data.scalar.length, &title_len);
+      title = pdfout_utf8_to_str (pdfout_scalar_value (node),
+				  node->data.scalar.length, &title_len);
       value = pdf_new_string (ctx, doc, title, title_len);
       free (title);
       pdf_dict_puts_drop (ctx, dict, "Title", value);
@@ -687,7 +688,7 @@ pdfout_outline_get (yaml_document_t **yaml_doc_ptr, fz_context *ctx,
       pdfout_yaml_document_initialize (yaml_doc, NULL, NULL, NULL, 1, 1);
   
       root = fz_outline_to_yaml (ctx, outline, yaml_doc, 0);
-  
+      
       if (pdfout_sequence_length (yaml_doc, root) == 0)
 	{
 	  if (pdfout_batch_mode == 0)

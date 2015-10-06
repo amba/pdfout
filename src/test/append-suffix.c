@@ -22,7 +22,7 @@
 int
 main (int argc, char **argv)
 {
-  test_init ("default-filename");
+  test_init ();
   test_assert
     (test_streq (pdfout_append_suffix ("abc", ".yaml"), "abc.yaml"));
   

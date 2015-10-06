@@ -21,7 +21,7 @@
 /* FIXME: replace pdfout_float_sequence with pdfout_yaml_fz_rect_to_? ? */
 /* FIXME: use open_memstream */
 static void put_char (fz_context *ctx, char c, char **textbuf,
-		      size_t *textbuf_len, int *textbuf_pos);
+		      size_t *textbuf_len, size_t *textbuf_pos);
 
 void
 pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
@@ -30,7 +30,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   yaml_document_t yaml_doc;
   yaml_document_t *doc = &yaml_doc;
   char buffer[256];
-  fz_page *page = fz_load_page (ctx, &pdf_doc->super, page_number - 1);
+  fz_page *page = fz_load_page (ctx, &pdf_doc->super, page_number);
   fz_text_sheet *text_sheet = fz_new_text_sheet (ctx);
   fz_text_page *text_page = fz_new_text_page (ctx);
   fz_device *dev = fz_new_text_device (ctx, text_sheet, text_page);
@@ -40,7 +40,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   int value, mapping, block_n, lines;
   size_t textbuf_len = 1;	/* initial length */
   char *textbuf = xmalloc (textbuf_len);
-  int textbuf_pos;
+  size_t textbuf_pos;
 
   ((pdf_page *) page)->ctm = fz_identity;
 
@@ -51,7 +51,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 
   mapping = pdfout_yaml_document_add_mapping (doc, NULL, 0);
 
-  pdfout_snprintf (buffer, sizeof buffer, "%d", page_number);
+  pdfout_snprintf (buffer, sizeof buffer, "%d", page_number + 1);
   pdfout_mapping_push (doc, mapping, "page", buffer);
 
   mbox = ((pdf_page *) page)->mediabox;
@@ -152,6 +152,8 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 	  }
 	case FZ_PAGE_BLOCK_IMAGE:
 	  break;
+	default:
+	  assert (0);
 	}
     }
   pdfout_yaml_emitter_dump (emitter, doc);
@@ -167,7 +169,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 /* FIXME: use size_t for textbuf_pos */
 static void
 put_char (fz_context *ctx, char c, char **textbuf, size_t *textbuf_len,
-	  int *textbuf_pos)
+	  size_t *textbuf_pos)
 {
   if (*textbuf_pos + 2 > *textbuf_len)
     *textbuf = x2nrealloc (*textbuf, textbuf_len, 1);
@@ -179,8 +181,6 @@ put_char (fz_context *ctx, char c, char **textbuf, size_t *textbuf_len,
 static void process_block (FILE *memstream, fz_text_block *block)
 {
   fz_text_line *line;
-  fz_text_char *ch;
-  char utf[4];
 
   for (line = block->lines; line - block->lines < block->len;
        line++)
@@ -188,10 +188,21 @@ static void process_block (FILE *memstream, fz_text_block *block)
       fz_text_span *span;
       for (span = line->first_span; span; span = span->next)
 	{
+	  fz_text_char *ch;
+	    
 	  if (span != line->first_span)
 	      putc (' ', memstream);
 	  for (ch = span->text; ch < span->text + span->len; ch++)
-	    fwrite (utf, fz_runetochar (utf, ch->c), 1, memstream);
+	    {
+	      char utf[4];
+	      int len = fz_runetochar (utf, ch->c);
+	      if (utf[0] == '\0')
+		{
+		  pdfout_msg ("process_block: skipping null character");
+		  continue;
+		}
+	      fwrite (utf, len, 1, memstream);
+	    }
 	}
       putc ('\n', memstream);
     }
@@ -207,7 +218,7 @@ pdfout_text_get_page (FILE *stream, fz_context *ctx,
   fz_device *dev;
   fz_page_block *block;
 
-  page = fz_load_page (ctx, &doc->super, page_number - 1);
+  page = fz_load_page (ctx, &doc->super, page_number);
   ((pdf_page *) page)->ctm = fz_identity;
   
   text_sheet = fz_new_text_sheet (ctx);

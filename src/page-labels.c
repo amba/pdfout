@@ -13,350 +13,319 @@
    
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "common.h"
+#include "page-labels.h"
+#include <c-ctype.h>
 
-#define MSG(fmt, args...) pdfout_msg ("check page labels: " fmt, ## args)
-
-/* returns non-zero if page labels in YAML_DOC are invalid */
-static int
-check_page_labels (fz_context *ctx, pdf_document *doc,
-		   yaml_document_t *yaml_doc)
-{
-  yaml_node_t *sequence, *mapping, *scalar;
-  char *endptr, *string;
-  int length, i, mapping_id, number;
+struct pdfout_page_labels_s {
+  /* See section 12.4.2 in PDF 1.7 reference.  */
+  size_t len, cap;
+  pdfout_page_labels_mapping_t *array;
+};
   
-  pdf_count_pages (ctx, doc);
-  sequence = yaml_document_get_root_node (yaml_doc);
-  if (sequence == NULL)
-    {
-      MSG ("empty YAML document");
-      return 0;
-    }
-  if (sequence->type != YAML_SEQUENCE_NODE)
-    {
-      MSG ("not a sequence");
-      return 1;
-    }
-  length = pdfout_sequence_length (yaml_doc, 1);
-
-  for (i = 0; i < length; ++i)
-    {
-      mapping_id = pdfout_sequence_get (yaml_doc, 1, i);
-      mapping = yaml_document_get_node (yaml_doc, mapping_id);
-      if (mapping == NULL || mapping->type != YAML_MAPPING_NODE)
-	{
-	  MSG ("missing mapping node");
-	  return 1;
-	}
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping_id, "page");
-      if (scalar == NULL || scalar->type != YAML_SCALAR_NODE)
-	{
-	  MSG ("missing required key 'page'");
-	  return 1;
-	}
-
-      string = pdfout_scalar_value (scalar);
-      number = pdfout_strtoint (string, &endptr);
-      if (endptr == string || endptr[0] != '\0')
-	{
-	  MSG ("invalid page string '%s'", string);
-	  return 1;
-	}
-
-      if (number < 1 || number > doc->page_count)
-	{
-	  MSG ("page %d out of range 1..%d", number,
-			   doc->page_count);
-	  return 1;
-	}
-
-      if (i == 0 && number != 1)
-	{
-	  MSG ("missing required page label for page 1");
-	  return 1;
-	}
-
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping_id, "style");
-      if (scalar)
-	{
-	  if (scalar->type != YAML_SCALAR_NODE)
-	    {
-	      MSG ("value of key 'style' not a scalar node");
-	      return 1;
-	    }
-	  string = pdfout_scalar_value (scalar);
-	  if (strcasecmp (string, "arabic") && strcmp (string, "Roman")
-	      && strcmp (string, "roman") && strcmp (string, "letters")
-	      && strcmp (string, "Letters"))
-	    {
-	      MSG ("unknown value '%s' of key 'style'.\n"
-		   "supported values are arabic,Roman,roman,letters,Letters.",
-		   string);
-	      return 1;
-	    }
-	}
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping_id, "first");
-      if (scalar)
-	{
-	  if (scalar->type != YAML_SCALAR_NODE)
-	    {
-	      MSG ("value of key 'first' not a scalar node");
-	      return 1;
-	    }
-	  string = pdfout_scalar_value (scalar);
-	  number = pdfout_strtoint (string, &endptr);
-	  if (endptr == string || endptr[0] != '\0')
-	    {
-	      MSG ("value '%s' of key 'first' not a number",
-			       string);
-	      return 1;
-	    }
-	  if (number < 1)
-	    {
-	      MSG ("value of key 'first' has to be >= 1");
-	      return 1;
-	    }
-	}
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping_id, "prefix");
-      if (scalar)
-	{
-	  if (scalar->type != YAML_SCALAR_NODE)
-	    {
-	      MSG ("value of key 'prefix' not a scalar");
-	      return 1;
-	    }
-	}
-    }
-  return 0;
+pdfout_page_labels_t *
+pdfout_page_labels_new (void)
+{
+  return XZALLOC (pdfout_page_labels_t);
 }
 
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("update page labels: " fmt, ## args)
-
-int
-pdfout_update_page_labels (fz_context *ctx, pdf_document *doc,
-			   yaml_document_t *yaml_doc)
+void
+pdfout_page_labels_free (pdfout_page_labels_t *labels)
 {
-  int length, i;
-  pdf_obj *root, *labels, *array, *dict;
-
-  if (yaml_doc)
-    {
-      /* initialize doc->page_count */
-      pdf_count_pages (ctx, doc);
-      if (check_page_labels (ctx, doc, yaml_doc))
-	return 1;
-    }
-  
-  root = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Root");
-
-  if (root == NULL)
-    {
-      MSG ("no document catalog, cannot update page labels");
-      return 1;
-    }
-
-  labels = pdf_new_dict (ctx, doc, 1);
-  array = pdf_new_array (ctx, doc, 2);
-  pdf_dict_puts_drop (ctx, labels, "Nums", array);
-  pdf_dict_puts_drop (ctx, root, "PageLabels", labels);
-
-  if (yaml_doc)
-    length = pdfout_sequence_length (yaml_doc, 1);
-  
-  if (yaml_doc == NULL || length == 0)
-    {
-      MSG ("removing page labels");
-      return 0;
-    }
-
-  for (i = 0; i < length; ++i)
-    {
-      yaml_node_t *scalar;
-      int mapping, number;
-      
-      dict = pdf_new_dict (ctx, doc, 3);
-      mapping = pdfout_sequence_get (yaml_doc, 1, i);
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping, "page");
-      assert (scalar && scalar->type == YAML_SCALAR_NODE);
-      number = pdfout_strtoint_null (pdfout_scalar_value (scalar)) - 1;
-      pdf_array_push_drop (ctx, array, pdf_new_int (ctx, doc, number));
-      pdf_array_push_drop (ctx, array, dict);
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping, "style");
-      if (scalar)
-	{
-          char *string;
-
-	  string = pdfout_scalar_value (scalar);
-	  if (strcmp (string, "arabic") == 0)
-	    pdf_dict_puts_drop (ctx, dict, "S", pdf_new_name (ctx, doc, "D"));
-	  else if (strcmp (string, "Roman") == 0)
-	    pdf_dict_puts_drop (ctx, dict, "S", pdf_new_name (ctx, doc, "R"));
-	  else if (strcmp (string, "roman") == 0)
-	    pdf_dict_puts_drop (ctx, dict, "S", pdf_new_name (ctx, doc, "r"));
-	  else if (strcmp (string, "letters") == 0)
-	    pdf_dict_puts_drop (ctx, dict, "S", pdf_new_name (ctx, doc, "a"));
-	  else if (strcmp (string, "Letters") == 0)
-	    pdf_dict_puts_drop (ctx, dict, "S", pdf_new_name (ctx, doc, "A"));
-	  else
-	    /* should never happen  */
-	    error (1, 0, "unknown style %s", string);
-	}
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping, "first");
-      if (scalar)
-	{
-	  number = pdfout_strtoint_null (pdfout_scalar_value (scalar));
-	  pdf_dict_puts_drop (ctx, dict, "St", pdf_new_int (ctx, doc, number));
-	}
-      scalar = pdfout_mapping_gets_node (yaml_doc, mapping, "prefix");
-      if (scalar)
-	{
-	  char *text_string;
-	  int text_string_len;
-
-	  text_string =
-	    pdfout_utf8_to_text_string (pdfout_scalar_value (scalar),
-					scalar->data.scalar.length,
-					&text_string_len);
-	  pdf_dict_puts_drop (ctx, dict, "P",
-			      pdf_new_string (ctx, doc, text_string,
-					      text_string_len));
-	  free (text_string);
-	}
-    }
-  return 0;
-}
-
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("get page labels: " fmt, ## args)
-
-/* return values like for pdfout_get_page_labels () */
-static int
-get_page_labels (yaml_document_t *yaml_doc, fz_context *ctx,
-		 pdf_document *doc)
-{
-  pdf_obj *array, *labels;
-  int length, i, sequence;
-  
-  labels = pdf_dict_getp (ctx, pdf_trailer (ctx, doc), "Root/PageLabels");
-  
+  size_t i;
+    
   if (labels == NULL)
-    {
-      MSG ("no 'PageLabels' entry found in the document catalogue");
-      return 1;
-    }
+    return;
   
-  array = pdf_dict_gets (ctx, labels, "Nums");
-  length = pdf_array_len (ctx, array);
+  for (i = 0; i < labels->len; ++i)
+    free (labels->array[i].prefix);
   
-  if (length == 0)
-    {
-      MSG ("empty 'PageLabels' entry");
-      return 1;
-    }
+  free (labels->array);
+  free (labels);
+}
 
-  if (length % 2)
-    MSG ("uneven number in Nums array");
+#define MSG(fmt, args...) pdfout_msg ("pdfout_page_labels_push: " fmt, ## args);
+#define MSG_RETURN(value, fmt, args...)		\
+  do						\
+    {						\
+      MSG (fmt, ## args);			\
+      return value;				\
+    }						\
+  while (0)
+
+int pdfout_page_labels_push (pdfout_page_labels_t *labels,
+			     const pdfout_page_labels_mapping_t *mapping)
+{
+  int previous_page_number;
+  pdfout_page_labels_mapping_t *new_mapping;
+  assert (labels);
   
-  sequence = pdfout_yaml_document_add_sequence (yaml_doc, NULL, 0);
-  for (i = 0; i < length / 2; ++i)
+  if (mapping->page < 0)
+    MSG_RETURN (1, "page < 1");
+  if (labels->len == 0 && mapping->page != 0)
+    MSG_RETURN (1, "page for first page label must be 1");
+  if (labels->len)
     {
-      pdf_obj *dict, *key, *P;
-      int  index, mapping, St, pdf_buf_len, utf8_buf_len;
-      char *style, *S, *pdf_buf, *utf8_buf;
-      char buffer[30];
-      
-      key = pdf_array_get (ctx, array, 2 * i);
-      
-      if (pdf_is_int (ctx, key) == 0)
-	{
-	  MSG ("key in number tree not an int");
-	  continue;
-	}
-      
-      index = pdf_to_int (ctx, key);
-      
-      if (index < 0)
-	{
-	  MSG ("key in number tree is < 0");
-	  continue;
-	}
-      
-      mapping = pdfout_yaml_document_add_mapping (yaml_doc, NULL, 0);
-      pdfout_yaml_document_append_sequence_item (yaml_doc, sequence, mapping);
-      pdfout_snprintf (buffer, sizeof buffer, "%d", index + 1);
-      pdfout_mapping_push (yaml_doc, mapping, "page", buffer);
-      
-      dict = pdf_array_get (ctx, array, 2 * i + 1);
-
-      /* pdf_to_name returns the empty string - not NULL - on all errors,
-	 so the below strcmp () is allowed.  */
-      S = pdf_to_name (ctx, pdf_dict_gets (ctx, dict, "S"));
-      style = NULL;
-      if (strcmp (S, "D") == 0)
-	style = "arabic";
-      else if (strcmp (S, "R") == 0)
-	style = "Roman";
-      else if (strcmp (S, "r") == 0)
-	style = "roman";
-      else if (strcmp (S, "A") == 0)
-	style = "Letters";
-      else if (strcmp (S, "a") == 0)
-	style = "letters";
-      if (style)
-	pdfout_mapping_push (yaml_doc, mapping, "style", style);
-      /* no else here, since the 'S' key is optional  */
-      
-      St = pdf_to_int (ctx, pdf_dict_gets (ctx, dict, "St"));
-      if (St)
-	{
-	  pdfout_snprintf (buffer, sizeof buffer, "%d", St);
-	  pdfout_mapping_push (yaml_doc, mapping, "first", buffer);
-	}
-      
-      P = pdf_dict_gets (ctx, dict, "P");
-      if (P)
-	{
-	  pdf_buf = pdf_to_str_buf (ctx, P);
-	  pdf_buf_len = pdf_to_str_len (ctx, P);
-	  if (pdf_buf_len)
-	    {
-	      utf8_buf =
-		pdfout_text_string_to_utf8 (pdf_buf, pdf_buf_len,
-					    &utf8_buf_len);
-	      pdfout_mapping_push (yaml_doc, mapping, "prefix", utf8_buf);
-	      free (utf8_buf);
-	    }
-	}
-
+      previous_page_number = labels->array[labels->len - 1].page;
+      if (mapping->page <= previous_page_number)
+	MSG_RETURN (1, "page number %d not larger than previous page %d",
+		    mapping->page + 1, previous_page_number + 1);
     }
+  if (mapping->start < 0)
+    MSG_RETURN (1, "value of key 'first' must be >= 1");
   
-  if (pdfout_sequence_length (yaml_doc, sequence) == 0)
-    return 1;
-  
+  assert (labels->len <= labels->cap);
+  if (labels->len == labels->cap)
+    labels->array = PDFOUT_X2NREALLOC (labels->array, &labels->cap,
+				       pdfout_page_labels_mapping_t);
+  new_mapping = &labels->array[labels->len++];
+  new_mapping->page = mapping->page;
+  new_mapping->style = mapping->style;
+  new_mapping->prefix = mapping->prefix ? xstrdup (mapping->prefix) : NULL;
+  new_mapping->start = mapping->start;
   return 0;
 }
 
-int
-pdfout_get_page_labels (yaml_document_t **yaml_doc_ptr, fz_context *ctx,
-			pdf_document *doc)
+size_t
+pdfout_page_labels_length (const pdfout_page_labels_t *labels)
 {
-  yaml_document_t *yaml_doc;
+  assert (labels);
+  return labels->len;
+}
 
-  *yaml_doc_ptr = yaml_doc = XZALLOC (yaml_document_t);
+pdfout_page_labels_mapping_t *
+pdfout_page_labels_get_mapping (const pdfout_page_labels_t *labels,
+				size_t index)
+{
+  assert (labels && labels->len > index);
+  return &labels->array[index];
+}
 
-  pdfout_yaml_document_initialize (yaml_doc, NULL, NULL, NULL, 1, 1);
+#undef MSG
+#define MSG(fmt, args...) pdfout_msg ("checking page labels: " fmt, ## args);
 
-  if (get_page_labels (yaml_doc, ctx, doc))
+int
+pdfout_page_labels_check (const pdfout_page_labels_t *labels, int page_count)
+{
+  int i, len, page;
+  const pdfout_page_labels_mapping_t *mapping;
+  if (labels == NULL)
+    return 0;
+  len = pdfout_page_labels_length (labels);
+  assert (len);
+  int previous_page = -1;
+  for (i = 0; i < len; ++i)
     {
-      yaml_document_delete (yaml_doc);
-      free (yaml_doc);
-      *yaml_doc_ptr = NULL;
-      return 1;
+      mapping = pdfout_page_labels_get_mapping (labels, i);
+      page = mapping->page;
+      assert (page > previous_page);
+      previous_page = page;
+      assert (page >= 0);
+      assert (i != 0 || page == 0);
+      assert (mapping->style >= PDFOUT_PAGE_LABELS_NO_NUMBERING
+	      && mapping->style <= PDFOUT_PAGE_LABELS_LOWER);
+      assert (mapping->start >= 0);
+      if (page >= page_count)
+	{
+	  MSG ("page %d exceedes page count %d", page + 1, page_count);
+	  return 1;
+	}
     }
-
   return 0;
+}
+
+static char *
+arabic_numbering (int value, char *resultbuf, size_t prefix_len,
+		  size_t *lengthp)
+{
+  assert (value >= 1);
+  int len = 0;
+  for (int copy = value; copy; copy /= 10)
+    ++len;
+  if (resultbuf == NULL || prefix_len + len + 1 > *lengthp)
+    {
+      *lengthp = prefix_len + len + 1;
+      resultbuf = xcharalloc (*lengthp);
+    }
+  pdfout_snprintf (resultbuf + prefix_len, *lengthp - prefix_len, "%d", value);
+  return resultbuf;
+}
+  
+static char *
+letter_numbering (int value, bool uppercase, char *resultbuf,
+		  size_t prefix_len, size_t *lengthp)
+{
+  /* numbering: A to Z, then AA to ZZ ... */
+  int len = (--value) / 26 + 1;
+  char *p;
+  
+  if (resultbuf == NULL || prefix_len + len + 1 > *lengthp)
+    {
+      *lengthp = prefix_len + len + 1;
+      resultbuf = xcharalloc (*lengthp);
+    }
+  for (p = resultbuf + prefix_len; p < resultbuf + prefix_len + len; ++p)
+    *p = value % 26 + (uppercase ? 'A' : 'a');
+  *p = 0;
+  return resultbuf;
+}
+
+static const char *roman_hundreds[10] =
+  {0, "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"};
+static const char *roman_tens[10] =
+  {0, "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"};
+static const char *roman_ones[10] =
+  {0, "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"};
+static const int roman_str_lengths[10] =
+  {0,  1,   2,    3,     2,    1,   2,    3,     4,      2  };
+
+static char *
+get_roman_block (char *p, int value, int power, const char **block,
+		 bool uppercase)
+{
+  int i;
+  int num = (value % (power * 10)) / power;
+  for (i = 0; i < roman_str_lengths[num]; ++i)
+    {
+      *p = block[num][i];
+      if (uppercase)
+	*p = c_toupper (*p);
+      ++p;
+    }
+    
+  return p;
+}
+
+static int
+roman_length (int value)
+{
+  int len;
+  /* Leading Ms. */
+  len = value / 1000;
+  
+  len += roman_str_lengths[(value % 1000) / 100];
+  len += roman_str_lengths[(value % 100) / 10];
+  len += roman_str_lengths[value % 10];
+  return len;
+}
+
+static char *
+roman_numbering (int value, bool uppercase, char *resultbuf, size_t prefix_len,
+		 size_t *lengthp)
+{
+  char *p;
+  int num, len = roman_length (value);
+  assert (value > 0);
+  
+  if (resultbuf == NULL || prefix_len + len + 1 > *lengthp)
+    {
+      *lengthp = prefix_len + len + 1;
+      resultbuf = xcharalloc (*lengthp);
+    }
+  
+  /* Get leading Ms.  */
+  num = value / 1000;
+  for (p = resultbuf + prefix_len; p < resultbuf + prefix_len + num; ++p)
+    *p = uppercase ? 'M' : 'm';
+  
+  p = get_roman_block (p, value, 100, roman_hundreds, uppercase);
+  p = get_roman_block (p, value,  10,     roman_tens, uppercase);
+  p = get_roman_block (p, value,   1,     roman_ones, uppercase);
+  
+  *p = 0;
+  return resultbuf;
+}  
+
+static int
+do_search (int page_index, const pdfout_page_labels_t *labels)
+{
+  int len = labels->len;
+  
+  assert (len >= 1);
+  if (page_index >= labels->array[len - 1].page)
+    return len - 1;
+  else
+    {
+      /* Use binary search, not linear search, as there are crazy PDFs where
+	 labels->len equals the page count.  */
+      int upper = len;
+      int lower = 0;
+      while (1)
+	{
+	  int mid, page;
+	  if (lower > upper)
+	    return upper;
+	  mid = (lower + upper) / 2;
+	  page = labels->array[mid].page;
+	  if (page_index == page)
+	    return mid;
+	  else if (page_index > page)
+	    lower = mid + 1;
+	  else if (page_index < page)
+	    upper = mid - 1;
+	}
+    }
+}
+
+char *
+pdfout_page_labels_print (int page_index, const pdfout_page_labels_t *labels,
+			  char *resultbuf, size_t *lengthp)
+{
+  const pdfout_page_labels_mapping_t *mapping;
+  int value, start;
+  size_t prefix_len;
+  
+  assert (page_index >= 0);
+  assert (labels);
+  assert (labels->len);
+  
+  mapping = &labels->array[do_search (page_index, labels)];
+  value = page_index - mapping->page;
+  assert (value >= 0);
+  start = mapping->start;
+  start += !start;
+  value += start;
+  
+  prefix_len = mapping->prefix ? strlen (mapping->prefix) : 0;
+  if (mapping->style)
+    {
+      bool uppercase = true;
+      switch (mapping->style)
+	{
+	case PDFOUT_PAGE_LABELS_ARABIC:
+	  resultbuf = arabic_numbering (value, resultbuf, prefix_len, lengthp);
+	  break;
+	case PDFOUT_PAGE_LABELS_LOWER:
+	  uppercase = false;
+	  /* fallthrough */
+	case PDFOUT_PAGE_LABELS_UPPER:
+	  resultbuf = letter_numbering (value, uppercase, resultbuf,
+					prefix_len, lengthp);
+	  break;
+	case PDFOUT_PAGE_LABELS_LOWER_ROMAN:
+	  uppercase = false;
+	  /* fallthrough */
+	case PDFOUT_PAGE_LABELS_UPPER_ROMAN:
+	  resultbuf = roman_numbering (value, uppercase, resultbuf,
+				       prefix_len, lengthp);
+	  break;
+	default:
+	  abort ();
+	}
+    }
+  else
+    {
+      if (resultbuf == NULL || prefix_len + 1 > *lengthp)
+	{
+	  *lengthp = prefix_len + 1;
+	  resultbuf = xcharalloc (*lengthp);
+	}
+    }
+  
+  if (prefix_len)
+    memcpy (resultbuf, mapping->prefix, prefix_len);
+  if (mapping->style == 0)
+    resultbuf[prefix_len] = 0;
+  
+  return resultbuf;
 }

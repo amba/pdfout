@@ -1,4 +1,5 @@
-SUBDIRS = . gl src 
+# Run gnulib tests last (see sec. 3.9 in gnulib manual).
+SUBDIRS = . gl src gl-tests
 
 all-local:
 	+ cd $(srcdir)/mupdf && $(GNU_MAKE) libs third build=$(mupdf_build)

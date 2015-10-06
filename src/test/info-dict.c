@@ -20,10 +20,9 @@
 int
 main (int argc, char **argv)
 {
-  test_init ("info-dict");
+  test_init ();
 
 #define COMMAND "info"
-#define SUFFIX ".info"
 #define INPUT "\
 Title: pdfout info dict test\n\
 Author: pdfout\n\

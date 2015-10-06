@@ -20,18 +20,16 @@
 int
 main (void)
 {
-  test_init ("create");
-  char *pdf = test_tempname ();
+  test_init ();
 
   /* pagecount */
   {
-    test_pdfout (0, 0, "create", "-p10", "-o", pdf);
-    test_pdfout (0, "10\n", "pagecount", pdf);
+    test_pdfout_fgrep (0, "Count 3", "create", "-p3");
   }
 		   
   /* grep for width and height in page dict */
   {
-    char *paper_sizes[][2] = {
+    const char *paper_sizes[][2] = {
       /* {format, "width"} */
       {"", "0 0 595.* 841"},		/* A4 */
       {"A0", "0 0 2383.* 3370"},
@@ -42,12 +40,12 @@ main (void)
       {0}
     };
 
-    char *(*ptr)[2];
+    const char *(*ptr)[2];
 
     for (ptr = paper_sizes; **ptr; ++ptr)
       {
-	char *size = ptr[0][0];
-	char *grep_string = ptr[0][1];
+	const char *size = ptr[0][0];
+	const char *grep_string = ptr[0][1];
 
 	if (size[0] == '\0')
 	  /* use default paper size */
@@ -70,24 +68,23 @@ main (void)
   /* invalid usage */
   {
     /* unknown paper sizes */
-    char *paper_sizes[] = {
+    const char *paper_sizes[] = {
       "A11",
       "Fettie",
       "a-1",
       NULL
     };
 
-    char **ptr;
+    const char **ptr;
     
     for (ptr = paper_sizes; *ptr; ++ptr)
-      test_pdfout_status (EX_USAGE, 0, 0, "create", "-s", *ptr, "-o", pdf);
+      test_pdfout_status (EX_USAGE, 0, 0, "create", "-s", *ptr);
 
     /* no height */
-    test_pdfout_status (EX_USAGE, 0, 0, "create", "-w", "100", "-o", pdf);
+    test_pdfout_status (EX_USAGE, 0, 0, "create", "-w", "100");
 
     /* negative height */
-    test_pdfout_status (EX_USAGE, 0, 0, "create", "w", "100", "-h", "-100",
-			"-o", pdf);
+    test_pdfout_status (EX_USAGE, 0, 0, "create", "w", "100", "-h", "-100");
     
   }
   return 0;

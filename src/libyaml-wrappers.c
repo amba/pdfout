@@ -16,14 +16,19 @@
 
 
 #include "common.h"
+#include "libyaml-wrappers.h"
+#include <string.h>
+#include <yaml.h>
+#include <exitfail.h>
 
 /* libyaml wrappers */
 
+/* FIXME: use exit_failure, print errno  */
 void
 pdfout_yaml_parser_initialize (yaml_parser_t *parser)
 {
   if (yaml_parser_initialize (parser) == 0)
-    error (1, 0, "yaml_parser_initialize");
+    error (exit_failure, errno, "yaml_parser_initialize");
 }
 
 int
@@ -38,23 +43,21 @@ pdfout_yaml_parser_load (yaml_parser_t *parser, yaml_document_t *document)
   return retval;
 }
 
+extern int yaml_emitter_indent;
+extern int yaml_emitter_line_width;
+extern bool yaml_emitter_escape_unicode;
+
 void
 pdfout_yaml_emitter_initialize (yaml_emitter_t *emitter)
 {
   if (yaml_emitter_initialize (emitter) == 0)
-    error (1, 0, "yaml_emitter_initialize");
+    error (exit_failure, errno, "yaml_emitter_initialize");
   
-  yaml_emitter_set_indent (emitter, pdfout_yaml_emitter_indent);
-  yaml_emitter_set_width (emitter, pdfout_yaml_emitter_line_width);
-  yaml_emitter_set_unicode (emitter, pdfout_yaml_emitter_escape_unicode == 0);
+  yaml_emitter_set_indent (emitter, yaml_emitter_indent);
+  yaml_emitter_set_width (emitter, yaml_emitter_line_width);
+  yaml_emitter_set_unicode (emitter, yaml_emitter_escape_unicode == 0);
 }
 
-void
-pdfout_yaml_emitter_open (yaml_emitter_t *emitter)
-{
-  if (yaml_emitter_open (emitter) == 0)
-    error (1, 0, "yaml_emitter_open");
-}
 
 void
 pdfout_yaml_emitter_dump (yaml_emitter_t *emitter,
@@ -81,20 +84,8 @@ pdfout_yaml_document_initialize (yaml_document_t *document,
 {
   if (yaml_document_initialize (document, version_directive,
 				tag_directives_start, tag_directives_end,
-				start_implicit, end_implicit)
-      == 0)
-    {
-      error (1, 0, "yaml_document_initialize");
-    }
-}
-
-yaml_node_t *
-pdfout_yaml_document_get_root_node (yaml_document_t *document)
-{
-  yaml_node_t *retval = yaml_document_get_root_node (document);
-  if (retval == NULL)
-    error (1, 0, "yaml_document_get_root_node");
-  return retval;
+				start_implicit, end_implicit) == 0)
+    error (1, 0, "yaml_document_initialize");
 }
 
 yaml_node_t *
@@ -108,7 +99,7 @@ pdfout_yaml_document_get_node (yaml_document_t *document, int index)
 
 int
 pdfout_yaml_document_add_scalar (yaml_document_t *document, char *tag,
-				 char *value, int length,
+				 const char *value, int length,
 				 yaml_scalar_style_t style)
 {
   int retval;
@@ -168,6 +159,228 @@ pdfout_yaml_document_append_mapping_pair (yaml_document_t *document,
 
 /* YAML convenience functions */
 
+int pdfout_yaml_is_null (const char *string);
+
+int pdfout_yaml_is_bool (const char *string);
+
+int pdfout_yaml_is_true (const char *string);
+
+char *pdfout_yaml_scalar_value (const yaml_event_t *event)
+{
+  assert (pdfout_yaml_is_scalar (event));
+  return (char *) event->data.scalar.value;
+}
+
+#define DEFINE_EVENT_TYPE_TEST(name, NAME)		\
+  bool							\
+  pdfout_yaml_is_ ## name (const yaml_event_t *event)	\
+  {							\
+    assert (event);					\
+    return event->type == YAML_ ## NAME ## _EVENT;	\
+  }
+
+DEFINE_EVENT_TYPE_TEST (stream_start, STREAM_START)
+DEFINE_EVENT_TYPE_TEST (stream_end, STREAM_END)
+DEFINE_EVENT_TYPE_TEST (document_start, DOCUMENT_START)
+DEFINE_EVENT_TYPE_TEST (document_end, DOCUMENT_END)
+DEFINE_EVENT_TYPE_TEST (scalar, SCALAR)
+DEFINE_EVENT_TYPE_TEST (sequence_start, SEQUENCE_START)
+DEFINE_EVENT_TYPE_TEST (sequence_end, SEQUENCE_END)
+DEFINE_EVENT_TYPE_TEST (mapping_start, MAPPING_START)
+DEFINE_EVENT_TYPE_TEST (mapping_end, MAPPING_END)
+
+yaml_event_t *
+pdfout_yaml_event_new (void)
+{
+  return XZALLOC (yaml_event_t);
+}
+
+void
+pdfout_yaml_event_free (yaml_event_t *event)
+{
+  yaml_event_delete (event);
+  free (event);
+}
+
+#define MSG(fmt, args...) pdfout_errno_msg (errno, "YAML emitter: " fmt, ##args)
+#define MSG_RETURN(status, fmt, args...)	\
+  do						\
+    {						\
+      MSG (fmt, ## args);			\
+      return status;				\
+    }						\
+  while (0)					
+
+static int
+emit_event (yaml_emitter_t *emitter, yaml_event_t *event)
+{
+  if (yaml_emitter_emit (emitter, event) == 0)
+    MSG_RETURN (1, "%s", emitter->problem);
+  return 0;
+}
+
+#define DEFINE_EMIT_EVENT(name)					\
+  int								\
+  pdfout_yaml_ ## name ## _event (yaml_emitter_t *emitter,	\
+				  yaml_event_t *event)		\
+  {								\
+    assert (emitter && event);					\
+    if (yaml_ ## name ## _event_initialize (event) == 0)	\
+      MSG_RETURN (1, "cannot initialize " #name " event");	\
+    return emit_event (emitter, event);				\
+  }
+
+static _GL_UNUSED DEFINE_EMIT_EVENT (stream_end)
+DEFINE_EMIT_EVENT (sequence_end)
+DEFINE_EMIT_EVENT (mapping_end)
+
+
+static int
+pdfout_yaml_stream_start_event (yaml_emitter_t *emitter, yaml_event_t *event)
+{
+  if (yaml_stream_start_event_initialize (event, YAML_UTF8_ENCODING)
+      == 0)
+    MSG_RETURN (1, "cannot initialize stream start event");
+  return emit_event (emitter, event);
+}
+
+int
+pdfout_yaml_document_start_event (yaml_emitter_t *emitter, yaml_event_t *event,
+				  yaml_version_directive_t *version,
+				  int implicit)
+{
+  if (yaml_document_start_event_initialize (event, version, 0, 0, implicit)
+      == 0)
+    MSG_RETURN (1, "cannot initialize document start event");
+  return emit_event (emitter, event);
+}
+
+int
+pdfout_yaml_document_end_event (yaml_emitter_t *emitter, yaml_event_t *event,
+				int implicit)
+{
+  if (yaml_document_end_event_initialize (event, implicit) == 0)
+    MSG_RETURN (1, "cannot initialize document end event");
+  return emit_event (emitter, event);
+}
+
+int
+pdfout_yaml_scalar_event (yaml_emitter_t *emitter, yaml_event_t *event,
+			  const char *value)
+{
+  yaml_scalar_style_t style = strchr (value, '\n') ?
+    YAML_DOUBLE_QUOTED_SCALAR_STYLE : YAML_ANY_SCALAR_STYLE;
+  if (yaml_scalar_event_initialize (event, NULL, NULL, (yaml_char_t *) value,
+				    strlen (value),
+				    true, true, style) == 0)
+    MSG_RETURN (1, "cannot initialize scalar event");
+  return emit_event (emitter, event);
+}
+
+int
+pdfout_yaml_sequence_start_event (yaml_emitter_t *emitter, yaml_event_t *event,
+				  yaml_sequence_style_t style)
+{
+  if (yaml_sequence_start_event_initialize (event, NULL, NULL, true, style)
+      == 0)
+    MSG_RETURN (1, "cannot initialize sequence start event");
+  return emit_event (emitter, event);
+}
+
+int
+pdfout_yaml_mapping_start_event (yaml_emitter_t *emitter, yaml_event_t *event,
+				 yaml_mapping_style_t style)
+{
+  if (yaml_mapping_start_event_initialize (event, NULL, NULL, true, style)
+      == 0)
+    MSG_RETURN (1, "cannot initialize mapping start event");
+  return emit_event (emitter, event);
+}
+
+int
+pdfout_yaml_emitter_open (yaml_emitter_t *emitter, yaml_event_t *event)
+{
+  if (emitter->opened)
+    return 0;
+
+  if (pdfout_yaml_stream_start_event (emitter, event))
+    return 1;
+  emitter->opened = true;
+  return 0;
+}
+  
+int
+pdfout_yaml_parser_parse (yaml_parser_t *parser, yaml_event_t *event)
+{
+  yaml_event_delete (event);
+  if (yaml_parser_parse (parser, event) == 0)
+    {
+      pdfout_errno_msg (errno, "pdfout_yaml_parser_parse: %s",
+			parser->problem);
+      return 1;
+    }
+#ifdef DEBUG_PARSE
+  static const char *event_names[] = {
+    "YAML_NO_EVENT","YAML_STREAM_START_EVENT","YAML_STREAM_END_EVENT",
+    "YAML_DOCUMENT_START_EVENT","YAML_DOCUMENT_END_EVENT","YAML_ALIAS_EVENT",
+    "YAML_SCALAR_EVENT","YAML_SEQUENCE_START_EVENT","YAML_SEQUENCE_END_EVENT",
+    "YAML_MAPPING_START_EVENT","YAML_MAPPING_END_EVENT"
+  };
+  pdfout_msg ("pdfout_yaml_parser_parse: %s", event_names[event->type]);
+#endif	/* DEBUG_PARSE */
+  return 0;
+}
+
+int
+pdfout_yaml_parser_start (yaml_parser_t *parser, yaml_event_t *event)
+{
+  if (parser->stream_start_produced == false)
+    {
+      /* Parse stream start event.  */
+      if (pdfout_yaml_parser_parse (parser, event))
+	return 2;
+      assert (pdfout_yaml_is_stream_start (event));
+    }
+  
+  /* Parse document-start or stream-end event.  */
+  if (pdfout_yaml_parser_parse (parser, event))
+    return 2;
+  if (pdfout_yaml_is_stream_end (event))
+    return 1;
+  
+  if (pdfout_yaml_is_document_start (event) == false)
+    {
+      pdfout_msg ("pdfout_yaml_parser_start: expected document start event");
+      return 2;
+    }
+  
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* FIXME remove/rename following cruft:  */
+
+
+
+
 int
 pdfout_load_yaml (yaml_document_t **doc, FILE *file)
 {
@@ -192,11 +405,6 @@ pdfout_load_yaml (yaml_document_t **doc, FILE *file)
   return retval ? 0 : 1;
 }
 
-/* default values. can be changed on command line. */
-int pdfout_yaml_emitter_indent = 4;
-int pdfout_yaml_emitter_line_width = -1;
-int pdfout_yaml_emitter_escape_unicode = 0;
-
 void
 pdfout_dump_yaml (FILE *file, yaml_document_t *doc)
 {
@@ -215,7 +423,7 @@ pdfout_scalar_value (yaml_node_t *node)
 }
 
 void
-pdfout_sequence_push (yaml_document_t *doc, int sequence, char *value)
+pdfout_sequence_push (yaml_document_t *doc, int sequence, const char *value)
 {
   assert (doc);
   assert (sequence);
@@ -263,7 +471,8 @@ pdfout_mapping_length (yaml_document_t *doc, int mapping)
 }
 
 void
-pdfout_mapping_push (yaml_document_t *doc, int mapping, char *key, char *value)
+pdfout_mapping_push (yaml_document_t *doc, int mapping, const char *key,
+		     const char *value)
 {
   int key_id, value_id;
   key_id = pdfout_yaml_document_add_scalar (doc, NULL, key, -1,
@@ -274,7 +483,7 @@ pdfout_mapping_push (yaml_document_t *doc, int mapping, char *key, char *value)
 }
 
 void
-pdfout_mapping_push_id (yaml_document_t *doc, int mapping, char *key,
+pdfout_mapping_push_id (yaml_document_t *doc, int mapping, const char *key,
 			int value_id)
 {
   int key_id;
