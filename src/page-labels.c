@@ -107,29 +107,28 @@ pdfout_page_labels_get_mapping (const pdfout_page_labels_t *labels,
 int
 pdfout_page_labels_check (const pdfout_page_labels_t *labels, int page_count)
 {
-  int i, len, page;
+  int i, len, page, previous_page = -1;
   const pdfout_page_labels_mapping_t *mapping;
+
   if (labels == NULL)
     return 0;
   len = pdfout_page_labels_length (labels);
-  assert (len);
-  int previous_page = -1;
+  if (len < 1)
+    return 1;
   for (i = 0; i < len; ++i)
     {
       mapping = pdfout_page_labels_get_mapping (labels, i);
       page = mapping->page;
-      assert (page > previous_page);
-      previous_page = page;
-      assert (page >= 0);
-      assert (i != 0 || page == 0);
-      assert (mapping->style >= PDFOUT_PAGE_LABELS_NO_NUMBERING
-	      && mapping->style <= PDFOUT_PAGE_LABELS_LOWER);
-      assert (mapping->start >= 0);
       if (page >= page_count)
 	{
 	  MSG ("page %d exceedes page count %d", page + 1, page_count);
 	  return 1;
 	}
+      /* Some paranoid sanity checks.  */
+      if (page < 0 || page <= previous_page || (i == 0 && page != 0)
+	  || mapping->start < 0 || mapping->style < 0  || mapping->style > 5)
+	return 1;
+      previous_page = page;
     }
   return 0;
 }
@@ -236,7 +235,7 @@ roman_numbering (int value, bool uppercase, char *resultbuf, size_t prefix_len,
   return resultbuf;
 }  
 
-static int
+static int _GL_ATTRIBUTE_PURE
 do_search (int page_index, const pdfout_page_labels_t *labels)
 {
   int len = labels->len;

@@ -153,7 +153,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 	case FZ_PAGE_BLOCK_IMAGE:
 	  break;
 	default:
-	  assert (0);
+	  abort ();
 	}
     }
   pdfout_yaml_emitter_dump (emitter, doc);

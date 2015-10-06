@@ -16,7 +16,8 @@ enum pdfout_outline_format {
 };
 
 /* returns statically allocated string */
-const char *pdfout_outline_suffix (enum pdfout_outline_format);
+const char *pdfout_outline_suffix (enum pdfout_outline_format)
+  _GL_ATTRIBUTE_PURE;
 
 /* Shall be used for all status messages.  */
 #define pdfout_msg(format, args...)		\

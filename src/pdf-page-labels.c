@@ -74,7 +74,7 @@ int pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
       else if (style == PDFOUT_PAGE_LABELS_LOWER)
 	pdf_dict_puts_drop (ctx, dict_obj, "S", pdf_new_name (ctx, doc, "a"));
       else if (style)
-	assert (0);
+	abort ();
       
       pdf_array_push_drop (ctx, array_obj,
 			   pdf_new_int (ctx, doc, mapping->page));
@@ -223,7 +223,7 @@ get_page_labels_mapping (pdfout_page_labels_t *labels, yaml_parser_t *parser,
 	  return 1;
 	  break;
 	default:
-	  assert (0);
+	  abort ();
 	}
     }
   

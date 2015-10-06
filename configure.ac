@@ -11,7 +11,7 @@ AC_CONFIG_SRCDIR([src/outline.c])
 AC_CONFIG_HEADERS([config.h])
 dnl Checks for programs.
 
-AC_PROG_CC
+AC_PROG_CC_C99
 gl_EARLY
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR]) dnl workaround for automake 1.11
@@ -21,13 +21,15 @@ AC_PROG_RANLIB
 
 gl_MANYWARN_ALL_GCC([warnings])
 # Set up the list of the pointless, undesired warnings.
-nw="-Wdouble-promotion -Wshadow"
+nw="-Wdouble-promotion -Wshadow -Wvariadic-macros"
 nw="$nw -Wsuggest-attribute=noreturn -Wjump-misses-init"
 # Enable all GCC warnings not in this list.
 gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 
 warnings="$warnings -Wno-error=unused-parameter"
 warnings="$warnings -Wno-missing-field-initializers"
+warnings="$warnings -Wno-error=clobbered"
+
 
 AC_ARG_ENABLE([warnings],
 	[AS_HELP_STRING([--enable-warnings],

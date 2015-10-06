@@ -247,7 +247,7 @@ static void check_regex (void)
   exit (0);
 }
 
-static error_t
+static error_t _GL_ATTRIBUTE_PURE
 parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
 {
   switch (key)

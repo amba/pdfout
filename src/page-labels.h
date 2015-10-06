@@ -31,12 +31,13 @@ int pdfout_page_labels_push (pdfout_page_labels_t *labels,
 			     const pdfout_page_labels_mapping_t *mapping);
 
 /* Return number of elements in LABELS, which must be non-null.  */
-size_t pdfout_page_labels_length (const pdfout_page_labels_t *labels);
+size_t pdfout_page_labels_length (const pdfout_page_labels_t *labels)
+  _GL_ATTRIBUTE_PURE;
 
 /* Return INDEX'th element of a page labels array.  */
 pdfout_page_labels_mapping_t *
 pdfout_page_labels_get_mapping (const pdfout_page_labels_t *labels,
-				size_t index);
+				size_t index) _GL_ATTRIBUTE_PURE;
 							      
 
 /* LABELS must be well-formed.

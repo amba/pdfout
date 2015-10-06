@@ -13,27 +13,34 @@ void pdfout_yaml_emitter_close (yaml_emitter_t *emitter);
 /* Covenience functions.  */
 
 /* see http://yaml.org/type/null.html */
-int pdfout_yaml_is_null (const char *string);
+int pdfout_yaml_is_null (const char *string) _GL_ATTRIBUTE_PURE;
 
 /* see http://yaml.org/type/bool.html */
-int pdfout_yaml_is_bool (const char *string);
+int pdfout_yaml_is_bool (const char *string) _GL_ATTRIBUTE_PURE;
 
 /* returns 1 for true  */
-int pdfout_yaml_is_true (const char *string);
+int pdfout_yaml_is_true (const char *string) _GL_ATTRIBUTE_PURE;
 
 /* Get value of scalar event.  */
-char *pdfout_yaml_scalar_value (const yaml_event_t *event);
+char *pdfout_yaml_scalar_value (const yaml_event_t *event) _GL_ATTRIBUTE_PURE;
 
 /* Event types. */
-bool pdfout_yaml_is_stream_start (const yaml_event_t *event);
-bool pdfout_yaml_is_stream_end (const yaml_event_t *event);
-bool pdfout_yaml_is_document_start (const yaml_event_t *event);
-bool pdfout_yaml_is_document_end (const yaml_event_t *event);
-bool pdfout_yaml_is_scalar (const yaml_event_t *event);
-bool pdfout_yaml_is_sequence_start (const yaml_event_t *event);
-bool pdfout_yaml_is_sequence_end (const yaml_event_t *event);
-bool pdfout_yaml_is_mapping_start (const yaml_event_t *event);
-bool pdfout_yaml_is_mapping_end (const yaml_event_t *event);
+bool pdfout_yaml_is_stream_start (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_stream_end (const yaml_event_t *event) _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_document_start (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_document_end (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_scalar (const yaml_event_t *event) _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_sequence_start (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_sequence_end (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_mapping_start (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
+bool pdfout_yaml_is_mapping_end (const yaml_event_t *event)
+  _GL_ATTRIBUTE_PURE;
 
 yaml_event_t *pdfout_yaml_event_new (void);
 

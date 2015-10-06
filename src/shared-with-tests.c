@@ -54,7 +54,7 @@ pdfout_outline_suffix (enum pdfout_outline_format format)
     case 0: return ".outline.yaml";
     case 1: return ".outline.wysiwyg";
     default:
-      assert (0);
+      abort ();
     }
   error (1, 0, "pdfout_outline_suffix: invalid format");
   return NULL;

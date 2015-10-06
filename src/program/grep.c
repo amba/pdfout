@@ -898,7 +898,6 @@ get_lines (const char *text)
       
       line_start = line_end + 1;
     }
-  while (line_end[0] != '\0');
   
   return lines;
 }
@@ -958,7 +957,7 @@ static int grep_page (const char *text)
 /* Return 0 if there was a match, and 1 otherwise.  */
 static bool grep_pdf (fz_context *ctx)
 {
-  pdf_document *doc;
+  pdf_document *doc = NULL;	/* Set to NULL for -Wmaybe-uninitialized.  */
   int page_count;
   int count = 0;
   bool status;

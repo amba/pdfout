@@ -292,12 +292,12 @@ static int
 calculate_node_count (yaml_document_t *doc, int node_id)
 {
   int count, kids, num_kids, i, kid_count, open;
-  yaml_node_t *open_node, *node;
+  yaml_node_t *open_node; /* *node; */
   char printf_buffer[20];
   open = 0;
   count = 0;
-  node = yaml_document_get_node (doc, node_id);
-  assert (node && node->type == YAML_MAPPING_NODE);
+  /* node = yaml_document_get_node (doc, node_id); */
+  /* assert (node && node->type == YAML_MAPPING_NODE); */
   kids = pdfout_mapping_gets (doc, node_id, "kids");
   if (kids)
     {

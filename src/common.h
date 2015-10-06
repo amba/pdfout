@@ -148,7 +148,7 @@ int pdfout_load_yaml (yaml_document_t **doc, FILE *file);
 
 void pdfout_dump_yaml (FILE *file, yaml_document_t *doc);
 
-char *pdfout_scalar_value (yaml_node_t *scalar_node);
+char *pdfout_scalar_value (yaml_node_t *scalar_node) _GL_ATTRIBUTE_PURE;
 
 int pdfout_mapping_gets (yaml_document_t *doc, int mapping,
 			 const char *key_string);
