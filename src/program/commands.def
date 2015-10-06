@@ -55,13 +55,13 @@ DEF_COMMAND ("gettxt",
 DEF_COMMAND ("create",
 	     REGULAR,
 	     pdfout_command_create,
-	     "Create an empty PDF file"
+	     "Create empty PDF files."
 	     )
 
 DEF_COMMAND ("convert-outline",
 	     REGULAR,
 	     pdfout_command_convert_outline,
-	     "Convert outline format"
+	     "Convert outline format."
 	     )
 
 DEF_COMMAND ("repair",
@@ -73,7 +73,7 @@ DEF_COMMAND ("repair",
 DEF_COMMAND ("grep",
 	     REGULAR,
 	     pdfout_command_grep,
-	     "search text for patterns"
+	     "Search with regular expressions."
 	     )
 
 DEF_COMMAND ("debug",
