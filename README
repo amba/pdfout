@@ -4,6 +4,7 @@ Fast PDF modification and analysis tool based on the [[http://mupdf.com/][MuPDF 
 pdfout can
  - dump and modify outlines, page labels, keys of the information dictionary
  - extract text
+ - regex search each page's text. Supports many of GNU Grep's options and prefixing of search results with the page label and/or index. 
  - repair broken cross-reference tables
 
 ** Install  
@@ -20,7 +21,7 @@ pdfout can
 run the setup*.exe and select the packages =gcc-core, make, pkg-config, libyaml-devel, libunistring2, libunistring-devel, openssl-devel=
 
 *** download and build
-for md5 and gpg signatures see [[http://amba.github.io/index.html]]
+for gpg signatures see [[http://amba.github.io/index.html]]
 #+BEGIN_EXAMPLE
  $ wget amba.github.io/pdfout-0.1-alpha.tar.gz
  $ tar -xzf pdfout-0.1.tar.gz

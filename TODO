@@ -8,6 +8,7 @@
    - [X] w32 cygwin
 
  - [X] use __FILE__ and basename in test_init?
+ - [ ] use pdf_open_document_with_stream!
  - [ ] test on document with xref streams. further test incremental update with
    xref streams.
  - [ ] test repeated incremental updates to the same file, with/without xref-streams
@@ -15,8 +16,10 @@
  - [ ] remove -o options, if command by default writes to stdout.
  - [ ] gettxt: no spaces between spans? (broken ligatures when parsing tex output)
  - [ ] Always use exit status exit_failure on error.
- - [ ] Create libyaml structs with XMALLOC, not XZALLOC.
-
+ - [X] Create libyaml structs with XMALLOC, not XZALLOC.
+         => use allocators like yaml_emitter_new(void)
+ - [ ] gettxt: remove gettxt-yaml for now.
+        span, line and page-separator options
  - [-] README:
    - [ ] testing info
    - [X] list openssl
@@ -28,8 +31,8 @@
  - [ ] comments: Use full sentences, terminated with double space.
 
  - [ ] apply to GNU Savannah
- - [ ] page labels: rename 'first' to 'start', since the pdf name is called 'St' 
- - [ ] thirdparty:
+ - [X] page labels: rename 'first' to 'start', since the pdf name is called 'St' 
+ - [-] thirdparty:
    - [ ] glibc:
      - [ ] fix argp bug 18719
      - [ ] manual
@@ -37,17 +40,16 @@
    - [ ] gnulib 
      - [ ] fix 'verify' module test failure on freebsd with 'make check -j4'
      - [ ] cygwin test fails
-     - [ ] memory leak in gnulib 'copy-file' module?
+     - [ ] memory leak in gnulib 'copy-file' module
    - [ ] contrib .pc file for GNU libunistring
    - [ ] comment on argp book
-   - [ ] mupdf:
+   - [-] mupdf:
      - [ ] prefix warnings with program name
-     - [ ] u16 -> u8
+     - [X] u16 -> u8 -> do not use fz_outline?
      - [ ] incremental update with xref: Syscall param write(buf) points to
         uninitialised byte(s)
      - [ ] -Wunused-parameter in fz_unread_byte and fz_sync_bits
      - [ ] add to PDF_NAMES: "Pagelabels", "Nums", "St", "a", "r"  
-
    - [ ] libyaml non-BMP escaping
 
 
@@ -56,12 +58,12 @@
    - [ ] forward declaration of mupdf / libyaml struct pointers? (C11 feature)
 
  - [ ] use gnulib xlist module in outline-wysiwyg.c instead of manually using
-   x2nrealloc ?
+   x2nrealloc ??
 
  - [ ] tests: read from stderr in pipe and test batch mode
 
 
- - [ ] AC_SUBST AM_CPPFLAGS?
+ - [ ] AC_SUBST AM_CPPFLAGS? No! build gnulib without WARN_CFLAGS
 
  - [X] gettxt: allow page range
 
@@ -71,27 +73,23 @@
    - [ ] page labels format
    - [ ] info dict format
 
- - [ ] grep command, showing page numbers of results, various regex
- flavors & options, allow multi line matches?
-
- - [ ] grep: recursion
+ - [ ] grep: recursion, other GNU Grep options.
 
  - [ ] commands case-insensitive, aliases: set-outline ... 
 
- - [ ] use own gcc attribute macros PDFOUT_UNUSED, PRINTF, WUR 
-   - [ ] WUR for pdfout_load_yaml and all others that return int?
+ - [ ] WUR attribute for pdfout_load_yaml and all others that return int?
 
- - [ ] tests: write grep replacements ?
+ - [X] tests: write grep replacements ?
 
  - [-] cleanup namespaces:
    - [ ] arguments use bool from stdbool.h
-   - [ ] remove FROM arg of pdfout_get_default_filename (always ".pdf")
+   - [X] remove FROM arg of pdfout_get_default_filename (always ".pdf")
    - [ ] cleanup namespace to pdfout_(outline|pagelabels|info|text)_(get|set)
    - [ ] cleanup yaml convenience namespace
    - [ ] naming of output FILE * streams and filenames. name all 'output(_filename)'?
-   - [ ] enum types use '_e' suffix typedefs?
+   - [ ] enum types typedefs
    - [X] *_set take NULL input to remove
-   - [ ] pdfout_prog namespace?
+   - [ ] no pdfout_ suffix in src/program
 
  - [X] pdfout_float_sequence macro
 
@@ -108,9 +106,8 @@
  - [ ] metadata set/get commands
  - [ ] gettext l10n
 
- - [ ] get page labels: differentiate between empty and broken page labels.
+ - [X] get page labels: differentiate between empty and broken page labels.
  - [ ] get info: differentiate between empty and broken info dict.
- - [ ] convert-outline check yaml-outlines
  - [ ] option to update producer in info dict
 
 

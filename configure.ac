@@ -27,6 +27,7 @@ nw="-Wdouble-promotion -Wshadow -Wvariadic-macros \
 gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 
 warnings="$warnings -Wno-error=unused-parameter \
+-Wno-error=suggest-attribute=pure \
 -Wno-missing-field-initializers"
 
 
