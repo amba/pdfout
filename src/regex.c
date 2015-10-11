@@ -105,5 +105,7 @@ void
 pdfout_re_free (struct pdfout_re_pattern_buffer *buffer)
 {
   regfree (&buffer->pattern_buffer);
+  free (buffer->regs.start);
+  free (buffer->regs.end);
   free (buffer);
 }
