@@ -5,7 +5,7 @@
    fun:libunistring_freea
    fun:libunistring_mem_iconveha
    fun:u8_conv_from_encoding
-   fun:pdfout_text_string_to_utf8
+   fun:pdfout_str_to_utf8
    fun:check_string_conversions
    fun:parse_opt
    fun:group_parse
