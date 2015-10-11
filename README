@@ -24,7 +24,7 @@ run the setup*.exe and select the packages =gcc-core, make, pkg-config, libyaml-
 for gpg signatures see [[http://amba.github.io/index.html]]
 #+BEGIN_EXAMPLE
  $ wget amba.github.io/pdfout-0.1-alpha.tar.gz
- $ tar -xzf pdfout-0.1.tar.gz
+ $ tar -xzf pdfout-0.1-alpha.tar.gz
  $ cd pdfout-0.1
  $ ./configure --prefix=/usr/local
  $ make
