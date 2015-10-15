@@ -71,7 +71,7 @@ static void list_commands (void);
 static void describe_commands (char *prog_name);
 
 static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
+parse_opt (int key, char *arg _GL_UNUSED, struct argp_state *state)
 {
   const char try_help[] = "Try '%s --help' for more information.\n";
   switch (key)

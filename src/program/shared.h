@@ -50,19 +50,21 @@ char *upcase (char *s);
 /* Lowercase arg and run argmatch.  */
 ptrdiff_t argcasematch (char *arg, const char *const *valid);
   
-/* calls exit (EX_USAGE) on failure */
-FILE *pdfout_xfopen (const char *path, const char *mode);
+/* Calls argp_failure on error.  */
+FILE *xfopen (struct argp_state *state, const char *path, const char *mode);
 
-/* calls exit (1) on error */
+/* Calls 'exit (exit_failure)' on error.  */
 fz_context *pdfout_new_context (void);
 
-void pdfout_argp_parse (const struct argp * argp, int argc, char ** argv,
+void pdfout_argp_parse (const struct argp *argp, int argc, char ** argv,
 			unsigned flags, int *arg_index, void *input);
 
-/* calls pdfout_xfopen to open a stream */
-FILE *pdfout_get_stream (char **output_filename, char mode,
-			 const char *pdf_filename,
-			 bool use_default_filename, const char *suffix);
+/* Append SUFFIX to FILENAME and call xfopen on the resulting filename. */
+FILE *open_default_read_file (struct argp_state *state,
+			      const char *filename, const char *suffix);
+
+FILE *open_default_write_file (struct argp_state *state,
+			       const char *filename, const char *suffix);
 
 /* calls exit (EX_USAGE) on error */
 enum pdfout_outline_format pdfout_outline_get_format (struct argp_state *state,

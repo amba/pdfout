@@ -30,40 +30,39 @@ static struct argp_option options[] = {
 };
 
 static char *pdf_filename;
-static char *info_filename;
-static char *output_filename;
+static char *pdf_output_filename;
 static bool append;
 static bool remove_info;
-static bool use_default_filename;
+static FILE *input;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  
+  static bool use_default_filename;
   switch (key)
     {
     case 'a': append = true; break;
-    case 'o': output_filename = arg; break;
+    case 'o': pdf_output_filename = arg; break;
     case 'r': remove_info = true; break;
     case 'd': use_default_filename = true; break;
       
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	case 1: info_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
 
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
 
     case ARGP_KEY_END:
-      if (info_filename && use_default_filename)
-	argp_error (state, "use either option '-d' or second argument");
+      if (use_default_filename)
+	input = open_default_read_file (state, pdf_filename, ".info");
+      else
+	input = stdin;
       break;
-      
+
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -84,7 +83,6 @@ pdfout_command_setinfo (int argc, char **argv)
   yaml_document_t *yaml_doc = NULL;
   fz_context *ctx;
   pdf_document *doc;
-  FILE *input;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
@@ -92,17 +90,12 @@ pdfout_command_setinfo (int argc, char **argv)
   doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
   if (remove_info == false)
-    {
-      input = pdfout_get_stream (&info_filename, 'r', pdf_filename,
-				 use_default_filename, ".info");
-  
-      if (pdfout_load_yaml (&yaml_doc, input))
-	exit (1);
-    }
+    if (pdfout_load_yaml (&yaml_doc, input))
+      exit (1);
   
   if (pdfout_update_info_dict (ctx, doc, yaml_doc, append))
     exit (EX_DATAERR);
 
-  pdfout_write_document (ctx, doc, pdf_filename, output_filename);
+  pdfout_write_document (ctx, doc, pdf_filename, pdf_output_filename);
   exit (0);
 }

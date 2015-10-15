@@ -83,7 +83,7 @@ static void quote_line (char *line, size_t len)
 }
 
 int
-main (int argc, char **argv)
+main (void)
 {
   char *line = NULL;
   size_t line_len = 0;

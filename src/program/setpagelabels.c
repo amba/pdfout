@@ -16,8 +16,8 @@
 
 #include "shared.h"
 #include "../page-labels.h"
-static char usage[] = "PDF_FILE [YAML]";
-static char doc[] = "Modify page labels\n";
+static char usage[] = "PDF_FILE";
+static char doc[] = "Read page labels from standard input.\n";
 
 static struct argp_option options[] = {
   {"default-filename", 'd', 0, 0, "read input from PDF_FILE.pagelabels"},
@@ -28,35 +28,36 @@ static struct argp_option options[] = {
 
 static char *pdf_filename;
 static char *output_filename;
-static char *page_labels_filename;
-static bool use_default_filename;
+static FILE *input;
 static bool remove_page_labels;
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state)
 {
+  static bool use_default_filename;
   switch (key)
     {
     case 'o': output_filename = arg; break;
-    case 'd': use_default_filename = true; break;
     case 'r': remove_page_labels = true; break;
+    case 'd': use_default_filename = true; break;
+
+      break;
       
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	case 1: page_labels_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
 
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
-
-    case ARGP_KEY_END:
-      if (page_labels_filename && use_default_filename)
-	argp_error (state, "use either option '-d' or second argument");
       break;
       
+    case ARGP_KEY_END:
+      if (use_default_filename)
+	input = open_default_read_file (state, pdf_filename, ".pagelabels");
+      else
+	input = stdin;
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -76,7 +77,6 @@ pdfout_command_setpagelabels (int argc, char **argv)
 {
   fz_context *ctx;
   pdf_document *doc;
-  FILE *input;
   yaml_parser_t *parser;
   pdfout_page_labels_t *labels;
   
@@ -87,8 +87,6 @@ pdfout_command_setpagelabels (int argc, char **argv)
 
   if (remove_page_labels == false)
     {
-      input = pdfout_get_stream (&page_labels_filename, 'r', pdf_filename,
-				 use_default_filename, ".pagelabels");
       parser = yaml_parser_new (input);
       if (pdfout_page_labels_from_yaml (&labels, parser))
 	exit (EX_DATAERR);

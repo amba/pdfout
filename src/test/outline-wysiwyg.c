@@ -22,7 +22,7 @@
 
 
 int
-main (int arg, char **argv)
+main (void)
 {
   test_init ();
 

@@ -18,8 +18,8 @@
 #include "common.h"
 #include "shared.h"
 
-static char usage[] = "PDF_FILE [OUTLINE]";
-static char doc[] = "Modify the outline\n";
+static char usage[] = "PDF_FILE";
+static char doc[] = "Read the new outline from standard input.\n";
 
 static struct argp_option options[] = {
   {"output", 'o', "FILE", 0, PDFOUT_NO_INCREMENTAL},
@@ -31,38 +31,40 @@ static struct argp_option options[] = {
 };
 
 static char *pdf_filename;
-static char *output_filename;
-static char *outline_filename;
+static char *pdf_output_filename;
+static FILE *input;
 static char *default_view;
-static bool use_default_filename;
 static bool remove_outline;
 static enum pdfout_outline_format format;
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state)
 {
+  static bool use_default_filename;
   switch (key)
     {
     case 'v': default_view = arg; break;
-    case 'o': output_filename = arg; break;
+    case 'o': pdf_output_filename = arg; break;
     case 'd': use_default_filename = true; break;
     case 'r': remove_outline = true; break;
     case 'f': format = pdfout_outline_get_format (state, arg); break;
       
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	case 1: outline_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
       
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
+      break;
 
     case ARGP_KEY_END:
-      if (outline_filename && use_default_filename)
-	argp_error (state, "use either option '-d' or second argument");
+      if (use_default_filename)
+	input = open_default_read_file (state, pdf_filename,
+					pdfout_outline_suffix (format));
+      else
+	input = stdin;
       break;
       
     default:
@@ -87,7 +89,6 @@ pdfout_command_setoutline (int argc, char **argv)
   pdf_document *doc;
   fz_context *ctx;
   yaml_document_t *yaml_doc = NULL;
-  FILE *input;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
@@ -96,10 +97,6 @@ pdfout_command_setoutline (int argc, char **argv)
 
   if (remove_outline == false)
     {
-      input = pdfout_get_stream (&outline_filename, 'r', pdf_filename,
-				 use_default_filename,
-				 pdfout_outline_suffix (format));
-  
       if (pdfout_outline_load (&yaml_doc, input, format))
 	exit (EX_DATAERR);
   
@@ -110,7 +107,7 @@ pdfout_command_setoutline (int argc, char **argv)
   if (pdfout_outline_set (ctx, doc, yaml_doc))
     exit (EX_DATAERR);
       
-  pdfout_write_document (ctx, doc, pdf_filename, output_filename);
+  pdfout_write_document (ctx, doc, pdf_filename, pdf_output_filename);
   exit (0);
 }
 

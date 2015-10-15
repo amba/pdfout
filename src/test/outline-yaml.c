@@ -19,7 +19,7 @@
 #include "data/outline-yaml.h"
 
 int
-main (int arg, char **argv)
+main (void)
 {
   test_init ();
 

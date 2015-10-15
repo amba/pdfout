@@ -37,12 +37,10 @@ pdfout_append_suffix (const char *filename, const char *suffix)
 {
   size_t filename_len = strlen (filename);
   size_t suffix_len = strlen (suffix);
-  char *result = xmalloc (filename_len + suffix_len + 1);
-
-  memcpy (result, filename, filename_len);
-  memcpy (result + filename_len, suffix, suffix_len);
-  result[filename_len + suffix_len] = '\0';
+  char *result = xcharalloc (filename_len + suffix_len + 1);
   
+  memcpy (result, filename, filename_len);
+  memcpy (result + filename_len, suffix, suffix_len + 1);
   return result;
 }
 

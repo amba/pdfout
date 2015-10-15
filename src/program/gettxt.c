@@ -19,13 +19,11 @@
 #include "shared.h"
 
 static char usage[] = "PDF_FILE";
-static char doc[] = "Extract text\n";
+static char doc[] = "Extract text and write it to standard output.\n";
 
 
 
 static struct argp_option options[] = {
-  {"output", 'o', "TXT_FILE", 0,
-   "write output to TXT_FILE"},
   {"default-filename", 'd', 0, 0,
    "write output to PDF_FILE.txt"},
   {"page-range", 'p', "PAGE1[-PAGE2][,PAGE3[-PAGE4]...]", 0,
@@ -38,8 +36,7 @@ static struct argp_option options[] = {
 };
 
 static char *pdf_filename;
-static char *txt_filename;
-static bool use_default_filename;
+static FILE *output;
 static bool use_yaml;
 static int yaml_mode = PDFOUT_TXT_YAML_LINES;
 static char *page_range;
@@ -49,8 +46,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
 {
   switch (key)
     {
-    case 'o': txt_filename = arg; break;
-    case 'd': use_default_filename = true; break;
+    case 'd':
+      output = open_default_write_file (state, pdf_filename, ".txt");
+      break;
     case 'p': page_range = arg; break;
       
     case 's':
@@ -59,7 +57,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
       
     case 'y': use_yaml = true; break;
-    
     case ARGP_KEY_ARG:
       switch (state->arg_num)
 	{
@@ -71,11 +68,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
 
-    case ARGP_KEY_END:
-      if (txt_filename && use_default_filename)
-	argp_error (state, "-o and -d are mutually exclusive");
-      break;
-      
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -97,13 +89,15 @@ pdfout_command_gettxt (int argc, char **argv)
   pdf_document *doc;
   int  i, page_count;
   yaml_emitter_t emitter;
-  FILE *output;
   int *pages;
 
   /* only move a copy of pages to soothe Memcheck */
   int *pages_ptr;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
+
+  if (output == NULL)
+    output = stdout;
   
   ctx = pdfout_new_context ();
   doc = pdfout_pdf_open_document (ctx, pdf_filename);
@@ -116,8 +110,6 @@ pdfout_command_gettxt (int argc, char **argv)
   else
     pages = pdfout_parse_page_range (page_range, page_count);
   
-  output = pdfout_get_stream (&txt_filename, 'w', pdf_filename,
-  			      use_default_filename, ".txt");
 
   if (use_yaml == false)
     {
@@ -134,8 +126,6 @@ pdfout_command_gettxt (int argc, char **argv)
 	for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
 	  pdfout_print_yaml_page (ctx, doc, i - 1, &emitter, yaml_mode);
     }
-  
-  pdfout_output_to_msg (txt_filename);
-  
+    
   exit (0);
 }

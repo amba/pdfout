@@ -20,7 +20,7 @@
 
 /* FIXME: replace pdfout_float_sequence with pdfout_yaml_fz_rect_to_? ? */
 /* FIXME: use open_memstream */
-static void put_char (fz_context *ctx, char c, char **textbuf,
+static void put_char (char c, char **textbuf,
 		      size_t *textbuf_len, size_t *textbuf_pos);
 
 void
@@ -121,7 +121,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 		      }
 		    if (mode == PDFOUT_TXT_YAML_LINES
 			&& span != line->first_span)
-		      put_char (ctx, ' ', &textbuf, &textbuf_len,
+		      put_char (' ', &textbuf, &textbuf_len,
 				&textbuf_pos);
 
 		    for (ch = span->text; ch < span->text + span->len; ch++)
@@ -129,7 +129,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 
 			n = fz_runetochar (utf, ch->c);
 			for (i = 0; i < n; i++)
-			  put_char (ctx, utf[i], &textbuf, &textbuf_len,
+			  put_char (utf[i], &textbuf, &textbuf_len,
 				    &textbuf_pos);
 
 		      }
@@ -166,9 +166,9 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   fz_drop_text_page (ctx, text_page);
   fz_drop_text_sheet (ctx, text_sheet);
 }
-/* FIXME: use size_t for textbuf_pos */
+
 static void
-put_char (fz_context *ctx, char c, char **textbuf, size_t *textbuf_len,
+put_char (char c, char **textbuf, size_t *textbuf_len,
 	  size_t *textbuf_pos)
 {
   if (*textbuf_pos + 2 > *textbuf_len)

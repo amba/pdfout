@@ -19,30 +19,25 @@
 #include "shared.h"
 
 static const char usage[] = "PDF_FILE";
-static const char args_doc[] = "Get page count\n";
+static const char args_doc[] = "Write pagecount to standard output.\n";
 
 static struct argp_option options[] = {
-  {"output", 'o', "FILE", 0, "write pagecount to file (default: stdout) FILE"},
   {0}
 };
 
 /* arguments */
 static char *pdf_filename;
-static char *output_filename;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
   switch (key)
     {
-    case 'o': output_filename = arg; break;
-
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
 
     case ARGP_KEY_NO_ARGS:
@@ -62,19 +57,14 @@ pdfout_command_pagecount (int argc, char **argv)
 {
   fz_context *ctx;
   pdf_document *doc;
-  FILE *output;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   ctx = pdfout_new_context ();
   doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
-  if (output_filename == NULL)
-    output = stdout;
-  else
-    output = pdfout_xfopen (output_filename, "w");
-      
-  fprintf (output, "%d\n", pdf_count_pages (ctx, doc));
+  
+  printf ("%d\n", pdf_count_pages (ctx, doc));
   
   exit (0);
 }

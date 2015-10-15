@@ -146,7 +146,7 @@ struct argp pdfout_yaml_emitter_argp =
   {yaml_emitter_options, yaml_emitter_parse_opt};
 
 FILE *
-pdfout_xfopen (const char *path, const char *mode)
+xfopen (struct argp_state *state, const char *path, const char *mode)
 {
   FILE *result = fopen (path, mode);
   if (result == NULL)
@@ -154,8 +154,8 @@ pdfout_xfopen (const char *path, const char *mode)
       const char *mode_string = strcmp (mode, "r") == 0 ? "for reading" :
 	strcmp (mode, "w") == 0 ? "for writing" :
 	xasprintf ("(mode '%s')", mode);
-      pdfout_errno_msg (errno, "cannot open file '%s' %s", path, mode_string);
-      exit (EX_USAGE);
+      argp_failure (state, argp_err_exit_status, errno,
+		    "cannot open file '%s' %s", path, mode_string);
     }
   
   return result;
@@ -186,36 +186,32 @@ pdfout_new_context (void)
   return ctx;
 }
 
-FILE *
-pdfout_get_stream (char **filename, char mode,
-		   const char *pdf_filename,
-		   bool use_default_filename, const char *suffix)
+static FILE *
+open_default_file (struct argp_state *state, const char *filename,
+		   const char *suffix, const char *mode)
 {
-  FILE *result = NULL;
-
-  assert (mode == 'w' || mode == 'r');
-  
-  if (*filename == NULL)
-    {
-      if (use_default_filename)
-	{
-	  *filename =
-	    pdfout_append_suffix (pdf_filename, suffix);
-	}
-      else
-	{
-	  if (mode == 'r')
-	    result = stdin;
-	  else
-	    result = stdout;
-	}
-    }
-
-  if (result == NULL)
-    result = pdfout_xfopen (*filename, mode == 'w' ? "w" : "r");
-  
-  return result;
+  char *default_filename = pdfout_append_suffix (filename, suffix);
+  FILE *file = xfopen (state, default_filename, mode);
+  if (strcmp (mode, "w") == 0)
+    pdfout_msg ("writing output to file '%s'", default_filename);
+  free (default_filename);
+  return file;
 }
+
+FILE *
+open_default_read_file (struct argp_state *state, const char *filename,
+			const char *suffix)
+{
+  return open_default_file (state, filename, suffix, "r");
+}
+
+FILE *
+open_default_write_file (struct argp_state *state, const char *filename,
+			 const char *suffix)
+{
+  return open_default_file (state, filename, suffix, "w");
+}
+
 
 
 

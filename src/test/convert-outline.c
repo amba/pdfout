@@ -21,16 +21,43 @@
 #include "data/outline-wysiwyg.h"
 
 int
-main (int argc, char **argv)
+main (void)
 {
   test_init ();
+  const char YAML[] = "\
+-   title: title1\n\
+    page: 1\n\
+-   title: ζβσ\n\
+    page: 2\n\
+-   title: 3\n\
+    page: 3\n\
+    kids:\n\
+    -   title: 4\n\
+        page: 4\n\
+    -   title: 5\n\
+        page: 5\n\
+        kids:\n\
+        -   title: 6\n\
+            page: 6\n\
+        -   title: 7\n\
+            page: 7\n\
+            kids:\n\
+            -   title: 8\n\
+                page: 8\n\
+    -   title: 9\n\
+        page: 10\n\
+-   title: 'empty titles:'\n\
+    page: 10\n\
+-   title: \n\
+    page: 10\n\
+    kids:\n\
+    -   title: \n\
+        page: 10\n";
 
   {
-    char *outline_yaml = test_tempname ();
-    
     /* convert to YAML and back */
-    test_pdfout (INPUT, 0, "convert-outline", "-fw", "-o", outline_yaml);
-    test_pdfout (0, EXPECTED, "convert-outline", "-tw", outline_yaml);
+    test_pdfout (INPUT, YAML, "convert-outline", "-fw");
+    test_pdfout (YAML, EXPECTED, "convert-outline", "-tw");
 
     test_pdfout_status (EX_USAGE, 0, 0, "convert-outline", "-f", "lala");
   }

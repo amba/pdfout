@@ -19,8 +19,10 @@
 #include "shared.h"
 #include "../page-labels.h"
 
-static char usage[] = "PDF_FILE > FILE]";
-static char doc[] = "Dump page labels\n\vReturn values:\n\
+static char usage[] = "PDF_FILE";
+static char doc[] = "Dump page labels to standard output.\n"
+
+  "\vReturn values:\n\
 0: PDF_FILE has valid page labels.\n\
 1: PDF_FILE has no page labels. No output is produced.\n\
 2: PDF_FILE's page labels are damaged, but part of them could be extracted.\n\
@@ -33,26 +35,33 @@ static struct argp_option options[] = {
 };
 
 static char *pdf_filename;
-static bool use_default;
-
+static FILE *output;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
+  static bool use_default_filename;
   switch (key)
     {
-    case 'd': use_default = true; break;
+    case 'd': use_default_filename = true; break;
       
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
 
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
+      break;
+
+    case ARGP_KEY_END:
+      if (use_default_filename)
+	output = open_default_write_file (state, pdf_filename, ".pagelabels");
+      else
+	output = stdout;
+      break;
       
     default:
       return ARGP_ERR_UNKNOWN;
@@ -75,9 +84,8 @@ pdfout_command_getpagelabels (int argc, char **argv)
   pdf_document *doc;
   pdfout_page_labels_t *labels;
   yaml_emitter_t *emitter;
-  char *output = NULL;
   int rv;
-  
+
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
   ctx = pdfout_new_context ();
@@ -91,12 +99,10 @@ pdfout_command_getpagelabels (int argc, char **argv)
       exit (2 * rv + 1);
     }
 
-  emitter = yaml_emitter_new(pdfout_get_stream (&output, 'w', pdf_filename,
-						use_default, ".pagelabels"));
+  emitter = yaml_emitter_new (output);
   
   if (pdfout_page_labels_to_yaml (emitter, labels))
     exit (EX_IOERR);
   
-  pdfout_output_to_msg (output);
   exit (2 * rv);
 }

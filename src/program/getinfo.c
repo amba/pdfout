@@ -19,42 +19,43 @@
 #include "shared.h"
 
 static char usage[] = "PDF_FILE";
-static char doc[] = "Dump the information dictionary\n";
+static char doc[] = "Dump the information dictionary to standard output.\n";
+
 
 static struct argp_option options[] = {
   {"default-filename", 'd', 0, 0, "write output to PDF_FILE.info"},
-  {"output", 'o', "YAML", 0, "write output to file YAML (default: stdout)."},
   {0}
 };
 
 static char *pdf_filename;
-static char *output_filename;
-static bool use_default_filename;
+static FILE *output;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
+  static bool use_default_filename;
   switch (key)
     {
-    case 'o': output_filename = arg; break;
     case 'd': use_default_filename = true; break;
-
+      
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
 
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
-      
-    case ARGP_KEY_END:
-      if (output_filename && use_default_filename)
-	argp_error (state, "options -o and -d are mutually exclusive");
       break;
       
+    case ARGP_KEY_END:
+      if (use_default_filename)
+	output = open_default_write_file (state, pdf_filename, ".info");
+      else
+	output = stdout;
+      break;
+
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -75,7 +76,6 @@ pdfout_command_getinfo (int argc, char **argv)
   yaml_document_t *yaml_doc;
   fz_context *ctx;
   pdf_document *doc;
-  FILE *output;
     
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
@@ -87,12 +87,8 @@ pdfout_command_getinfo (int argc, char **argv)
       pdfout_no_output_msg ();
       exit (1);
     }
-
-  output = pdfout_get_stream (&output_filename, 'w', pdf_filename,
-			      use_default_filename, ".info");
   
   pdfout_dump_yaml (output, yaml_doc);
 
-  pdfout_output_to_msg (output_filename);
   exit (0);
 }

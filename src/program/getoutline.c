@@ -19,36 +19,34 @@
 #include "shared.h"
 
 static char usage[] = "PDF_FILE";
-static char doc[] = "Dump the outline\n";
-
+static char doc[] = "Dump outline to standard output.\n";
 
 static struct argp_option options[] = {
   {PDFOUT_OUTLINE_FORMAT_OPTION},
-  {"default-filename", 'd', 0, 0, "write output to PDF_FILE.outline.FORMAT"},
-  {"output", 'o', "FILE", 0, "dump outline to FILE"},
+  {"default-filename", 'd', 0, 0,
+   "write output to file PDF_FILE.outline.FORMAT"},
   {0}
 };
 
 static char *pdf_filename;
-static char *output_filename;
-static bool use_default_filename;
+static FILE *output;
 enum pdfout_outline_format format;
+
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
+  static bool use_default_filename;
   switch (key)
     {
-    case 'o': output_filename = arg; break;
-    case 'd': use_default_filename = true; break;
     case 'f': format = pdfout_outline_get_format (state, arg); break;
-
+    case 'd': use_default_filename = true; break;
+      
     case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
+      if (state->arg_num == 0)
+	pdf_filename = arg;
+      else
+	return ARGP_ERR_UNKNOWN;
       break;
       
     case ARGP_KEY_NO_ARGS:
@@ -56,8 +54,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
-      if (output_filename && use_default_filename)
-	argp_error (state, "-o and -d are mutually exclusive");
+      if (use_default_filename)
+	output = open_default_write_file (state, pdf_filename,
+					  pdfout_outline_suffix (format));
+      else
+	output = stdout;
       break;
       
     default:
@@ -78,7 +79,6 @@ pdfout_command_getoutline (int argc, char **argv)
 {
   yaml_document_t *yaml_doc;
   pdf_document *doc;
-  FILE *output;
   fz_context *ctx;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
@@ -92,17 +92,12 @@ pdfout_command_getoutline (int argc, char **argv)
       exit (1);
     }
 
-  output = pdfout_get_stream (&output_filename, 'w', pdf_filename,
-			      use_default_filename,
-			      pdfout_outline_suffix (format));
-
   if (pdfout_outline_dump (output, yaml_doc, format))
     {
       pdfout_no_output_msg ();
       exit (1);
     }
   
-  pdfout_output_to_msg (output_filename);
   exit (0);
 }
 
