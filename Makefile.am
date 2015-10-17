@@ -15,6 +15,10 @@ distclean-local:
 dist-hook:
 	cp -R $(srcdir)/mupdf $(distdir)/mupdf
 
+# mupdf generates some files inside the source tree.
+distcheck-hook:
+	chmod -R u+w $(distdir)/mupdf
+
 EXTRA_DIST = COPYING README AUTHORS INSTALL TODO
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --cache-file=$(abs_top_builddir)/config.cache

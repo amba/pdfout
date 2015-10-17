@@ -11,6 +11,7 @@ misc.c \
 common.h \
 outline-wysiwyg.c \
 outline-wysiwyg.h \
+libyaml-wrappers.h \
 libyaml-wrappers.c \
 outline.c \
 page-labels.h \

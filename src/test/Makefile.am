@@ -44,8 +44,8 @@ valgrind.supp \
 data/empty10.pdf \
 data/broken.pdf \
 data/hello-world.pdf \
-page-labels-broken.pdf \
-page-labels-really-broken.pdf \
+data/page-labels-broken.pdf \
+data/page-labels-really-broken.pdf \
 data/outline-yaml.h \
 data/outline-wysiwyg.h \
 data/gettxt.h
