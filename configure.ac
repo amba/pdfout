@@ -5,6 +5,7 @@ AC_PREREQ([2.69])
 AC_INIT([pdfout], [0.1], [github.com/amba/pdfout/issues])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign])
+AM_SILENT_RULES([yes])
 AM_MAINTAINER_MODE
 AC_CONFIG_MACRO_DIRS([m4 gl/m4])
 AC_CONFIG_SRCDIR([src/outline.c])
@@ -30,7 +31,7 @@ gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 AC_ARG_ENABLE([warnings],
 	[AS_HELP_STRING([--enable-warnings],
 	[enable many compiler warnings])],
-	[AS_IF([test "X$enableval" = "Xyes"],
+	[AS_IF([test "$enableval" = "yes"],
 	       [for w in $warnings;
 	          do gl_WARN_ADD([$w], [WARN_CFLAGS])
 		done
@@ -40,7 +41,7 @@ AC_ARG_ENABLE([warnings],
 AC_ARG_ENABLE([Werror],
 	[AS_HELP_STRING([--enable-Werror],
 			[compile with -Werror])],
-	[AS_IF([test "X$enableval" = "Xyes"], 
+	[AS_IF([test "$enableval" = "yes"], 
                [gl_WARN_ADD([-Werror], [WARN_CFLAGS])
 	        gl_WARN_ADD([-Wno-error=suggest-attribute=pure], [WARN_CFLAGS])
 		])])
@@ -49,7 +50,6 @@ dnl Checks for libraries.
 dnl use pkg-config if possible
 
 PKG_CHECK_MODULES([LIBYAML], [yaml-0.1 >= 0.1.4])
-PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto >= 1.0.1e])
 
 AC_SEARCH_LIBS([u8_conv_from_encoding], [unistring], [],
                [AC_MSG_FAILURE([missing library])])
@@ -67,17 +67,23 @@ AS_IF([test -r ${third}/openjpeg/libopenjpeg], [],
 Try './git-submodule-update.sh'])])
   
 AX_CHECK_GNU_MAKE()
-AS_IF([test "X${_cv_gnu_make_command}" != "X"],
-[AC_SUBST([GNU_MAKE], ["${_cv_gnu_make_command}"])],
-  [AC_MSG_ERROR([need GNU make to build mupdf])])
+AS_IF([test -n "${_cv_gnu_make_command}"],
+      [AC_SUBST([GNU_MAKE], ["${_cv_gnu_make_command}"])],
+      [AC_MSG_ERROR([GNU make is required to build mupdf])])
 
-AC_ARG_ENABLE([mupdf-build],
-  [AS_HELP_STRING([--enable-mupdf-build=BUILD],
-  [use build=BUILD on the make command line when compiling mupdf.
-  Must be one of release(default),debug,native,coverage,profile,memento])],
-  [mupdf_build=${enableval}], [mupdf_build=release])
-  
-AC_SUBST([mupdf_build])
+dnl Set up mupdf's build command
+MUPDF_MAKE_COMMAND="SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS="
+AS_IF([test "$AM_DEFAULT_VERBOSITY" = "1"],
+      [MUPDF_MAKE_COMMAND=="$MUPDF_MAKE_COMMAND verbose=yes"])
+
+MUPDF_XCFLAGS="-g"
+AC_ARG_VAR([MUPDF_CFLAGS], [C compiler flags used to build mupdf])
+AS_IF([test -n "$MUPDF_CFLAGS"],
+      [MUPDF_XCFLAGS="$MUPDF_XCFLAGS $MUPDF_CFLAGS],
+      [MUPDF_XCFLAGS="$MUPDF_XCFLAGS $CFLAGS])
+
+AC_SUBST([MUPDF_MAKE_COMMAND])
+AC_SUBST([MUPDF_XCFLAGS])
 
 gl_INIT
 

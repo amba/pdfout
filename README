@@ -1,5 +1,5 @@
 * pdfout
-Fast PDF modification and analysis tool based on the [[http://mupdf.com/][MuPDF library]] and the [[http://yaml.org/][YAML data serialization standard]].
+Fast PDF analysis and manipulation tool based on the [[http://mupdf.com/][MuPDF library]] and the [[http://yaml.org/][YAML data serialization standard]].
 
 pdfout can
  - dump and modify outlines, page labels, keys of the information dictionary
@@ -12,13 +12,13 @@ pdfout can
 *** install prequisites
 
 *dpkg-based: e.g. Trisquel, Debian*
- : $ apt-get install gcc make pkg-config libyaml-dev libunistring-dev libssl-dev
+ : $ apt-get install gcc make pkg-config libyaml-dev libunistring-dev
 *rpm-based: e.g. Fedora*
- : $ dnf install tar pkgconfig gcc make libyaml-devel libunistring-devel openssl-devel
+ : $ dnf install tar pkgconfig gcc make libyaml-devel libunistring-devel
 
 *Cygwin*
 
-run the setup*.exe and select the packages =gcc-core, make, pkg-config, libyaml-devel, libunistring2, libunistring-devel, openssl-devel=
+run the setup*.exe and select the packages =gcc-core, make, pkg-config, libyaml-devel, libunistring2 and libunistring-devel=
 
 *** download and build
 for gpg signatures see [[http://amba.github.io/index.html]]
@@ -28,6 +28,7 @@ for gpg signatures see [[http://amba.github.io/index.html]]
  $ cd pdfout-0.1
  $ ./configure --prefix=/usr/local
  $ make
+recommended: $ make check
  $ make install
 #+END_EXAMPLE
 
@@ -49,21 +50,20 @@ Copyright (C) 2015 Simon Reinhardt
 #+END_EXAMPLE
 
 *** Used Libraries
-| Library    | Copyright Owner | License                 |
-|------------+-----------------+-------------------------|
-| MuPDF      | Artifex Inc.    | AGPL Version 3 or later |
-| GNU Gnulib | FSF             | GPL Version 3 or later  |
-| libyaml    | Kirill Simonov  | X11                     |
+| Library    | Copyright Owner | License        |
+|------------+-----------------+----------------|
+| MuPDF      | Artifex Inc.    | [[http://www.gnu.org/licenses/agpl-3.0][AGPL3+]]         |
+| GNU Gnulib | FSF             | [[http://www.gnu.org/licenses/gpl][GPL3+]]          |
+| libyaml    | Kirill Simonov  | [[http://directory.fsf.org/wiki/License:X11][X11 (aka. MIT)]] |
 
 *** further libraries required by mupdf
-| Library   | Copyright Owner                                  | License                                           |
-|-----------+--------------------------------------------------+---------------------------------------------------|
-| freetype  | David Turner, Robert Wilhelm, and Werner Lemberg | GPL Version 2 or later / Freetype Project License |
-| zlib      | Jean-loup Gailly and Mark Adler                  | zlib-license                                      |
-| jbig2dec  | Artifex Inc.                                     | AGPL Version 3 or later                           |
-| libcrypto | The OpenSSL Project                              | OpenSSL license                                   |
-| libjpeg   | Thomas G. Lane, Guido Vollbeding                 | Independent JPEG Group License                    |
-| OpenJPEG  | various                                          | 2-clause BSD                                      |
+| Library  | Copyright Owner                                  | License                             |
+|----------+--------------------------------------------------+-------------------------------------|
+| freetype | David Turner, Robert Wilhelm, and Werner Lemberg | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0][GPL2+]]  / [[http://directory.fsf.org/wiki/License:FreeType][Freetype Project License]]   |
+| zlib     | Jean-loup Gailly and Mark Adler                  | [[http://directory.fsf.org/wiki/License:Zlib][License of ZLib]]                     |
+| jbig2dec | Artifex Inc.                                     | [[http://www.gnu.org/licenses/agpl-3.0][AGPL3+]]                              |
+| libjpeg  | Thomas G. Lane, Guido Vollbeding                 | [[http://directory.fsf.org/wiki?title%3DLicense:JPEG][Independent JPEG Group License]]      |
+| OpenJPEG | various                                          | [[http://directory.fsf.org/wiki?title%3DLicense:FreeBSD][FreeBSD License (aka. 2-clause BSD)]] |
 
 #+STARTUP: showall
 # Local Variables:

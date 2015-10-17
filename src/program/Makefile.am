@@ -39,12 +39,12 @@ LDADD = \
 ../libshared-with-tests.a \
 $(top_builddir)/gl/libgnu.a
 
-mupdf_lib_dir = $(top_srcdir)/mupdf/build/$(mupdf_build)
+mupdf_build_dir = $(abs_top_builddir)/mupdf
 LDADD += \
-  $(mupdf_lib_dir)/libmupdf.a \
-  $(mupdf_lib_dir)/libfreetype.a \
-  $(mupdf_lib_dir)/libjbig2dec.a \
-  $(mupdf_lib_dir)/libopenjpeg.a \
-  $(mupdf_lib_dir)/libjpeg.a \
-  $(mupdf_lib_dir)/libz.a
+  $(mupdf_build_dir)/libmupdf.a \
+  $(mupdf_build_dir)/libfreetype.a \
+  $(mupdf_build_dir)/libjbig2dec.a \
+  $(mupdf_build_dir)/libopenjpeg.a \
+  $(mupdf_build_dir)/libjpeg.a \
+  $(mupdf_build_dir)/libz.a
 

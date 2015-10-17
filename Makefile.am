@@ -2,21 +2,18 @@
 SUBDIRS = . gl src gl-tests
 
 all-local:
-	+ cd $(srcdir)/mupdf && $(GNU_MAKE) libs third build=$(mupdf_build)
+	+ cd $(srcdir)/mupdf && $(GNU_MAKE) libs third build=debug \
+                               OUT="$(abs_top_builddir)/mupdf" $(MUPDF_MAKE_COMMAND) XCFLAGS="$(MUPDF_XCFLAGS)"
 
 clean-local:
-	+ cd $(srcdir)/mupdf && $(GNU_MAKE) clean build=$(mupdf_build)
+	rm -rf "$(abs_top_builddir)/mupdf" 
 
 distclean-local:
-	+ cd $(srcdir)/mupdf && $(GNU_MAKE) nuke build=$(mupdf_build)
+	+ cd $(srcdir)/mupdf && $(GNU_MAKE) nuke build=debug \
+                                               OUT="$(abs_top_builddir)/mupdf"
 
 dist-hook:
-	cp -R $(srcdir)/mupdf $(distdir)/mupdf \
-	&& rm -rf $(distdir)/mupdf/build
-
-distcheck-hook:
-# mupdf needs to build in source dir, so make it writable
-	chmod u+w $(distdir) && chmod -R u+w $(distdir)/mupdf
+	cp -R $(srcdir)/mupdf $(distdir)/mupdf
 
 EXTRA_DIST = COPYING README AUTHORS INSTALL TODO
 
