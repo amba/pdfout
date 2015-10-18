@@ -49,21 +49,21 @@ Copyright (C) 2015 Simon Reinhardt
    GNU General Public License for more details.
 #+END_EXAMPLE
 
-*** Used Libraries
-| Library    | Copyright Owner | License        |
-|------------+-----------------+----------------|
-| MuPDF      | Artifex Inc.    | [[http://www.gnu.org/licenses/agpl-3.0][AGPLv3+]]        |
-| GNU Gnulib | FSF             | [[http://www.gnu.org/licenses/gpl][GPLv3+]]         |
-| libyaml    | Kirill Simonov  | [[http://directory.fsf.org/wiki/License:X11][X11 (aka. MIT)]] |
+*** Licenses of the used libraries
+| Library    | License        |
+|------------+----------------|
+| MuPDF      | [[http://www.gnu.org/licenses/agpl-3.0][AGPLv3+]]        |
+| GNU Gnulib | [[http://www.gnu.org/licenses/gpl][GPLv3+]]         |
+| libyaml    | [[http://directory.fsf.org/wiki/License:X11][X11 (aka. MIT)]] |
 
 *** further libraries required by mupdf
-| Library  | Copyright Owner                                  | License                             |
-|----------+--------------------------------------------------+-------------------------------------|
-| freetype | David Turner, Robert Wilhelm, and Werner Lemberg | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0][GPLv2+]] / [[http://directory.fsf.org/wiki/License:FreeType][Freetype Project License]]   |
-| zlib     | Jean-loup Gailly and Mark Adler                  | [[http://directory.fsf.org/wiki/License:Zlib][License of ZLib]]                     |
-| jbig2dec | Artifex Inc.                                     | [[http://www.gnu.org/licenses/agpl-3.0][AGPLv3+]]                             |
-| libjpeg  | Thomas G. Lane, Guido Vollbeding                 | [[http://directory.fsf.org/wiki?title%3DLicense:JPEG][Independent JPEG Group License]]      |
-| OpenJPEG | various                                          | [[http://directory.fsf.org/wiki?title%3DLicense:FreeBSD][FreeBSD License (aka. 2-clause BSD)]] |
+| Library  | License                             |
+|----------+-------------------------------------|
+| freetype | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0][GPLv2+]] / [[http://directory.fsf.org/wiki/License:FreeType][Freetype Project License]]   |
+| zlib     | [[http://directory.fsf.org/wiki/License:Zlib][License of ZLib]]                     |
+| jbig2dec | [[http://www.gnu.org/licenses/agpl-3.0][AGPLv3+]]                             |
+| libjpeg  | [[http://directory.fsf.org/wiki?title%3DLicense:JPEG][Independent JPEG Group License]]      |
+| OpenJPEG | [[http://directory.fsf.org/wiki?title%3DLicense:FreeBSD][FreeBSD License (aka. 2-clause BSD)]] |
 
 #+STARTUP: showall
 # Local Variables:
