@@ -3,7 +3,8 @@ SUBDIRS = . gl src gl-tests
 
 all-local:
 	+ cd $(srcdir)/mupdf && $(GNU_MAKE) libs third build=debug \
-                               OUT="$(abs_top_builddir)/mupdf" $(MUPDF_MAKE_COMMAND) XCFLAGS="$(MUPDF_XCFLAGS)"
+          OUT="$(abs_top_builddir)/mupdf" \
+	  $(MUPDF_MAKE_COMMAND) XCFLAGS="$(MUPDF_XCFLAGS)"
 
 clean-local:
 	rm -rf "$(abs_top_builddir)/mupdf" 
