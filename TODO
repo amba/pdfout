@@ -8,11 +8,10 @@
    - [X] fedora
    - [X] w32 cygwin
 
- - [ ] build without openssl!
+ - [X] build without openssl!
  - [ ] better error messages on YAML parsing, maybe line/column number? list valid events.
  - [X] use __FILE__ and basename in test_init?
  - [ ] use pdf_open_document_with_stream to open files.
- - [ ] use pdf_write_document_to_stream for writing.
  - [ ] test on document with xref streams. further test incremental update with
    xref streams.
  - [X] run gnulib tests after program tests (see gnulib manual, sec. 3.9)
@@ -30,42 +29,34 @@
 
  - [X] github.io:
    - [X] Name | Last modified | Size | gpg
- - [ ] always build mupdf with debug info.
+ - [X] always build mupdf with debug info.
  - [ ] comments: Use full sentences, terminated with double space.
 
  - [X] page labels: rename 'first' to 'start', since the pdf name is called 'St' 
  - [-] thirdparty:
    - [ ] glibc:
-     - [ ] fix argp bug 18719
+     - [ ](repored) fix argp bug 18719
      - [ ] manual
        - [ ] fix argp examples
-   - [ ] gnulib 
-     - [ ] fix 'verify' module test failure on freebsd with 'make check -j4'
-     - [ ] cygwin test fails
-     - [ ] memory leak in gnulib 'copy-file' module
    - [ ] contrib .pc file for GNU libunistring
    - [ ] comment on argp book
-   - [X] mupdf:
-     - [X] u16 -> u8 -> do not use fz_outline?
+   - [-] mupdf:
+     - [X] u16 -> u8
      - [X] incremental update with xref: Syscall param write(buf) points to
         uninitialised byte(s)
      - [X] -Wunused-parameter in fz_unread_byte and fz_sync_bits
-     - [X] add to PDF_NAMES: "Pagelabels", "Nums", "St", "a", "r"  
-     - [X] write document to stream (reported)
+     - [ ](reported) add to PDF_NAMES: "Pagelabels", "Nums", "St", "a", "r" 
+     - [ ](reported) write document to stream
+     - [ ] open document from FILE*
+     - [ ] large file support broken for xref streams
+     - [ ] mem leaks in pdf-pkcs7.c for both sign/verify
+     - [ ] pdf_resolve_obj no longer existent but still in object.h.
    - [ ] libyaml non-BMP escaping
 
 
 
  - [ ] use minimal includes to speed up compilation
    - [ ] forward declaration of mupdf / libyaml struct pointers? (C11 feature)
-
- - [ ] use gnulib xlist module in outline-wysiwyg.c instead of manually using
-   x2nrealloc ??
-
- - [ ] tests: read from stderr in pipe and test batch mode
-
-
- - [ ] AC_SUBST AM_CPPFLAGS? No! build gnulib without WARN_CFLAGS
 
  - [X] gettxt: allow page range
 
@@ -75,9 +66,9 @@
    - [ ] page labels format
    - [ ] info dict format
 
- - [ ] grep: recursion, other GNU Grep options.
+ - [ ] grep: recursion, remaining GNU Grep options.
 
- - [ ] commands case-insensitive, aliases: set-outline ... 
+ - [ ] command aliases: set-outline ... 
 
  - [ ] WUR attribute for pdfout_load_yaml and all others that return int?
 
@@ -100,6 +91,7 @@
  - [ ] prevent input pdf file == output pdf file, check inodes.
       (at the moment we just check filenames) patch mupdf to accept streams?
       Maybe refuse operation if output file exists?
+ - [ ] add sign/verify commands
 
  - [ ] downstream:
    - [ ] configure option to use existing mupdf build
