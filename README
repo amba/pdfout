@@ -1,6 +1,9 @@
 * pdfout
 Fast PDF analysis and manipulation tool. Based on the [[http://mupdf.com/][MuPDF library]] and the [[http://yaml.org/][YAML data serialization standard]].
 
+This is *EXPERIMENTAL SOFTWARE:* interfaces and input/output formats are still evolving.
+So do not (yet) rely on it for production use.
+
 pdfout can
  - dump and modify outlines, page labels, keys of the information dictionary
  - extract text
