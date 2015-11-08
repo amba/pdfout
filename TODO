@@ -8,6 +8,7 @@
    - [X] fedora
    - [X] w32 cygwin
 
+ - [X] page numbering like in latex (alph Alph).
  - [X] build without openssl!
  - [ ] better error messages on YAML parsing, maybe line/column number? list valid events.
  - [X] use __FILE__ and basename in test_init?
