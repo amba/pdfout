@@ -41,14 +41,14 @@ static bool use_yaml;
 static int yaml_mode = PDFOUT_TXT_YAML_LINES;
 static char *page_range;
 
+
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
+  static bool use_default_filename;
   switch (key)
     {
-    case 'd':
-      output = open_default_write_file (state, pdf_filename, ".txt");
-      break;
+    case 'd': use_default_filename = true; break;
     case 'p': page_range = arg; break;
       
     case 's':
@@ -67,6 +67,12 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case ARGP_KEY_NO_ARGS:
       argp_usage (state);
+    case ARGP_KEY_END:
+      if (use_default_filename)
+	output = open_default_write_file (state, pdf_filename, ".txt");
+      else
+	output = stdout;
+      break;
 
     default:
       return ARGP_ERR_UNKNOWN;
@@ -95,9 +101,6 @@ pdfout_command_gettxt (int argc, char **argv)
   int *pages_ptr;
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
-
-  if (output == NULL)
-    output = stdout;
   
   ctx = pdfout_new_context ();
   doc = pdfout_pdf_open_document (ctx, pdf_filename);
