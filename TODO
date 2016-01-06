@@ -8,6 +8,9 @@
    - [X] fedora
    - [X] w32 cygwin
 
+ - [ ] outline [Fit] to [XYZ, null, null, null] conversion command.
+ - [ ] commandline 'pdfout outline set file.pdf' instead 'pdfout setoutline file.pdf'
+ - [ ] builtin JSON
  - [X] page numbering like in latex (alph Alph).
  - [X] build without openssl!
  - [ ] better error messages on YAML parsing, maybe line/column number? list valid events.
@@ -27,6 +30,8 @@
    - [ ] testing info
    - [X] list openssl
    - [ ] NEWS
+ - [ ] use GNU gettext's moo for object-orientation
+ - [ ] build with -Wc++-compat
 
  - [X] github.io:
    - [X] Name | Last modified | Size | gpg
