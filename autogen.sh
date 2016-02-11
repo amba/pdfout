@@ -56,22 +56,24 @@ if test $skip_gnulib = false; then
   # Skip the gnulib-tool step if gnulib-tool was not found.
   if test -n "$GNULIB_TOOL"; then
     GNULIB_MODULES='
-      argp
-      argmatch
-      clean-temp
-      dirname
-      error
-      tempname
-      xvasprintf
-      xmemdup0
-      regex
-      regex-quote
-      manywarnings
-      progname
-      copy-file
-      full-read
-      full-write
-    '
+argp
+argmatch
+clean-temp
+dirname
+error
+tempname
+xvasprintf
+xmemdup0
+regex
+regex-quote
+manywarnings
+progname
+copy-file
+full-read
+full-write
+minmax
+unistr/u8-check
+'
     $GNULIB_TOOL --source-base=gl --m4-base=gl/m4 --tests-base=gl-tests \
 		  --with-tests --import $GNULIB_MODULES
     

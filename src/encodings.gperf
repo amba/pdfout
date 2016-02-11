@@ -1,0 +1,21 @@
+%struct-type
+%define hash-function-name encodings_hash
+%define lookup-function-name get_encoding
+%language=ANSI-C
+%{
+static struct encoding *get_encoding(const char *name, unsigned int len);	
+%}
+struct encoding;
+%%
+ASCII, ascii_mbtowc, ascii_wctomb,
+UTF-8, utf8_mbtowc, utf8_wctomb,
+C, utf8_mbtowc, utf8_wctomb, true,
+UTF-16, utf16_mbtowc, utf16_wctomb,
+UTF-16BE, utf16be_mbtowc, utf16be_wctomb,
+UTF-16LE, utf16le_mbtowc, utf16le_wctomb,
+UTF-32, utf32_mbtowc, utf32_wctomb,
+UTF-32BE, utf32be_mbtowc, utf32be_wctomb,
+UTF-32LE, utf32le_mbtowc, utf32le_wctomb,
+PDFDOCENCODING, pdfdoc_mbtowc, pdfdoc_wctomb,
+PDFDOC, pdfdoc_mbtowc, pdfdoc_wctomb,
+%%

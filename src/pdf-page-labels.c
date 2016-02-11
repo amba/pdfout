@@ -1,5 +1,6 @@
 #include "common.h"
 #include "page-labels.h"
+#include "charset-conversion.h"
 #include <argmatch.h>
 
 /* Update PDF's page labels.  */
@@ -52,7 +53,7 @@ int pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
       prefix = mapping->prefix;
       if (prefix)
 	{
-	  text = pdfout_utf8_to_str (prefix, strlen (prefix), &text_len);
+	  text = pdfout_utf8_to_pdf (ctx, prefix, strlen (prefix), &text_len);
 	  /* FIXME: check INT_MAX overflow.  */
 	  string_obj = pdf_new_string (ctx, doc, text, text_len);
 	  pdf_dict_puts_drop (ctx, dict_obj, "P", string_obj);
@@ -539,8 +540,9 @@ page_labels_get (pdfout_page_labels_t *labels, fz_context *ctx,
 	      if (pdf_buf_len)
 		{
 		  size_t utf8_buf_len;
-		  mapping.prefix = pdfout_str_to_utf8 (pdf_buf, pdf_buf_len,
-							&utf8_buf_len);
+		  mapping.prefix = pdfout_pdf_to_utf8 (ctx, pdf_buf,
+						       pdf_buf_len,
+						       &utf8_buf_len);
 		}
 	    }
 	}

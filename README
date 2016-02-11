@@ -15,13 +15,13 @@ pdfout can
 *** install prequisites
 
 *dpkg-based: e.g. Trisquel, Debian*
- : $ apt-get install gcc make pkg-config libyaml-dev libunistring-dev
+ : $ apt-get install gcc make pkg-config libyaml-dev
 *rpm-based: e.g. Fedora*
- : $ dnf install tar pkgconfig gcc make libyaml-devel libunistring-devel
+ : $ dnf install tar pkgconfig gcc make libyaml-devel
 
 *Cygwin*
 
-run the setup.exe and select the packages =gcc-core, make, pkg-config, libyaml-devel, libunistring2 and libunistring-devel=
+run the setup.exe and select the packages =gcc-core, make, pkg-config, libyaml-devel=
 
 *** download and build
 for gpg signatures see [[http://amba.github.io/index.html]]
@@ -52,21 +52,8 @@ Copyright (C) 2015 Simon Reinhardt
    GNU General Public License for more details.
 #+END_EXAMPLE
 
-*** Licenses of the used libraries
-| Library    | License        |
-|------------+----------------|
-| MuPDF      | [[http://www.gnu.org/licenses/agpl-3.0][AGPLv3+]]        |
-| GNU Gnulib | [[http://www.gnu.org/licenses/gpl][GPLv3+]]         |
-| libyaml    | [[http://directory.fsf.org/wiki/License:X11][X11 (aka. MIT)]] |
-
-*** Further libraries required by mupdf
-| Library  | License                             |
-|----------+-------------------------------------|
-| freetype | [[http://www.gnu.org/licenses/old-licenses/gpl-2.0][GPLv2+]] / [[http://directory.fsf.org/wiki/License:FreeType][Freetype Project License]]   |
-| zlib     | [[http://directory.fsf.org/wiki/License:Zlib][License of ZLib]]                     |
-| jbig2dec | [[http://www.gnu.org/licenses/agpl-3.0][AGPLv3+]]                             |
-| libjpeg  | [[http://directory.fsf.org/wiki?title%3DLicense:JPEG][Independent JPEG Group License]]      |
-| OpenJPEG | [[http://directory.fsf.org/wiki?title%3DLicense:FreeBSD][FreeBSD License (aka. 2-clause BSD)]] |
+See file COPYRIGHT for full details on used libraries and code derived
+from other projects.
 
 #+STARTUP: showall
 # Local Variables:

@@ -44,17 +44,12 @@ AC_ARG_ENABLE([Werror],
 	[AS_IF([test "$enableval" = "yes"], 
                [gl_WARN_ADD([-Werror], [WARN_CFLAGS])
 	        gl_WARN_ADD([-Wno-error=suggest-attribute=pure], [WARN_CFLAGS])
-		])])
+		gl_WARN_ADD([-Wno-error=clobbered], [WARN_CFLAGS])])])
 	      
 dnl Checks for libraries.
 dnl use pkg-config if possible
 
 PKG_CHECK_MODULES([LIBYAML], [yaml-0.1 >= 0.1.4])
-
-AC_SEARCH_LIBS([u8_conv_from_encoding], [unistring], [],
-               [AC_MSG_FAILURE([missing library])])
-AC_CHECK_HEADERS([unistr.h uniconv.h],
-                 [], [AC_MSG_FAILURE([missing headers])])
 
 dnl build mupdf submodule
 dnl is it checked out?

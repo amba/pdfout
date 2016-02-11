@@ -18,11 +18,18 @@ page-labels.h \
 page-labels.c \
 pdf-page-labels.c \
 info-dict.c dates.c \
-string-conversion.c \
+charset-conversion.c \
+charset-conversion.h \
+encodings.h \
 open-write-pdf.c \
 text-extraction.c \
 pdfout-regex.h \
 regex.c
+
+charset-conversion.c: encodings.h
+encodings.h: encodings.gperf
+	gperf $(srcdir)/encodings.gperf > $(srcdir)/encodings.h-t && \
+	mv $(srcdir)/encodings.h-t $(srcdir)/encodings.h
 
 libshared_with_tests_a_SOURCES = \
 shared-with-tests.h \
@@ -30,5 +37,5 @@ shared-with-tests.c
 
 EXTRA_DIST = \
 pdfdoc.txt \
-PDFDOCENCODING.TXT
-
+PDFDOCENCODING.TXT \
+encodings.gperf

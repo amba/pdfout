@@ -18,6 +18,7 @@
 #include "common.h"
 #include "outline-wysiwyg.h"
 #include "libyaml-wrappers.h"
+#include "charset-conversion.h"
 
 static int fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
 			       yaml_document_t *doc, int sequence);
@@ -175,7 +176,7 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
       node = pdfout_mapping_gets_node (yaml_doc, mapping, "title");
       assert (node && node->type == YAML_SCALAR_NODE
 	      && pdfout_scalar_value (node));
-      title = pdfout_utf8_to_str (pdfout_scalar_value (node),
+      title = pdfout_utf8_to_pdf (ctx, pdfout_scalar_value (node),
 				  node->data.scalar.length, &title_len);
       value = pdf_new_string (ctx, doc, title, title_len);
       free (title);

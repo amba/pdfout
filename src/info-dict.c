@@ -16,6 +16,7 @@
 
 
 #include "common.h"
+#include "charset-conversion.h"
 
 #define MSG(fmt, args...) pdfout_msg ("check info dict: " fmt, ## args)
 
@@ -166,7 +167,7 @@ pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
       else
 	{
 	  /* reencode and create string object */
-	  text_string = pdfout_utf8_to_str (value_string,
+	  text_string = pdfout_utf8_to_pdf (ctx, value_string,
 					    strlen (value_string),
 					    &text_string_len);
 	  /* FIXME: check for INT_MAX.  */
@@ -226,7 +227,7 @@ get_info_dict (yaml_document_t *yaml_doc, fz_context *ctx, pdf_document *doc)
 	      continue;
 	    }
 
-	  value_string = pdfout_str_to_utf8 (pdf_to_str_buf (ctx, val),
+	  value_string = pdfout_pdf_to_utf8 (ctx, pdf_to_str_buf (ctx, val),
 					     pdf_to_str_len (ctx, val),
 					     &value_string_len);
 	  /* FIXME: check INT_MAX overflow.  */

@@ -26,8 +26,6 @@
 
 #include <yaml.h>
 
-#include <uniconv.h>
-
 #include <xalloc.h>
 #include <xvasprintf.h>
 #include <argmatch.h>
@@ -44,15 +42,6 @@ enum {
   PDFOUT_TXT_YAML_CHARACTERS,
 };
 
-
-
-/* silently replaces broken multibytes with a '?' character */
-char *pdfout_str_to_utf8 (const char *inbuf, size_t inbuf_len,
-			  size_t *outbuf_len);
-
-/* dies on all errors, so make sure that the UTF-8 is valid */
-char *pdfout_utf8_to_str (const char *inbuf, size_t inbuf_len,
-			  size_t *outbuf_len);
 
 void pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 			     int page_number, yaml_emitter_t *emitter,

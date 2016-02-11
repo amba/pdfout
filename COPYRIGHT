@@ -1,0 +1,30 @@
+pdfout is licensed under the terms of the GNU General Public License, either
+version 3 of the License, or (at your option) any later version.
+
+It is heavily based on work of other free software projects.
+We are grateful to the authors of those.
+
+Used libraries:
+
+ Library    | License        
+------------+---------------
+ MuPDF      | AGPLv3+      
+ GNU Gnulib | GPLv3+         
+ libyaml    | X11 (aka. MIT)
+
+dependencies of mupdf:
+ Library  | License
+----------+-----------
+ freetype | GPLv2+ / Freetype Project License
+ zlib     | License of Zlib
+ jbig2dec | AGPLv3+
+ libjpeg  | Independent JPEG Group License
+ OpenJPEG | FreeBSD License (aka. 2-clause BSD)
+
+
+Used code fragments:
+
+- The autogen.sh script is derived from GNU libunistring.
+
+- The mbtowc_xxx and wctomb_xxx functions in src/charset-conversion.c are
+  derived from GNU libiconv.
