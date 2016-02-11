@@ -7,7 +7,7 @@
    - [X] freebsd
    - [X] fedora
    - [X] w32 cygwin
-
+ - [ ] use closeout gnulib module to check stdout status.
  - [ ] outline [Fit] to [XYZ, null, null, null] conversion command.
  - [ ] outline command to close/open all entries.
  - [ ] commandline 'pdfout outline set file.pdf' instead 'pdfout setoutline file.pdf'
