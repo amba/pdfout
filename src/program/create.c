@@ -24,6 +24,7 @@ static char doc[] = "Create empty PDF file.\n"
   "Paper size defaults to A4\n";
 
 static struct argp_option options[] = {
+  {"output", 'o', "FILE", 0, "Write PDF to FILE"},
   {"pages", 'p', "NUM", 0, "Create NUM pages (default: 1)"},
   {"paper-size", 's', "SIZE", 0, "use one of the following paper sizes:"},
   {"ISO 216: A0, A1, ..., A10, B0, ..., B10", 0, 0, OPTION_DOC, 0, 2},
@@ -42,6 +43,7 @@ static struct argp_option options[] = {
 
 static int page_count = 1;
 static float height, width;
+static const char *output_filename = "/dev/stdout"; /* FIXME: non portable */
 
 static void get_size (struct argp_state *state, const char *paper_size,
 		      float *width, float *height);
@@ -55,7 +57,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     {
     case 's': paper_size = arg; break;
     case 'l': landscape = true; break;
-      
+    case 'o': output_filename = arg; break;
     case 'p':
       page_count = pdfout_strtoint_null (arg);
       if (page_count < 0)
@@ -120,7 +122,6 @@ pdfout_command_create (int argc, char **argv)
 {
   fz_context *ctx;
   pdf_document *doc;
-  const char *output_filename = "/dev/stdout";
   
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 

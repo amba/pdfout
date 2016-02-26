@@ -64,7 +64,7 @@ void _test_grep (const char *file, const char *pattern,
 		 enum test_search_mode mode);
 
 #define test_grep(file, pattern) \
-  _test_grep (file, pattern, strlen (pattern), TEST_GREP)
+  _test_grep (file, pattern, TEST_GREP)
 
 #define test_egrep(file, pattern) \
   _test_grep (file, pattern, TEST_EGREP)

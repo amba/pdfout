@@ -16,7 +16,7 @@
 
 
 #include "test.h"
-
+#include "string.h"
 int
 main (void)
 {
@@ -24,7 +24,9 @@ main (void)
 
   /* pagecount */
   {
-    test_pdfout_fgrep (0, "Count 3", "create", "-p3");
+    char *file = test_tempname ();
+    test_pdfout (0, 0, "create", "-p3", "-o", file);
+    test_fgrep (file, "Count 3");
   }
 		   
   /* grep for width and height in page dict */
@@ -46,23 +48,27 @@ main (void)
       {
 	const char *size = ptr[0][0];
 	const char *grep_string = ptr[0][1];
-
+	char *file = test_tempname ();
 	if (size[0] == '\0')
 	  /* use default paper size */
-	  test_pdfout_grep (0, grep_string, "create");
+	  test_pdfout (0, 0, "create", "-o", file);
 	else
-	  test_pdfout_grep (0, grep_string, "create", "-s", size);
-	
+	  test_pdfout (0, 0, "create", "-o", file, "-s", size);
+
+	test_grep (file, grep_string);
       }
   }
   /* landscape option */
   {
-    test_pdfout_fgrep (0, "0 0 792 612", "create", "-sANSI A", "-l");
+    char *file = test_tempname ();
+    test_pdfout (0, 0, "create", "-sANSI A", "-l", "-o", file);
+    test_fgrep (file, "0 0 792 612");
   }
   /* height and width options */
   {
-    test_pdfout_fgrep (0, "0 0 100 100.1", "create", "-w", "100", "-h",
-		       "100.1");
+    char *file = test_tempname ();
+    test_pdfout (0, 0, "create", "-w", "100", "-h", "100.1", "-o", file);
+    test_fgrep (file, "0 0 100 100.1");
   }
 
   /* invalid usage */

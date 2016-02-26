@@ -31,9 +31,9 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   yaml_document_t *doc = &yaml_doc;
   char buffer[256];
   fz_page *page = fz_load_page (ctx, &pdf_doc->super, page_number);
-  fz_text_sheet *text_sheet = fz_new_text_sheet (ctx);
-  fz_text_page *text_page = fz_new_text_page (ctx);
-  fz_device *dev = fz_new_text_device (ctx, text_sheet, text_page);
+  fz_stext_sheet *text_sheet = fz_new_stext_sheet (ctx);
+  fz_stext_page *text_page = fz_new_stext_page (ctx);
+  fz_device *dev = fz_new_stext_device (ctx, text_sheet, text_page);
   fz_matrix transform = fz_identity; /* FIXME: required?? */
   fz_rect bbox, mbox;
   fz_device *bbox_dev = fz_new_bbox_device (ctx, &bbox);
@@ -71,9 +71,9 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 	case FZ_PAGE_BLOCK_TEXT:
 	  /* FIXME: put the following into separate function?  */
 	  {
-	    fz_text_block *block = text_page->blocks[block_n].u.text;
-	    fz_text_line *line;
-	    fz_text_char *ch;
+	    fz_stext_block *block = text_page->blocks[block_n].u.text;
+	    fz_stext_line *line;
+	    fz_stext_char *ch;
 	    char utf[4];
 	    int i, n;
 	    for (line = block->lines; line < block->lines + block->len;
@@ -82,7 +82,7 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 
 		int line_mapping =
 		  pdfout_yaml_document_add_mapping (doc, NULL, 0);
-		fz_text_span *span;
+		fz_stext_span *span;
 		int span_sequence;
 		textbuf_pos = 0;
 		bbox = line->bbox;
@@ -163,8 +163,8 @@ pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
   fz_drop_page (ctx, page);
   fz_drop_device (ctx, dev);
   fz_drop_device (ctx, bbox_dev);
-  fz_drop_text_page (ctx, text_page);
-  fz_drop_text_sheet (ctx, text_sheet);
+  fz_drop_stext_page (ctx, text_page);
+  fz_drop_stext_sheet (ctx, text_sheet);
 }
 
 static void
@@ -178,17 +178,17 @@ put_char (char c, char **textbuf, size_t *textbuf_len,
 }
 
 
-static void process_block (FILE *memstream, fz_text_block *block)
+static void process_block (FILE *memstream, fz_stext_block *block)
 {
-  fz_text_line *line;
+  fz_stext_line *line;
 
   for (line = block->lines; line - block->lines < block->len;
        line++)
     {
-      fz_text_span *span;
+      fz_stext_span *span;
       for (span = line->first_span; span; span = span->next)
 	{
-	  fz_text_char *ch;
+	  fz_stext_char *ch;
 	    
 	  if (span != line->first_span)
 	      putc (' ', memstream);
@@ -213,17 +213,17 @@ pdfout_text_get_page (FILE *stream, fz_context *ctx,
 		      pdf_document *doc, int page_number)
 {
   fz_page *page;
-  fz_text_sheet *text_sheet;
-  fz_text_page *text_page;
+  fz_stext_sheet *text_sheet;
+  fz_stext_page *text_page;
   fz_device *dev;
   fz_page_block *block;
 
   page = fz_load_page (ctx, &doc->super, page_number);
   ((pdf_page *) page)->ctm = fz_identity;
   
-  text_sheet = fz_new_text_sheet (ctx);
-  text_page = fz_new_text_page (ctx);
-  dev = fz_new_text_device (ctx, text_sheet, text_page);
+  text_sheet = fz_new_stext_sheet (ctx);
+  text_page = fz_new_stext_page (ctx);
+  dev = fz_new_stext_device (ctx, text_sheet, text_page);
   
   fz_run_page (ctx, page, dev, &fz_identity, NULL);
 
@@ -235,8 +235,8 @@ pdfout_text_get_page (FILE *stream, fz_context *ctx,
   fprintf (stream, "\f\n");
 
   /* cleanup */
-  fz_drop_text_page (ctx, text_page);
-  fz_drop_text_sheet (ctx, text_sheet);
+  fz_drop_stext_page (ctx, text_page);
+  fz_drop_stext_sheet (ctx, text_sheet);
   fz_drop_device (ctx, dev);
   fz_drop_page (ctx, page);
 }

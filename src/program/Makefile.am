@@ -37,14 +37,7 @@ libyaml-wrappers.c
 LDADD = \
 ../libcommon.a \
 ../libshared-with-tests.a \
-$(top_builddir)/gl/libgnu.a
-
-mupdf_build_dir = $(abs_top_builddir)/mupdf
-LDADD += \
-  $(mupdf_build_dir)/libmupdf.a \
-  $(mupdf_build_dir)/libfreetype.a \
-  $(mupdf_build_dir)/libjbig2dec.a \
-  $(mupdf_build_dir)/libopenjpeg.a \
-  $(mupdf_build_dir)/libjpeg.a \
-  $(mupdf_build_dir)/libz.a
-
+$(top_builddir)/gl/libgnu.a \
+$(abs_top_builddir)/mupdf/libmupdf.a \
+$(abs_top_builddir)/mupdf/libmupdfthird.a \
+$(abs_top_builddir)/mupdf/libmupdf.a

@@ -82,7 +82,7 @@ check_open (fz_context * ctx, char *file)
 static void
 check_incremental_update (void)
 {
-  fz_write_options opts = { 0 };
+  pdf_write_options opts = { 0 };
   fz_context *ctx;
   /* to run Memcheck-clean, keep a pointer to each doc  */
   pdf_document *doc[3];
@@ -99,7 +99,7 @@ check_incremental_update (void)
 
   pdfout_msg ("file: %s", file);
   
-  pdf_write_document (ctx, doc[0], file, &opts);
+  pdf_save_document (ctx, doc[0], file, &opts);
 
   doc[1] = check_open (ctx, file);
 
@@ -114,7 +114,7 @@ check_incremental_update (void)
 		      pdf_new_indirect (ctx, doc[1], num, 0));
 
   opts.do_incremental = 1;
-  pdf_write_document (ctx, doc[1], file, &opts);
+  pdf_save_document (ctx, doc[1], file, &opts);
 
   doc[2] = check_open (ctx, file);
 
@@ -131,7 +131,7 @@ check_incremental_update (void)
 static void
 check_incremental_update_xref (void)
 {
-  fz_write_options opts = { 0 };
+  pdf_write_options opts = { 0 };
   fz_context *ctx;
   /* to run Memcheck-clean, keep a pointer to each doc  */
   pdf_document *doc[3];
@@ -147,7 +147,7 @@ check_incremental_update_xref (void)
   doc[0] = pdf_create_document (ctx);
 
   opts.do_incremental = 0;
-  pdf_write_document (ctx, doc[0], file, &opts);
+  pdf_save_document (ctx, doc[0], file, &opts);
 
   doc[1] = check_open (ctx, file);
 
@@ -166,7 +166,7 @@ check_incremental_update_xref (void)
 
 
   opts.do_incremental = 1;
-  pdf_write_document (ctx, doc[1], file, &opts);
+  pdf_save_document (ctx, doc[1], file, &opts);
 
   doc[2] = check_open (ctx, file);
 
