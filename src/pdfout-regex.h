@@ -30,12 +30,12 @@ pdfout_re_compile_pattern (const char *pattern, size_t length,
 			   struct pdfout_re_pattern_buffer *buffer);
 
 regoff_t pdfout_re_search (struct pdfout_re_pattern_buffer *buffer,
-			   const char *string, __re_idx_t length,
-			   __re_idx_t start, regoff_t range);
+			   const char *string, regoff_t length,
+			   regoff_t start, regoff_t range);
 
 regoff_t pdfout_re_match (struct pdfout_re_pattern_buffer *buffer,
-			  const char *string, __re_idx_t length,
-			  __re_idx_t start);
+			  const char *string, regoff_t length,
+			  regoff_t start);
 
 /* Free contents of BUFFER, and BUFFER itself.  */
 void pdfout_re_free (struct pdfout_re_pattern_buffer *buffer);
