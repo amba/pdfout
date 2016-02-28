@@ -775,26 +775,6 @@ pdfdoc_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc,
   return RET_ILUNI;
 }
 
-static char *grow_buffer (fz_context *ctx, char *result, bool *have_malloced,
-			  size_t *available, size_t length)
-{
-  if (*have_malloced == false)
-    {
-      /* Nothing allocated so far. */
-      *available += *available / 2 + 1;
-      /* FIXME: throw */
-      assert (ctx);
-      char *result_tmp = xcharalloc (*available);
-      memcpy (result_tmp, result, length);
-      result = result_tmp;
-      *have_malloced = true;
-    }
-  else
-    /* FIXME: throw on error */
-    result = x2nrealloc (result, available, 1);
-
-  return result;
-}
 
 typedef int (*mbtowc_func) (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 			    int n);
@@ -805,143 +785,107 @@ struct encoding
   const char *name;
   mbtowc_func mbtowc;
   wctomb_func wctomb;
-  /* Print a terminating codepoint 0x00.  */
-  bool zero_terminate;
 };
 
 #include "encodings.h"
 
 char *
 pdfout_char_conv (fz_context *ctx, const char *fromcode, const char *tocode,
-		  const char *src, size_t srclen,
-		  char *result, size_t *lengthp)
+		  const char *src, int srclen, int *lengthp)
 {
-  bool have_malloced = false;
-
-  fz_var (have_malloced);
-  fz_var (result);
+  fz_buffer *buf = fz_new_buffer (ctx, 1);
+  unsigned char *result;
   
-  fz_try(ctx)
+  fz_try (ctx)
   {
-
-    mbtowc_func mbtowc = NULL;
-    wctomb_func wctomb = NULL;
-    
-    bool zero_terminate;
-
-    struct encoding *encoding = get_encoding (fromcode, strlen (fromcode));
-    if (encoding == NULL)
-      fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", fromcode);
-    mbtowc = encoding->mbtowc;
-    encoding = get_encoding (tocode, strlen (tocode));
-    if (encoding == NULL)
-      fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", tocode);
-    wctomb = encoding->wctomb;
-    zero_terminate = encoding->zero_terminate;
-
-    struct conv conv_s = {0};
-    conv_t conv = &conv_s;
-
-    /* AVAILABLE holds the allocated length of RESULT. */
-    size_t available = *lengthp;
-    
-    if (result == NULL || available == 0)
-      {
-	/* FIXME: throw on error.  */
-	available = 0;
-	result = x2nrealloc(result, &available, 1);
-	have_malloced = true;
-      }
-
-    /* *LENGTHP holds the number of characters written into RESULT.  */
-    *lengthp = 0;
-    while (srclen)
-      {
-	ucs4_t pwc;
-	int read;
-	if (srclen == 0)
-	  {
-	    if (zero_terminate)
-	      {
-		read = 1;
-		pwc = 0;
-	      }
-	    else
-	      break;
-	  }
-	else
-	  read = mbtowc (conv, &pwc, (const unsigned char *) src,
-			 MIN (10, srclen));
-	if (read < 0)
-	  fz_throw (ctx, FZ_ERROR_GENERIC,
-		    "pdfout_charset_conv: invalid %s multibyte", fromcode);
-	src += read;
-	srclen -= read;
-
-	while (1)
-	  {
-	    int written;
-	    if (available - *lengthp < 1)
-	      written = RET_TOOSMALL;
-	    else
-	      /* use MIN to avoid integer overflow.  */
-	      written = wctomb (conv, (unsigned char *) &result[*lengthp],
-				pwc, MIN(10, available - *lengthp));
-	    if (written > 0)
-	      {
-		*lengthp += written;
-		break;
-	      }
-	    else if (written == RET_TOOSMALL)
-	      {
-		result = grow_buffer (ctx, result, &have_malloced, &available,
-				      *lengthp);
-		continue;
-	      }
-	    else if (written == RET_ILUNI)
-	      fz_throw (ctx, FZ_ERROR_ABORT,
-			"pdfout_charset_conv: codepoint 0x%x invalid in %s",
-			pwc, tocode);
-	    else if (written < 0)
-	      abort();
-	  }
-      }
-    if (zero_terminate)
-      {
-	if (available - *lengthp < 1)
-	  result = grow_buffer (ctx, result, &have_malloced, &available,
-				*lengthp);
-	result[*lengthp] = '\0';
-      }
-	
+    pdfout_char_conv_buffer (ctx, fromcode, tocode, src, srclen, buf);
+  
+    /* Zero-terminate.  */
+    fz_write_buffer (ctx, buf, "\0\0\0\0", 4);
+  
+  
+    *lengthp = fz_buffer_storage (ctx, buf, &result) - 4;
   }
-    
   fz_catch (ctx)
   {
-    if (have_malloced)
-      free (result);
+    fz_drop_buffer (ctx, buf);
     fz_rethrow (ctx);
   }
-  return result;
+
+  /* Hack: Just free the buffer's struct, but not it's data.  */
+  free (buf);
+  return (char *) result;
 }
 
+void
+pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
+			 const char *tocode, const char *src, int srclen,
+			 fz_buffer *buf)
+{
+  mbtowc_func mbtowc = NULL;
+  wctomb_func wctomb = NULL;
+    
+  struct encoding *encoding = get_encoding (fromcode, strlen (fromcode));
+  
+  if (encoding == NULL)
+    fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", fromcode);
+  
+  mbtowc = encoding->mbtowc;
+  
+  encoding = get_encoding (tocode, strlen (tocode));
+  
+  if (encoding == NULL)
+    fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", tocode);
+  
+  wctomb = encoding->wctomb;
+
+  struct conv conv = {0};
+
+  while (srclen)
+    {
+      ucs4_t pwc;
+      int read;
+	
+      read = mbtowc (&conv, &pwc, (const unsigned char *) src,
+		     MIN (10, srclen));
+      if (read < 0)
+	fz_throw (ctx, FZ_ERROR_GENERIC,
+		  "pdfout_charset_conv: invalid %s multibyte", fromcode);
+      src += read;
+      srclen -= read;
+
+      unsigned char tmp[10];
+      int written = wctomb (&conv, tmp, pwc, 10);
+	
+      if (written > 0)
+	fz_write_buffer (ctx, buf, tmp, written);
+      else if (written == RET_ILUNI)
+	fz_throw (ctx, FZ_ERROR_ABORT,
+		  "pdfout_charset_conv: codepoint 0x%x invalid in %s",
+		  pwc, tocode);
+      else
+	abort();
+    }
+}
+    
+
 char *
-pdfout_pdf_to_utf8 (fz_context *ctx, const char *inbuf, size_t inbuf_len,
-		    size_t *outbuf_len)
+pdfout_pdf_to_utf8 (fz_context *ctx, const char *inbuf, int inbuf_len,
+		    int *outbuf_len)
 {
   if (inbuf_len >= 2
       && (memcmp (inbuf, "\xfe\xff", 2) == 0
 	  || memcmp (inbuf, "\xff\xfe", 2) == 0))
-    return pdfout_char_conv (ctx, "UTF-16", "C", inbuf, inbuf_len, NULL,
+    return pdfout_char_conv (ctx, "UTF-16", "C", inbuf, inbuf_len,
 			     outbuf_len);
   else
-    return pdfout_char_conv (ctx, "PDFDOC", "C", inbuf, inbuf_len, NULL,
+    return pdfout_char_conv (ctx, "PDFDOC", "C", inbuf, inbuf_len,
 			     outbuf_len);
 }
 
 char *
-pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, size_t inbuf_len,
-		    size_t *outbuf_len)
+pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, int inbuf_len,
+		    int *outbuf_len)
 {
   /* First try pdfdoc encoding. If that fails, use UTF-16BE.  */
 
@@ -954,7 +898,7 @@ pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, size_t inbuf_len,
   fz_try (ctx)
   {
     result = pdfout_char_conv (ctx, "UTF-8", "PDFDOC", inbuf, inbuf_len,
-			       NULL, outbuf_len);
+			       outbuf_len);
     use_pdfdoc = true;
   }
   fz_catch (ctx)
@@ -966,36 +910,5 @@ pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, size_t inbuf_len,
     return result;
 
   return pdfout_char_conv (ctx, "UTF-8", "UTF-16", inbuf, inbuf_len,
-			   NULL, outbuf_len);
+			   outbuf_len);
 }
-
-/* char * */
-/* pdfout_check_enc (fz_context *ctx, const char *code, const char *src, */
-/* 		  size_t srclen) */
-/* { */
-/*   struct encoding *encoding = get_encoding (code, strlen (code)); */
-/*   if (encoding == NULL) */
-/*       fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", code); */
-/*   struct conv conv_s = {0}; */
-/*   conv_t conv = &conv_s; */
-
-  
-/*   while (srclen) */
-/*     { */
-/*       ucs4_t pwc; */
-/*       int read = encoding->mbtowc (conv, &pwc, */
-/* 				   (const unsigned char *) src, */
-/* 				   MIN (10, srclen)); */
-/*       if (read < 0) */
-/* 	return (char *) src; */
-/*       srclen -= read; */
-/*       src += read; */
-/*     } */
-/*   return NULL; */
-/* } */
-
-/* char * */
-/* pdfout_u8_check (fz_context *ctx, const char *src, size_t len) */
-/* { */
-/*   return pdfout_check_enc (ctx, "UTF-8", src, len); */
-/* } */

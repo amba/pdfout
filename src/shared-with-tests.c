@@ -57,3 +57,39 @@ pdfout_outline_suffix (enum pdfout_outline_format format)
   error (1, 0, "pdfout_outline_suffix: invalid format");
   return NULL;
 }
+
+void
+pdfout_msg (const char *format, ...)
+{
+  va_list ap;
+  va_start (ap, format);
+  pdfout_vmsg (format, ap);
+}
+
+void pdfout_vmsg (const char *format, va_list ap)
+{
+  pdfout_errno_vmsg (0, format, ap);
+}
+
+void
+pdfout_errno_msg (int errno, const char *format, ...)
+{
+  va_list ap;
+  va_start (ap, format);
+  pdfout_errno_vmsg (errno, format, ap);
+}
+
+void
+pdfout_errno_vmsg (int errno, const char *format, va_list ap)
+{
+  if (pdfout_batch_mode)
+    return;
+  
+  fprintf (stderr, "%s: ", program_name);
+  vfprintf (stderr, format, ap);
+
+  if (errno)
+    fprintf (stderr, ": %s\n", strerror (errno));
+  else
+    fprintf (stderr, "\n");
+}

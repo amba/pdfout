@@ -9,7 +9,7 @@ struct encoding;
 %%
 ASCII, ascii_mbtowc, ascii_wctomb,
 UTF-8, utf8_mbtowc, utf8_wctomb,
-C, utf8_mbtowc, utf8_wctomb, true,
+C, utf8_mbtowc, utf8_wctomb,
 UTF-16, utf16_mbtowc, utf16_wctomb,
 UTF-16BE, utf16be_mbtowc, utf16be_wctomb,
 UTF-16LE, utf16le_mbtowc, utf16le_wctomb,

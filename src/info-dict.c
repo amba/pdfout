@@ -105,7 +105,7 @@ pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
   yaml_node_t *key, *value, *mapping;
   char *text_string, *key_string, *value_string;
   int length, i;
-  size_t text_string_len;
+  int text_string_len;
 
   if (yaml_doc && check_yaml_infodict (yaml_doc))
     {
@@ -202,7 +202,7 @@ get_info_dict (yaml_document_t *yaml_doc, fz_context *ctx, pdf_document *doc)
   for (i = 0; i < len; ++i)
     {
       pdf_obj *key, *val;
-      size_t value_string_len;
+      int value_string_len;
       char *name, *value_string;
       
       key = pdf_dict_get_key (ctx, info, i);

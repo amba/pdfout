@@ -24,7 +24,7 @@ dependencies of mupdf:
 
 Used code fragments:
 
-- the grep command is based loosely on GNU Grep.
+- the grep command (src/program/grep.c) is based loosely on GNU Grep.
   
 - The autogen.sh script is derived from GNU libunistring.
 

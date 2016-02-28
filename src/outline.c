@@ -151,7 +151,7 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
     **ref_table, **dict_table;
   yaml_node_t *node;
   int i, length, page, Count, mapping, kids;
-  size_t title_len;
+  int title_len;
   char *title;
   length = pdfout_sequence_length (yaml_doc, sequence);
   assert (length > 0);

@@ -73,6 +73,7 @@ full-read
 full-write
 minmax
 unistr/u8-check
+unistr/u8-uctomb
 '
     $GNULIB_TOOL --source-base=gl --m4-base=gl/m4 --tests-base=gl-tests \
 		  --with-tests --import $GNULIB_MODULES

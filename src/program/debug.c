@@ -14,6 +14,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+/* End each test here with exit (0).  */
 
 #include "common.h"
 #include "shared.h"
@@ -21,24 +22,8 @@
 #include "tempname.h"
 #include "charset-conversion.h"
 #include "pdfout-regex.h"
+#include "json.h"
 
-static char usage[] = "";
-static char doc[] = "Run checks, called by make check\v";
-
-enum {
-  INCREMENTAL_UPDATE = CHAR_MAX + 1,
-  INCREMENTAL_UPDATE_XREF,
-  STRING_CONVERSIONS,
-  REGEX,
-};
-
-static struct argp_option options[] = {
-  {"incremental-update", INCREMENTAL_UPDATE},
-  {"incremental-update-xref", INCREMENTAL_UPDATE_XREF},
-  {"string-conversions", STRING_CONVERSIONS},
-  {"regex", REGEX},
-  {0}
-};
 
 
 
@@ -204,13 +189,13 @@ static void print_string (const char *string, size_t len)
 #define test_conversion(from, too, src, expected)			\
   do									\
     {									\
-      size_t buffer_len, buffer_len_back;				\
+      int buffer_len, buffer_len_back;				\
       char *result, *result_back;					\
-      result = pdfout_char_conv (ctx, from, too, src, sizeof src - 1, \
-				 NULL, &buffer_len);			\
+      result = pdfout_char_conv (ctx, from, too, src, sizeof src - 1,	\
+				 &buffer_len);				\
       test_equal (result, expected, buffer_len, sizeof expected - 1);	\
       result_back = pdfout_char_conv (ctx, too, from, result, buffer_len, \
-				      NULL, &buffer_len_back);		\
+				      &buffer_len_back);		\
       test_equal (result_back, src, buffer_len_back, sizeof src - 1);	\
       free (result);							\
       free (result_back);						\
@@ -222,7 +207,7 @@ static void print_string (const char *string, size_t len)
 #define test_pdf_from_utf8(src, expected)				\
   do									\
     {									\
-      size_t buffer_len, buffer_len_back;				\
+      int buffer_len, buffer_len_back;				\
       char *result, *result_back;					\
       result = pdfout_utf8_to_pdf (ctx, src, sizeof src - 1, &buffer_len); \
       test_equal (result, expected, buffer_len, sizeof expected - 1);	\
@@ -265,8 +250,8 @@ check_string_conversions (void)
     const char *src = "σ";
     fz_try (ctx)
     {
-      size_t length;
-      pdfout_char_conv (ctx, "UTF-8", "PDFDOC", src, sizeof src - 1, NULL,
+      int length;
+      pdfout_char_conv (ctx, "UTF-8", "PDFDOC", src, sizeof src - 1,
 			&length);
       test_assert (0);
     }
@@ -302,6 +287,246 @@ static void check_regex (void)
   exit (0);
 }
 
+
+
+static void check_json_scanner_value (fz_context *ctx, const char *json,
+				      const char *value,
+				      json_token target_token, bool fail)
+{
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json,
+				   strlen (json));
+      
+  json_scanner *scanner = json_scanner_new (ctx, stm);
+      
+  json_token token = json_scanner_scan (ctx, scanner);
+      
+  if (fail)
+    test_assert (token == JSON_TOK_INVALID);
+  else
+    {
+      test_assert (token == target_token);
+      test_equal (json_scanner_value (ctx, scanner),
+		  value, json_scanner_value_len (ctx, scanner),
+		  strlen (value));
+      token = json_scanner_scan (ctx, scanner);
+      test_assert (token == JSON_TOK_EOF);
+    }
+  json_scanner_drop (ctx, scanner);
+  fz_drop_stream (ctx, stm);
+      
+}
+
+static void check_json_scanner (fz_context *ctx)
+{
+  {
+    struct test {
+      const char *text;
+      json_token expected[100];
+    };
+    int END = -2;
+      struct test tests[] = {
+      {" [true, false, {false : true, 1 : \"abc\"\"\"}]   ", {
+	  JSON_TOK_BEGIN_ARRAY, JSON_TOK_TRUE, JSON_TOK_VALUE_SEPARATOR,
+	  JSON_TOK_FALSE, JSON_TOK_VALUE_SEPARATOR, JSON_TOK_BEGIN_OBJECT,
+	  JSON_TOK_FALSE, JSON_TOK_NAME_SEPARATOR, JSON_TOK_TRUE,
+	  JSON_TOK_VALUE_SEPARATOR, JSON_TOK_NUMBER, JSON_TOK_NAME_SEPARATOR,
+	  JSON_TOK_STRING, JSON_TOK_STRING,
+	  JSON_TOK_END_OBJECT, JSON_TOK_END_ARRAY, JSON_TOK_EOF, END}
+      },
+      {" trux\n ", {JSON_TOK_INVALID, END}},
+      {" TRUE\n ", {JSON_TOK_INVALID, END}},
+      {"\n\n\n\n[f", {JSON_TOK_BEGIN_ARRAY, JSON_TOK_INVALID, END}},
+    }; 
+  
+    for (int i = 0; i < sizeof tests / sizeof (struct test); ++i)
+      {
+	const char *text = tests[i].text;
+	fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text,
+					 strlen (text));
+	json_scanner *scanner = json_scanner_new (ctx, stm);
+
+	for (int j = 0; tests[i].expected[j] != END; ++j)
+	  {
+	    json_token token = json_scanner_scan (ctx, scanner);
+	    test_assert (token == tests[i].expected[j]);
+	  }
+	json_scanner_drop (ctx, scanner);
+	fz_drop_stream (ctx, stm);
+      }
+  }
+
+  {
+    struct test {
+      const char *text;
+      bool fail;
+    };
+    
+    struct test tests[] = {
+      {"1"},
+      {"0"},
+      {"-1"},
+      {"1.1"},
+      {"0.1"},
+      {"1e+2"},
+      {"1e-0"},
+      {"1.1e2"},
+      {"a", true},
+      {"01", true},
+      {".1", true},
+      {"12.", true},
+      {"1e+ ", true},
+      {".1e1", true},
+      {0}
+    };
+    for (int i = 0; tests[i].text; ++i)
+      check_json_scanner_value (ctx, tests[i].text, tests[i].text,
+				JSON_TOK_NUMBER, tests[i].fail);
+  }
+  
+  {
+    struct test {
+      const char *text;
+      const char *value;
+      bool fail;
+    } tests[] = {
+      {"\"\"", ""},
+      {"\"x\"", "x"},
+      {"\"ℕ\"", "ℕ"},
+      {"\"abc\\ndef\"", "abc\ndef"},
+      {"\"\\u000a\"", "\n"},
+      {"\"\\uD834\\udd1e\\uD834\\udd1eabc\"", "𝄞𝄞abc"},
+      {"\"\\uD853\\uDF5C\"", "\U00024F5C"},
+      {"\"x", 0, true},
+      {"\"x\n\"", 0, true},
+      {"\"\\x\"", 0, true},
+      /* Single leading surrogate.  */
+      {"\"\\uD800\"", 0, true},
+      /* Leading surrogate not followed by trailing surrogate.  */
+      {"\"\\uD800\\u000a\"", 0, true},
+      {"\"\\uD800\\uD800\"", 0, true},
+      {0}
+    };
+    for (int i = 0; tests[i].text; ++i)
+      check_json_scanner_value (ctx, tests[i].text, tests[i].value,
+				JSON_TOK_STRING, tests[i].fail);
+  }
+}
+
+static void
+json_parser_test (fz_context *ctx, const char *text, json_token *list,
+		  const char **value_list)
+{
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text, strlen (text));
+  json_parser *parser = json_parser_new (ctx, stm);
+  int k = 0;
+  for (int j = 0; ;++j)
+  {
+    char *value;
+    int value_len;
+    
+    json_token token = json_parser_parse (ctx, parser, &value, &value_len);
+    if (token != list[j])
+      {
+	fprintf (stderr, "For text: %s, Expected token: %d, got: %d\n",
+		 text, list[j], token);
+	abort ();
+      }
+    if (token == JSON_TOK_STRING || token == JSON_TOK_NUMBER)
+      {
+	test_equal (value, value_list[k], value_len,
+		    strlen (value_list[k]));
+	++k;
+      }
+    if (token == JSON_TOK_EOF || token == JSON_TOK_INVALID)
+      break;
+  }
+  fz_drop_stream (ctx, stm);
+  json_parser_drop (ctx, parser);
+}
+  
+
+				    
+static void check_json_parser (fz_context *ctx)
+  
+{
+  enum {
+    END = JSON_TOK_EOF,
+    STRING = JSON_TOK_STRING,
+    NUMBER,
+    FALSE,
+    NUL,
+    TRUE,
+    BEGIN_ARRAY,
+    END_ARRAY,
+    BEGIN_OBJECT,
+    END_OBJECT,
+    VALUE_SEPARATOR,
+    NAME_SEPARATOR
+  };
+  
+  struct test {
+    const char *text;
+    json_token list[100];
+    const char *value_list[100];
+  };
+    
+  struct test tests[] = {
+    {"1", {NUMBER, END}, {"1"}},
+    {"[1, null, true, [], {}, false, \n\
+{\"abc\": 1, \"def\" : true}, {\"\": [1, {}]}, [1]]",
+     {BEGIN_ARRAY, NUMBER, NUL, TRUE, BEGIN_ARRAY, END_ARRAY, BEGIN_OBJECT,
+     END_OBJECT, FALSE, BEGIN_OBJECT, STRING, NUMBER, STRING, TRUE, END_OBJECT,
+     BEGIN_OBJECT, STRING, BEGIN_ARRAY, NUMBER, BEGIN_OBJECT, END_OBJECT,
+      END_ARRAY, END_OBJECT, BEGIN_ARRAY, NUMBER, END_ARRAY, END_ARRAY, END},
+     {"1", "abc", "1", "def", "", "1", "1"}},
+    {"", {-1}},
+    {"x", {-1}},
+    {"1 1", {NUMBER, -1}, {"1"}},
+    {"[", {BEGIN_ARRAY, -1}},
+    {"]", {-1}},
+    {"[1, 2", {BEGIN_ARRAY, NUMBER, NUMBER, -1}, {"1", "2"}},
+    {"[1 1]", {BEGIN_ARRAY, NUMBER, -1}, {"1"}},
+    {"[1, 2 3]", {BEGIN_ARRAY, NUMBER, NUMBER, -1}, {"1", "2"}},
+    {"[1]]", {BEGIN_ARRAY, NUMBER, END_ARRAY, -1}, {"1"}},
+    {"{false: 1}", {BEGIN_OBJECT, -1}},
+    {"{", {BEGIN_OBJECT, -1}},
+    {"}", {-1}},
+    {0}
+  };
+
+  for (int i = 0; tests[i].text; ++i)
+    json_parser_test (ctx, tests[i].text, tests[i].list, tests[i].value_list); 
+}
+
+static void check_json (void)
+{
+  fz_context *ctx = fz_new_context (0, 0, 0);
+
+  check_json_scanner (ctx);
+  check_json_parser (ctx);
+  exit (0);
+}
+
+static char usage[] = "";
+static char doc[] = "Run checks, called by make check\v";
+
+enum {
+  INCREMENTAL_UPDATE = CHAR_MAX + 1,
+  INCREMENTAL_UPDATE_XREF,
+  STRING_CONVERSIONS,
+  REGEX,
+  JSON,
+};
+
+static struct argp_option options[] = {
+  {"incremental-update", INCREMENTAL_UPDATE},
+  {"incremental-update-xref", INCREMENTAL_UPDATE_XREF},
+  {"string-conversions", STRING_CONVERSIONS},
+  {"regex", REGEX},
+  {"json", JSON},
+  {0}
+};
+
 static error_t
 parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
 {
@@ -311,6 +536,7 @@ parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
     case INCREMENTAL_UPDATE_XREF: check_incremental_update_xref (); break;
     case STRING_CONVERSIONS: check_string_conversions (); break;
     case REGEX: check_regex (); break;
+    case JSON: check_json (); break;
       
     default:
       return ARGP_ERR_UNKNOWN;

@@ -41,8 +41,16 @@ enum {
   PDFOUT_TXT_YAML_SPANS,
   PDFOUT_TXT_YAML_CHARACTERS,
 };
-
-
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7)
+# define PDFOUT_PRINTFLIKE(index)			\
+  __attribute__ ((format (printf, index, index + 1)))
+# define PDFOUT_WUR __attribute__ ((warn_unused_result))
+# define PDFOUT_UNUSED __attribute__ ((__unused__))
+#else
+# define PDFOUT_PRINTFLIKE(index) /* empty */
+# define PDFOUT_WUR
+# defune PDFOUT_UNUSED
+#endif
 void pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 			     int page_number, yaml_emitter_t *emitter,
 			     int mode);
@@ -103,6 +111,8 @@ void pdfout_write_document (fz_context *ctx, pdf_document *doc,
 /* calls exit (1) on error */
 pdf_document *pdfout_pdf_open_document (fz_context *ctx, const char *file);
 
+char *pdfout_check_utf8 (const char *s, size_t n);
+  
 /* On error, return -1.  */
 int pdfout_strtoui (const char *string);
 
@@ -120,9 +130,7 @@ float pdfout_strtof (const char *string);
 
 /* dies if result would be truncated */
 int pdfout_snprintf (char *str, size_t size, const char *fmt, ...)
-/* see gl/error.h for the definition of these attribute macros.  */
-  _GL_ATTRIBUTE_FORMAT ((_GL_ATTRIBUTE_SPEC_PRINTF, 3, 4));
-
+  PDFOUT_PRINTFLIKE (3);
 
 /* buff must be of type char[N].  */
 #define PDFOUT_SNPRINTF(buff, fmt, args...)		\

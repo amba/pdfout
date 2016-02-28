@@ -24,7 +24,9 @@ encodings.h \
 open-write-pdf.c \
 text-extraction.c \
 pdfout-regex.h \
-regex.c
+regex.c \
+json.c \
+json.h
 
 charset-conversion.c: encodings.h
 encodings.h: encodings.gperf

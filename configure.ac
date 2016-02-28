@@ -44,6 +44,10 @@ AC_ARG_ENABLE([Werror],
 	[AS_IF([test "$enableval" = "yes"], 
                [gl_WARN_ADD([-Werror], [WARN_CFLAGS])
 	        gl_WARN_ADD([-Wno-error=suggest-attribute=pure], [WARN_CFLAGS])
+		gl_WARN_ADD([-Wno-error=unused-parameter], [WARN_CFLAGS])
+		gl_WARN_ADD([-Wno-error=suggest-attribute=format],)
+		gl_WARN_ADD([-Wno-error=inline],		
+		            [WARN_CFLAGS])
 		gl_WARN_ADD([-Wno-error=clobbered], [WARN_CFLAGS])])])
 	      
 dnl Checks for libraries.

@@ -4,6 +4,13 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7)
+# define PDFOUT_PRINTFLIKE(index)			\
+  __attribute__ ((format (printf, index, index + 1)))
+#else
+# define PDFOUT_PRINTFLIKE(index) /* empty */
+#endif
+
 /* if set, do not print any status messages to stderr  */
 extern int pdfout_batch_mode;
 
@@ -19,17 +26,14 @@ enum pdfout_outline_format {
 const char *pdfout_outline_suffix (enum pdfout_outline_format)
   _GL_ATTRIBUTE_PURE;
 
-/* Shall be used for all status messages.  */
-#define pdfout_msg(format, args...)		\
-  do						\
-    {						\
-      if (pdfout_batch_mode == 0)		\
-	error (0, 0, format, ## args);		\
-    }						\
-  while (0)
+void pdfout_msg (const char *fmt, ...);
+//  PDFOUT_PRINTFLIKE (1);
 
-#define pdfout_errno_msg(errno, format, args...)	\
-  if (pdfout_batch_mode == 0) \
-    error (0, errno, format, ## args);
+void pdfout_vmsg (const char *format, va_list ap);
 
+void pdfout_errno_msg (int errnum, const char *format, ...);
+//  PDFOUT_PRINTFLIKE (2);
+
+void pdfout_errno_vmsg (int errnum, const char *format, va_list ap);
+  
 #endif	/* !SHARED_WITH_TESTS_H */
