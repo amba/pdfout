@@ -336,6 +336,10 @@ static void check_json_scanner (fz_context *ctx)
       {" trux\n ", {JSON_TOK_INVALID, END}},
       {" TRUE\n ", {JSON_TOK_INVALID, END}},
       {"\n\n\n\n[f", {JSON_TOK_BEGIN_ARRAY, JSON_TOK_INVALID, END}},
+      {"[1, 2, 3, \"ℝΦΓ\xff""def\"", {JSON_TOK_BEGIN_ARRAY, JSON_TOK_NUMBER, JSON_TOK_VALUE_SEPARATOR,
+				      JSON_TOK_NUMBER, JSON_TOK_VALUE_SEPARATOR,
+				      JSON_TOK_NUMBER, JSON_TOK_VALUE_SEPARATOR, JSON_TOK_INVALID,
+				      END}},
     }; 
   
     for (int i = 0; i < sizeof tests / sizeof (struct test); ++i)
@@ -348,7 +352,12 @@ static void check_json_scanner (fz_context *ctx)
 	for (int j = 0; tests[i].expected[j] != END; ++j)
 	  {
 	    json_token token = json_scanner_scan (ctx, scanner);
-	    test_assert (token == tests[i].expected[j]);
+	    json_token expected = tests[i].expected[j];
+	    if (token != expected)
+	      {
+		fprintf (stderr, "got token: %d, expected: %d\n", token, expected);
+		abort ();
+	      }
 	  }
 	json_scanner_drop (ctx, scanner);
 	fz_drop_stream (ctx, stm);
@@ -372,6 +381,7 @@ static void check_json_scanner (fz_context *ctx)
       {"1.1e2"},
       {"a", true},
       {"01", true},
+      {"000", true},
       {".1", true},
       {"12.", true},
       {"1e+ ", true},
@@ -397,6 +407,7 @@ static void check_json_scanner (fz_context *ctx)
       {"\"\\uD834\\udd1e\\uD834\\udd1eabc\"", "𝄞𝄞abc"},
       {"\"\\uD853\\uDF5C\"", "\U00024F5C"},
       {"\"x", 0, true},
+      {"\"x\x01\"", 0, true},
       {"\"x\n\"", 0, true},
       {"\"\\x\"", 0, true},
       /* Single leading surrogate.  */
@@ -404,6 +415,8 @@ static void check_json_scanner (fz_context *ctx)
       /* Leading surrogate not followed by trailing surrogate.  */
       {"\"\\uD800\\u000a\"", 0, true},
       {"\"\\uD800\\uD800\"", 0, true},
+      /* Broken UTF-8.  */
+      {"\"abcd\xfe\xff\"", 0, true},
       {0}
     };
     for (int i = 0; tests[i].text; ++i)
@@ -486,11 +499,13 @@ static void check_json_parser (fz_context *ctx)
     {"]", {-1}},
     {"[1, 2", {BEGIN_ARRAY, NUMBER, NUMBER, -1}, {"1", "2"}},
     {"[1 1]", {BEGIN_ARRAY, NUMBER, -1}, {"1"}},
+    {"[1 false]", {BEGIN_ARRAY, NUMBER, -1}, {"1"}},
     {"[1, 2 3]", {BEGIN_ARRAY, NUMBER, NUMBER, -1}, {"1", "2"}},
     {"[1]]", {BEGIN_ARRAY, NUMBER, END_ARRAY, -1}, {"1"}},
     {"{false: 1}", {BEGIN_OBJECT, -1}},
     {"{", {BEGIN_OBJECT, -1}},
     {"}", {-1}},
+    {"[ \"ρτγℝ∂Γ\\n\", ]", {BEGIN_ARRAY, STRING, -1}, {"ρτγℝ∂Γ\n"}},
     {0}
   };
 
@@ -503,6 +518,7 @@ static void check_json (void)
   fz_context *ctx = fz_new_context (0, 0, 0);
 
   check_json_scanner (ctx);
+  pdfout_msg ("-----Parser stuff-----------------------");
   check_json_parser (ctx);
   exit (0);
 }

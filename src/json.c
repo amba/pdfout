@@ -2,6 +2,7 @@
 #include "json.h"
 #include "c-ctype.h"
 #include "unistr.h"
+#include "uniwidth.h"
 
 typedef struct json_scanner_s {
   fz_stream *stream;
@@ -13,6 +14,15 @@ typedef struct json_scanner_s {
   /* Current line. Used for error message.  */
   fz_buffer *line;
   int line_count;
+  
+  /* Current error position in LINE. Used to draw a '^' at the position of the
+     error. If greater than the line's length, the '^' will be drawn one
+     column beyond the line's end.  */
+  int error;
+
+  /* Position in LINE of the last successfully scanned token. Used for the
+     parsers error messages.  */
+  int token_start;
 } json_scanner;
 
 static void scanner_read (fz_context *ctx, json_scanner *scanner)
@@ -25,7 +35,10 @@ static void scanner_read (fz_context *ctx, json_scanner *scanner)
   
   scanner->lookahead = fz_read_byte (ctx, scanner->stream);
   if (scanner->lookahead != EOF && scanner->lookahead != '\n')
-    fz_write_buffer_byte (ctx, scanner->line, scanner->lookahead);
+    {
+      fz_write_buffer_byte (ctx, scanner->line, scanner->lookahead);
+      ++scanner->error;
+    }
 }
 
 void
@@ -55,6 +68,7 @@ json_scanner_new (fz_context *ctx, fz_stream *stream)
     result->line = fz_new_buffer (ctx, 1);
   
     result->line_count = 1;
+    result->error = 0;
     scanner_read (ctx, result);
   }
   fz_catch (ctx)
@@ -78,34 +92,39 @@ json_scanner_value_len (fz_context *ctx, json_scanner *scanner)
   return scanner->value->len;
 }
 
-static json_token PDFOUT_WUR
-scanner_verror (fz_context *ctx, json_scanner *scanner, const char *fmt,
-		va_list ap)
-  
+static void error_marker (json_scanner *scanner, int error)
 {
-  int lah = scanner->lookahead;
-  int column = scanner->line->len;
-  
+  uint8_t *text = scanner->line->data;
+  int len = scanner->line->len;
+  int width = u8_width (text, error > len ? len : error, "UTF-8");
+  if (error > len)
+    ++width;
+  pdfout_msg_raw (" %.*s\n", len, text);
+  for (int i = 0; i < width; ++i)
+    pdfout_msg_raw (" ");
+  pdfout_msg_raw ("^\n");
+}
+
+static json_token PDFOUT_WUR PDFOUT_PRINTFLIKE (3)
+scanner_error (fz_context *ctx, json_scanner *scanner, const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+
+  int error_save = scanner->error;
   /* Finish to read the current line.  */
   while (scanner->lookahead != '\n' && scanner->lookahead != EOF)
     scanner_read (ctx, scanner);
-  
-  pdfout_msg ("In input line %d, column %d: %.*s", scanner->line_count,
-	      column, scanner->line->len, (char *) scanner->line->data);
+  pdfout_msg ("In line %d:", scanner->line_count);
   if (fmt)
-    pdfout_vmsg(fmt, ap);
+    pdfout_vmsg (fmt, ap);
   else
-    pdfout_msg ("Unexpected character '%c'", lah);
+    pdfout_msg ("Syntax error:");
+  
+  error_marker (scanner, error_save);
   return JSON_TOK_INVALID;
 }
 
-static json_token PDFOUT_WUR
-scanner_error (fz_context *ctx, json_scanner *scanner, const char *format, ...)
-{
-  va_list ap;
-  va_start (ap, format);
-  return scanner_verror (ctx, scanner, format, ap);
-}
 
 static json_token
 scanner_scan_literal (fz_context *ctx, const char *lit, json_scanner *scanner)
@@ -114,8 +133,7 @@ scanner_scan_literal (fz_context *ctx, const char *lit, json_scanner *scanner)
   while (*p)
     {
       if (scanner->lookahead != *p++)
-	return scanner_error (ctx, scanner, "Error in literal '%s'",
-			      lit);
+	return scanner_error (ctx, scanner, "Error in literal '%s'", lit);
       scanner_read(ctx, scanner);
     }
   switch (lit[0])
@@ -131,16 +149,7 @@ scanner_scan_literal (fz_context *ctx, const char *lit, json_scanner *scanner)
     }
 }
 
-static bool is_ws (int c)
-{
-  return c == ' ' || c == '\t' || c == '\n' || c == '\r';
-}
 
-static void skip_ws (fz_context *ctx, json_scanner *scanner)
-{
-  while (is_ws (scanner->lookahead))
-    scanner_read (ctx, scanner);
-}
 
 static void push_byte (fz_context *ctx, json_scanner *scanner, int byte)
 {
@@ -159,6 +168,9 @@ scanner_scan_number (fz_context *ctx, json_scanner *scanner)
 {
   scanner->value->len = 0;
 
+  if (scanner->lookahead == '.')
+    return scanner_error (ctx, scanner, "Leading point in Number.");
+  
   /* Optional minus.  */
   if (scanner->lookahead == '-')
     push_byte (ctx, scanner, '-');
@@ -168,7 +180,10 @@ scanner_scan_number (fz_context *ctx, json_scanner *scanner)
     {
       push_byte (ctx, scanner, '0');
       if (c_isdigit (scanner->lookahead))
-	return scanner_error (ctx, scanner, "Leading zero in number.");
+	{
+	  --scanner->error;
+	  return scanner_error (ctx, scanner, "Leading zero in number.");
+	}
     }
   else if (scanner->lookahead >= '1' && scanner->lookahead <= '9')
     {
@@ -189,7 +204,10 @@ scanner_scan_number (fz_context *ctx, json_scanner *scanner)
 	    push_byte (ctx, scanner, scanner->lookahead);
 	}
       else
-	return scanner_error (ctx, scanner, "No digit in fraction part.");
+	{
+	  ++scanner->error;
+	  return scanner_error (ctx, scanner, "No digit in fraction part.");
+	}
     }
 
   /* Optional exp.  */
@@ -262,7 +280,7 @@ static int utf16_escape_sequence (fz_context *ctx, json_scanner *scanner)
       if (scanner->lookahead != '\\')
 	{
 	  pdfout_msg ("Leading surrogate not followed by trailing surrogate.");
-	  return -1;
+	  return 1;
 	}
       scanner_read (ctx, scanner);
       int trailing = get_hex_sequence (ctx, scanner);
@@ -292,6 +310,7 @@ static int utf16_escape_sequence (fz_context *ctx, json_scanner *scanner)
 /* Return non-zero on invalid sequence.  */
 static int escape_sequence (fz_context *ctx, json_scanner *scanner)
 {
+  int ret;
   scanner_read (ctx, scanner);
   switch (scanner->lookahead)
     {
@@ -303,9 +322,42 @@ static int escape_sequence (fz_context *ctx, json_scanner *scanner)
     case 'r': push_byte (ctx, scanner, '\r'); break;
     case 't': push_byte (ctx, scanner, '\t'); break;
     case 'u':
-      return utf16_escape_sequence (ctx, scanner);
+	ret = utf16_escape_sequence (ctx, scanner);
+	if (ret)
+	  scanner->error -= 6;
+	return ret;
     default:
+      --scanner->error;
       return 1;
+    }
+  return 0;
+}
+
+static json_token
+utf8_sequence (fz_context *ctx, json_scanner *scanner)
+{
+  fz_buffer *value = scanner->value;
+  int start_len = value->len;
+  char *data = (char *) value->data;
+  char *start = data + start_len;
+  int start_line_len = scanner->line->len;
+  while (1)
+    {
+      int lah = scanner->lookahead;
+      
+      if (lah <= 0x1f || lah == '\\' || lah == '"')
+	{
+	  char *problem = pdfout_check_utf8 (data + start_len, value->len
+					     - start_len);
+	  if (problem)
+	    {
+	      scanner->error = start_line_len + (problem - start);
+	      return scanner_error (ctx, scanner, "Invalid UTF-8.");
+	    }
+	  break;
+	}
+      fz_write_buffer_byte (ctx, value, lah);
+      scanner_read (ctx, scanner);
     }
   return 0;
 }
@@ -323,10 +375,16 @@ scanner_scan_string (fz_context *ctx, json_scanner *scanner)
       if (lah == '"')
 	{
 	  scanner_read (ctx, scanner);
-	  if (pdfout_check_utf8 ((char *) scanner->value->data,
-				 scanner->value->len))
-	    return scanner_error (ctx, scanner, "Invalid UTF-8.");
 	  break;
+	  /* char *problem = pdfout_check_utf8 ((char *) scanner->value->data, */
+	  /* 				     scanner->value->len); */
+	  /* if (problem) */
+	  /*   { */
+	  /*     scanner->error = 0;//problem - (char *) scanner->value->data; */
+	  /*     printf ("scanner->error: %d\n", scanner->error); */
+	  /*     return scanner_error (ctx, scanner, "Invalid UTF-8."); */
+	  /*   } */
+	  /* break; */
 	}
       else if (lah == '\\')
 	{
@@ -336,13 +394,14 @@ scanner_scan_string (fz_context *ctx, json_scanner *scanner)
       else if (lah >= 0 && lah <= 0x1f)
 	return
 	  scanner_error (ctx, scanner,
-			 "Character 0x%0x has to be escaped in string.", lah);
+			 "Character 0x%02x has to be escaped in string.", lah);
       else if (lah == EOF)
 	return scanner_error (ctx, scanner, "Unfinished string.");
       else
 	{
-	  fz_write_buffer_byte (ctx, scanner->value, lah);
-	  scanner_read (ctx, scanner);
+	  json_token ret = utf8_sequence (ctx, scanner);
+	  if (ret)
+	    return ret;
 	}
     }
 
@@ -351,20 +410,31 @@ scanner_scan_string (fz_context *ctx, json_scanner *scanner)
   return JSON_TOK_STRING;
 }
 
-#define return_token(tok) \
+#define is_ws(c)  (c == ' ' || c == '\t' || c == '\n' || c == '\r')
+
+static void skip_ws (fz_context *ctx, json_scanner *scanner)
+{
+  while (is_ws (scanner->lookahead))
+    scanner_read (ctx, scanner);
+}
+
+#define return_token(tok)					\
   do {scanner_read (ctx, scanner); return tok;} while (0)
 
 json_token
 json_scanner_scan (fz_context *ctx, json_scanner *scanner)
 {
   skip_ws (ctx, scanner);
+
+  scanner->token_start = scanner->line->len;
+  
   switch (scanner->lookahead)
     {
     case EOF: return_token (JSON_TOK_EOF);
     case '"': return scanner_scan_string (ctx, scanner);
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
-    case '-': return scanner_scan_number (ctx, scanner);
+    case '-': case '.': return scanner_scan_number (ctx, scanner);
     case 'f': return scanner_scan_literal (ctx, "false", scanner);
     case 'n': return scanner_scan_literal (ctx, "null", scanner);
     case 't': return scanner_scan_literal (ctx, "true", scanner);
@@ -518,13 +588,13 @@ static json_token parser_read (fz_context *ctx, json_parser *parser)
   return result;
 }
 
-static json_token parser_error (fz_context *ctx, json_parser *parser,
-				const char *format, ... )
+static json_token parser_error (fz_context *ctx, json_parser *parser)
 {
-  va_list ap;
-  va_start (ap, format);
-
-  return scanner_verror (ctx, parser->scanner, format, ap);
+  json_scanner *scanner = parser->scanner;
+  pdfout_msg ("In line %d:", scanner->error);
+  pdfout_msg ("Syntax error:");
+  error_marker (scanner, scanner->token_start);
+  return JSON_TOK_INVALID;
 }
 
 #define DEF(NONTERM, TERM, args...)\
@@ -608,16 +678,22 @@ json_parser_parse (fz_context *ctx, json_parser *parser, char **value,
 		}
 	    }
 	  else
-	    return parser_error (ctx, parser, NULL);
+	    return parser_error (ctx, parser);
 	}
 
       /* Nontermial. Make table lookup.  */
+      if (t - JSON_TOK_STRING < 0)
+	{
+	  ++parser->scanner->token_start;
+	  return parser_error (ctx, parser);
+	}
+      
       const int *production = parse_table[X - START][t - JSON_TOK_STRING];
       if (production == NULL)
-	return parser_error (ctx, parser, NULL);
+	return parser_error (ctx, parser);
       else if (production[0] == EMPTY)
 	{
-	  /* Do nothing */
+	  /* Do nothing.  */
 	}
       else
 	for (int i = 4; i >= 0; --i)

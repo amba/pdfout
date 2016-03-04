@@ -59,6 +59,22 @@ pdfout_outline_suffix (enum pdfout_outline_format format)
 }
 
 void
+pdfout_vmsg_raw (const char *format, va_list ap)
+{
+  if (pdfout_batch_mode)
+    return;
+  vfprintf (stderr, format, ap);
+}
+
+void
+pdfout_msg_raw (const char *format, ...)
+{
+  va_list ap;
+  va_start (ap, format);
+  pdfout_vmsg_raw (format, ap);
+}
+
+void
 pdfout_msg (const char *format, ...)
 {
   va_list ap;
