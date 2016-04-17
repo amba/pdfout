@@ -663,10 +663,13 @@ json_parser_parse (fz_context *ctx, json_parser *parser, char **value,
 		{
 		case JSON_TOK_VALUE_SEPARATOR:
 		case JSON_TOK_NAME_SEPARATOR:
+		  /* In those cases nothing is returned. Get the next token
+		     and continue parsing.  */
 		  if (parser_read (ctx, parser) < 0)
 		    return JSON_TOK_INVALID;
 		  continue;
 		case JSON_TOK_STRING: case JSON_TOK_NUMBER:
+		  /* We need to return a value.  */
 		  if (value)
 		    {
 		      *value = (char *) parser->scanner->value->data;
@@ -700,5 +703,5 @@ json_parser_parse (fz_context *ctx, json_parser *parser, char **value,
 	  if (production[i])
 	    stack_push (ctx, parser, production[i]);
       
-    }
+    } /* end of while (1) */
 }
