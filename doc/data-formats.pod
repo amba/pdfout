@@ -1,0 +1,98 @@
+=pod
+
+=head1 JSON Parsing
+
+Parse and emit JSON, as defined in
+L<RFC 7159|https://tools.ietf.org/html/rfc7159>.
+
+=head2 Synopsis
+
+  const char *json = "[42, true, \"xxx\"]";
+
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json, strlen (json));
+  json_parser *parser = json_parser_new (ctx, stm);
+
+  char *number;
+  int len;
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_BEGIN_ARRAY);
+  
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_NUMBER);
+  assert (strcmp (number, "42") == 0 && len == 2);
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_TRUE);
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_STRING);
+  assert (strcmp (number, "xxx") == 0 && len == 3);
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_END_ARRAY);
+  
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_EOF);
+  
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_INVALID);
+
+  json_parser_drop (ctx, parser);
+  fz_drop_stream (ctx, stm);
+
+=head2 API
+
+Each time the JSON Parser is called, it produces a parsing event of type C<enum
+json_token>. The possible events are:
+
+=over
+
+=item JSON_INVALID
+
+The parser encountered invalid JSON.
+
+=item JSON_EOF
+
+The parser reached the end of file. In particular, the JSON is valid.
+
+=item JSON_STRING
+
+The event includes the contents and length of the string.
+
+=item JSON_NUMBER
+
+The event includes the contents and length of the number.
+
+=item JSON_FALSE
+
+=item JSON_NULL
+
+=item JSON_TRUE
+
+=item JSON_BEGIN_ARRAY
+
+=item JSON_END_ARRAY
+
+=item JSON_BEGIN_OBJECT
+
+=item JSON_END_OBJECT
+
+=back
+
+=head3 Functions
+
+=over
+
+=item C<json_parser *json_parser_new (fz_context *ctx, fz_stream *stm);>
+
+Return a new parser, which will read from C<stm>. Increase the refcount of
+C<stm>. Throw on error.
+
+=item C<void json_parser_drop (fz_context *ctx, json_parser *parser);>
+
+Deallocate C<parser> and decrease the refcount of the underlying stream.
+
+=item C<json_token json_parser_parse (fz_context *ctx, json_parser *parser,
+                                  char **value, int *value_len);>
+
+Get the next parsing event and return it's type. For the JSON_STRING and
+JSON_NUMBER events, C<*value> and C<*value_len> will hold the parsed string or
+number. Calling this function again after a JSON_EOF was encountered will
+return JSON_INVALID. 
+
+ 
+=back

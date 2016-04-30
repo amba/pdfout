@@ -489,7 +489,37 @@ static void check_json_invalid (fz_context *ctx)
   test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
 }
   
+static void check_json_synopsis (fz_context *ctx)
+{
+  /* Synopsis section of manual.  */
+  const char *json = "[42, true, \"xxx\"]";
+
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json, strlen (json));
+  json_parser *parser = json_parser_new (ctx, stm);
+
+  char *number;
+  int len;
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_BEGIN_ARRAY);
   
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_NUMBER);
+  assert (strcmp (number, "42") == 0 && len == 2);
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_TRUE);
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_STRING);
+  assert (strcmp (number, "xxx") == 0 && len == 3);
+
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_END_ARRAY);
+  
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_EOF);
+  
+  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_INVALID);
+
+  json_parser_drop (ctx, parser);
+  fz_drop_stream (ctx, stm);
+
+}
 
 static void check_json (void)
 {
@@ -502,6 +532,8 @@ static void check_json (void)
   check_json_eof (ctx);
 
   check_json_invalid (ctx);
+
+  check_json_synopsis (ctx);
   
   exit (0);
 }

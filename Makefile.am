@@ -20,6 +20,10 @@ dist-hook:
 distcheck-hook:
 	chmod -R u+w $(distdir)/mupdf
 
+html-local:
+	mkdir -p html
+	$(srcdir)/doc/build-doc.pl "$(srcdir)/doc" html
+
 EXTRA_DIST = COPYING COPYRIGHT README AUTHORS INSTALL TODO
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --cache-file=$(abs_top_builddir)/config.cache

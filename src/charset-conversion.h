@@ -9,7 +9,7 @@ char *
 pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, int inbuf_len,
 		    int *outbuf_len);
 
-/* If a codepoint can not be stored in the target encoding, throw
+/* If a codepoint cannot be stored in the target encoding, throw
    FZ_ERROR_ABORT. On all other errors throw FZ_ERROR_GENERIC.  */
 void
 pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
