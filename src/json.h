@@ -29,7 +29,5 @@ json_parser *json_parser_new (fz_context *ctx, fz_stream *stm);
 json_token json_parser_parse (fz_context *ctx, json_parser *parser,
 			      char **value, int *value_len);
 
-void json_parser_assert_eof (fz_context *ctx, json_parser *parser);
-
 
 #endif	/* PDFOUT_HAVE_JSON_H */

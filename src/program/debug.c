@@ -456,6 +456,41 @@ static void check_json_parser (fz_context *ctx)
     json_parser_test (ctx, tests[i].text, tests[i].list, tests[i].value_list); 
 }
 
+static void check_json_eof (fz_context *ctx)
+{
+  /* assert that calling the parser after reaching eof returns
+   JSON_INVALID.  */
+  const char *text = "true";
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text, strlen (text));
+  json_parser *parser = json_parser_new (ctx, stm);
+
+  char *result;
+  int len;
+
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_TRUE);
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_EOF);
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
+}
+
+static void check_json_invalid (fz_context *ctx)
+{
+  /* assert that calling the parser repeatedly after an error returns
+   JSON_INVALID.  */
+  const char *text = "a";
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text, strlen (text));
+  json_parser *parser = json_parser_new (ctx, stm);
+
+  char *result;
+  int len;
+
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
+  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
+}
+  
+  
+
 static void check_json (void)
 {
   fz_context *ctx = fz_new_context (0, 0, 0);
@@ -463,6 +498,11 @@ static void check_json (void)
   check_json_parser_values (ctx);
 
   check_json_parser (ctx);
+
+  check_json_eof (ctx);
+
+  check_json_invalid (ctx);
+  
   exit (0);
 }
 

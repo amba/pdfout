@@ -26,22 +26,22 @@ typedef struct json_scanner_s {
 } json_scanner;
 
 typedef enum scanner_token_e {
-  JSON_TOK_INVALID = JSON_INVALID,                                                          
+  JSON_TOK_INVALID = JSON_INVALID,
   JSON_TOK_EOF = JSON_EOF,
   				          
-  JSON_TOK_STRING = JSON_STRING,       /* "..."  */                                                  
-  JSON_TOK_NUMBER = JSON_NUMBER,       /* [ minus ] int [ frac ] [ exp ]  */                 
-  JSON_TOK_FALSE = JSON_FALSE,         /* false  */                                          
-  JSON_TOK_NULL = JSON_NULL,           /* null  */                                           
-  JSON_TOK_TRUE = JSON_TRUE,           /* true  */                                           
-				                                                                                   
-  JSON_TOK_BEGIN_ARRAY = JSON_BEGIN_ARRAY,                                                           
+  JSON_TOK_STRING = JSON_STRING,       /* "..."  */
+  JSON_TOK_NUMBER = JSON_NUMBER,       /* [ minus ] int [ frac ] [ exp ]  */
+  JSON_TOK_FALSE = JSON_FALSE,         /* false  */
+  JSON_TOK_NULL = JSON_NULL,           /* null  */
+  JSON_TOK_TRUE = JSON_TRUE,           /* true  */
+
+  JSON_TOK_BEGIN_ARRAY = JSON_BEGIN_ARRAY,
   JSON_TOK_END_ARRAY = JSON_END_ARRAY,
   
-  JSON_TOK_BEGIN_OBJECT = JSON_BEGIN_OBJECT,                                                       
-  JSON_TOK_END_OBJECT = JSON_END_OBJECT,                                                         
+  JSON_TOK_BEGIN_OBJECT = JSON_BEGIN_OBJECT,
+  JSON_TOK_END_OBJECT = JSON_END_OBJECT,
 
-  JSON_TOK_VALUE_SEPARATOR,     
+  JSON_TOK_VALUE_SEPARATOR,
 
   JSON_TOK_NAME_SEPARATOR,
   
@@ -555,13 +555,6 @@ json_parser_new (fz_context *ctx, fz_stream *stm)
   return result;
 }
 
-void json_parser_assert_eof (fz_context *ctx, json_parser *parser)
-{
-  if (parser->reached_eof == false)
-    fz_throw (ctx, FZ_ERROR_GENERIC,
-	      "Calling json_parser_assert_eof with tokens remaining."
-	      " lookahead: %d", parser->lookahead);
-}
 
 /* 
    For the algorithm, see the section on non-recursive LL(1)-Parsing in
@@ -679,11 +672,17 @@ json_parser_parse (fz_context *ctx, json_parser *parser, char **value,
 		   int *value_len)
 {
   if (parser->failed)
-    fz_throw (ctx, FZ_ERROR_GENERIC,
-	      "calling json_parser_parse after failure");
+    {
+      fz_warn (ctx, "calling json_parser_parse after failure");
+      return JSON_INVALID;
+    }
+  
   if (parser->reached_eof)
-    fz_throw (ctx, FZ_ERROR_GENERIC,
-	      "calling json_parser_parse after reaching EOF");
+    {
+      fz_warn (ctx, "calling json_parser_parse after reaching EOF");
+      return JSON_INVALID;
+    }
+  
   if (parser_read (ctx, parser) < 0)
     return JSON_INVALID;
   
