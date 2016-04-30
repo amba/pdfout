@@ -26,8 +26,6 @@
 
 
 
-
-
 #define test_assert(expr)					\
   do								\
     {								\
@@ -289,81 +287,41 @@ static void check_regex (void)
 
 
 
-static void check_json_scanner_value (fz_context *ctx, const char *json,
-				      const char *value,
-				      json_token target_token, bool fail)
+static void check_json_parser_value (fz_context *ctx, const char *json,
+				     const char *value,
+				     json_token target_token, bool fail)
 {
   fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json,
 				   strlen (json));
       
-  json_scanner *scanner = json_scanner_new (ctx, stm);
-      
-  json_token token = json_scanner_scan (ctx, scanner);
+  json_parser *parser = json_parser_new (ctx, stm);
+
+  char *result;
+  int result_len;
+  json_token token = json_parser_parse (ctx, parser, &result, &result_len);
       
   if (fail)
-    test_assert (token == JSON_TOK_INVALID);
+    {
+      if (token != JSON_INVALID) {
+	fprintf (stderr, "for input '%s':\n\
+got token %d, expected JSON_INVALID\n", json, token);
+	exit (1);
+      }
+    }
   else
     {
       test_assert (token == target_token);
-      test_equal (json_scanner_value (ctx, scanner),
-		  value, json_scanner_value_len (ctx, scanner),
-		  strlen (value));
-      token = json_scanner_scan (ctx, scanner);
-      test_assert (token == JSON_TOK_EOF);
+      test_equal (result, value, result_len, strlen (value));
+      /* token = json_parser_parse (ctx, parser, &result, &result_len); */
+      /* json_parser_finalize (ctx, parser); */
     }
-  json_scanner_drop (ctx, scanner);
+  json_parser_drop (ctx, parser);
   fz_drop_stream (ctx, stm);
       
-}
+    }
 
-static void check_json_scanner (fz_context *ctx)
+static void check_json_parser_values (fz_context *ctx)
 {
-  {
-    struct test {
-      const char *text;
-      json_token expected[100];
-    };
-    int END = -2;
-      struct test tests[] = {
-      {" [true, false, {false : true, 1 : \"abc\"\"\"}]   ", {
-	  JSON_TOK_BEGIN_ARRAY, JSON_TOK_TRUE, JSON_TOK_VALUE_SEPARATOR,
-	  JSON_TOK_FALSE, JSON_TOK_VALUE_SEPARATOR, JSON_TOK_BEGIN_OBJECT,
-	  JSON_TOK_FALSE, JSON_TOK_NAME_SEPARATOR, JSON_TOK_TRUE,
-	  JSON_TOK_VALUE_SEPARATOR, JSON_TOK_NUMBER, JSON_TOK_NAME_SEPARATOR,
-	  JSON_TOK_STRING, JSON_TOK_STRING,
-	  JSON_TOK_END_OBJECT, JSON_TOK_END_ARRAY, JSON_TOK_EOF, END}
-      },
-      {" trux\n ", {JSON_TOK_INVALID, END}},
-      {" TRUE\n ", {JSON_TOK_INVALID, END}},
-      {"\n\n\n\n[f", {JSON_TOK_BEGIN_ARRAY, JSON_TOK_INVALID, END}},
-      {"[1, 2, 3, \"ℝΦΓ\xff""def\"", {JSON_TOK_BEGIN_ARRAY, JSON_TOK_NUMBER, JSON_TOK_VALUE_SEPARATOR,
-				      JSON_TOK_NUMBER, JSON_TOK_VALUE_SEPARATOR,
-				      JSON_TOK_NUMBER, JSON_TOK_VALUE_SEPARATOR, JSON_TOK_INVALID,
-				      END}},
-    }; 
-  
-    for (int i = 0; i < sizeof tests / sizeof (struct test); ++i)
-      {
-	const char *text = tests[i].text;
-	fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text,
-					 strlen (text));
-	json_scanner *scanner = json_scanner_new (ctx, stm);
-
-	for (int j = 0; tests[i].expected[j] != END; ++j)
-	  {
-	    json_token token = json_scanner_scan (ctx, scanner);
-	    json_token expected = tests[i].expected[j];
-	    if (token != expected)
-	      {
-		fprintf (stderr, "got token: %d, expected: %d\n", token, expected);
-		abort ();
-	      }
-	  }
-	json_scanner_drop (ctx, scanner);
-	fz_drop_stream (ctx, stm);
-      }
-  }
-
   {
     struct test {
       const char *text;
@@ -389,8 +347,8 @@ static void check_json_scanner (fz_context *ctx)
       {0}
     };
     for (int i = 0; tests[i].text; ++i)
-      check_json_scanner_value (ctx, tests[i].text, tests[i].text,
-				JSON_TOK_NUMBER, tests[i].fail);
+      check_json_parser_value (ctx, tests[i].text, tests[i].text,
+				JSON_NUMBER, tests[i].fail);
   }
   
   {
@@ -420,8 +378,8 @@ static void check_json_scanner (fz_context *ctx)
       {0}
     };
     for (int i = 0; tests[i].text; ++i)
-      check_json_scanner_value (ctx, tests[i].text, tests[i].value,
-				JSON_TOK_STRING, tests[i].fail);
+      check_json_parser_value (ctx, tests[i].text, tests[i].value,
+			       JSON_STRING, tests[i].fail);
   }
 }
 
@@ -440,17 +398,17 @@ json_parser_test (fz_context *ctx, const char *text, json_token *list,
     json_token token = json_parser_parse (ctx, parser, &value, &value_len);
     if (token != list[j])
       {
-	fprintf (stderr, "For text: %s, Expected token: %d, got: %d\n",
+	fprintf (stderr, "For text: '%s', Expected token: %d, got: %d\n",
 		 text, list[j], token);
 	abort ();
       }
-    if (token == JSON_TOK_STRING || token == JSON_TOK_NUMBER)
+    if (token == JSON_STRING || token == JSON_NUMBER)
       {
 	test_equal (value, value_list[k], value_len,
 		    strlen (value_list[k]));
 	++k;
       }
-    if (token == JSON_TOK_EOF || token == JSON_TOK_INVALID)
+    if (token == JSON_EOF || token == JSON_INVALID)
       break;
   }
   fz_drop_stream (ctx, stm);
@@ -462,21 +420,6 @@ json_parser_test (fz_context *ctx, const char *text, json_token *list,
 static void check_json_parser (fz_context *ctx)
   
 {
-  enum {
-    END = JSON_TOK_EOF,
-    STRING = JSON_TOK_STRING,
-    NUMBER,
-    FALSE,
-    NUL,
-    TRUE,
-    BEGIN_ARRAY,
-    END_ARRAY,
-    BEGIN_OBJECT,
-    END_OBJECT,
-    VALUE_SEPARATOR,
-    NAME_SEPARATOR
-  };
-  
   struct test {
     const char *text;
     json_token list[100];
@@ -484,28 +427,28 @@ static void check_json_parser (fz_context *ctx)
   };
     
   struct test tests[] = {
-    {"1", {NUMBER, END}, {"1"}},
+    {"1", {JSON_NUMBER, JSON_EOF}, {"1"}},
     {"[1, null, true, [], {}, false, \n\
 {\"abc\": 1, \"def\" : true}, {\"\": [1, {}]}, [1]]",
-     {BEGIN_ARRAY, NUMBER, NUL, TRUE, BEGIN_ARRAY, END_ARRAY, BEGIN_OBJECT,
-     END_OBJECT, FALSE, BEGIN_OBJECT, STRING, NUMBER, STRING, TRUE, END_OBJECT,
-     BEGIN_OBJECT, STRING, BEGIN_ARRAY, NUMBER, BEGIN_OBJECT, END_OBJECT,
-      END_ARRAY, END_OBJECT, BEGIN_ARRAY, NUMBER, END_ARRAY, END_ARRAY, END},
+     {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_NULL, JSON_TRUE, JSON_BEGIN_ARRAY, JSON_END_ARRAY, JSON_BEGIN_OBJECT,
+     JSON_END_OBJECT, JSON_FALSE, JSON_BEGIN_OBJECT, JSON_STRING, JSON_NUMBER, JSON_STRING, JSON_TRUE, JSON_END_OBJECT,
+     JSON_BEGIN_OBJECT, JSON_STRING, JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_BEGIN_OBJECT, JSON_END_OBJECT,
+      JSON_END_ARRAY, JSON_END_OBJECT, JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_END_ARRAY, JSON_END_ARRAY, JSON_EOF},
      {"1", "abc", "1", "def", "", "1", "1"}},
     {"", {-1}},
     {"x", {-1}},
-    {"1 1", {NUMBER, -1}, {"1"}},
-    {"[", {BEGIN_ARRAY, -1}},
+    {"1 1", {JSON_NUMBER, -1}, {"1"}},
+    {"[", {JSON_BEGIN_ARRAY, -1}},
     {"]", {-1}},
-    {"[1, 2", {BEGIN_ARRAY, NUMBER, NUMBER, -1}, {"1", "2"}},
-    {"[1 1]", {BEGIN_ARRAY, NUMBER, -1}, {"1"}},
-    {"[1 false]", {BEGIN_ARRAY, NUMBER, -1}, {"1"}},
-    {"[1, 2 3]", {BEGIN_ARRAY, NUMBER, NUMBER, -1}, {"1", "2"}},
-    {"[1]]", {BEGIN_ARRAY, NUMBER, END_ARRAY, -1}, {"1"}},
-    {"{false: 1}", {BEGIN_OBJECT, -1}},
-    {"{", {BEGIN_OBJECT, -1}},
+    {"[1, 2", {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_NUMBER, -1}, {"1", "2"}},
+    {"[1 1]", {JSON_BEGIN_ARRAY, JSON_NUMBER, -1}, {"1"}},
+    {"[1 false]", {JSON_BEGIN_ARRAY, JSON_NUMBER, -1}, {"1"}},
+    {"[1, 2 3]", {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_NUMBER, -1}, {"1", "2"}},
+    {"[1]]", {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_END_ARRAY, -1}, {"1"}},
+    {"{false: 1}", {JSON_BEGIN_OBJECT, -1}},
+    {"{", {JSON_BEGIN_OBJECT, -1}},
     {"}", {-1}},
-    {"[ \"ρτγℝ∂Γ\\n\", ]", {BEGIN_ARRAY, STRING, -1}, {"ρτγℝ∂Γ\n"}},
+    {"[ \"ρτγℝ∂Γ\\n\", ]", {JSON_BEGIN_ARRAY, JSON_STRING, -1}, {"ρτγℝ∂Γ\n"}},
     {0}
   };
 
@@ -516,9 +459,9 @@ static void check_json_parser (fz_context *ctx)
 static void check_json (void)
 {
   fz_context *ctx = fz_new_context (0, 0, 0);
+  
+  check_json_parser_values (ctx);
 
-  check_json_scanner (ctx);
-  pdfout_msg ("-----Parser stuff-----------------------");
   check_json_parser (ctx);
   exit (0);
 }

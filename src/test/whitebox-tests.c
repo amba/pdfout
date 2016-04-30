@@ -32,6 +32,8 @@ main (void)
   test_pdfout (0, 0, "debug", "--string-conversions");
 
   test_pdfout (0, 0, "debug", "--regex");
+
+  test_pdfout (0, 0, "debug", "--json");
   
   test_assert (test_streq (pdfout_append_suffix ("abc", ".yaml"), "abc.yaml"));
   
