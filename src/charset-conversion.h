@@ -19,6 +19,6 @@ pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
 /* Return newly allocated buffer and store it's length in *LENGTHP.  */
 char *
 pdfout_char_conv (fz_context *ctx, const char *fromcode, const char *tocode,
-		     const char *src, int srclen, int *lengthp);
+		  const char *src, int srclen, int *lengthp);
 
 #endif /* !HAVE_CHARSET_CONVERSION_H */

@@ -1,0 +1,89 @@
+=pod
+
+=head1 Character Set Conversion
+
+It is possible to convert between any two of the following encodings:
+
+=over
+
+=item ASCII
+
+=item UTF-8
+
+=item C
+
+Alias for UTF-8.
+
+=item UTF-16BE
+
+Big-endian.
+
+=item UTF-16LE
+
+Little-endian.
+
+=item UTF-16
+
+Switches between BE and LE on FFFE/FEFF byte order marks, which can be
+everywhere in the stream. The default is big-endian.
+
+=item UTF-32BE
+
+=item UTF-32LE
+
+=item UTF-32
+
+Analogous to UTF-16.
+
+=item PDFDOCENCODING
+
+=item PDFDOC
+
+8-bit encoding as specified in Annex D.7 of the PDF spec.
+The codepoints 0x7f, 0x9f and 0xad are left undefined.
+
+=back
+
+=head2 Conversion Functions
+
+=over
+
+=item
+
+ void pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
+			       const char *tocode, const char *src, int srclen,
+			       fz_buffer *buf)
+
+This is the most generic function and used internally by all functions below.
+
+Convert the string C<src> of length C<srclen> from encoding C<fromcode> to
+encoding C<tocode>. The resulting bytes are appended to C<buf>.
+
+Throw FZ_ERROR_ABORT if a codepoint is not valid in the target encoding.
+Throw FZ_ERROR_GENERIC on all other errors.
+
+=item
+
+ char *pdfout_char_conv (fz_context *ctx, const char *fromcode, const char *tocode,
+		         const char *src, int srclen, int *lengthp);
+
+Like C<pdfout_char_conv_buffer>, but returns it's result as a char-pointer. The
+length of the result is stored in C<*lengthp>. The resulting string is always
+null-terminated. 
+
+=item
+
+ char *pdfout_pdf_to_utf8 (fz_context *ctx, const char *inbuf, int inbuf_len,
+                           int *outbuf_len);
+
+Convert PDF string (either PDFDOC or UTF-16BE) to null-terminated UTF-8.
+
+=item
+
+ char *pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, int inbuf_len,
+		           int *outbuf_len);
+
+Convert UTF-8 to PDF string. If possible, use PDFDOCENCODING. If that fails,
+use UTF-16.
+
+=back

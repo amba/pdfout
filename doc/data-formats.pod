@@ -77,17 +77,23 @@ The event includes the contents and length of the number.
 
 =over
 
-=item C<json_parser *json_parser_new (fz_context *ctx, fz_stream *stm);>
+=item
+
+ json_parser *json_parser_new (fz_context *ctx, fz_stream *stm);
 
 Return a new parser, which will read from C<stm>. Increase the refcount of
 C<stm>. Throw on error.
 
-=item C<void json_parser_drop (fz_context *ctx, json_parser *parser);>
+=item
+
+ void json_parser_drop (fz_context *ctx, json_parser *parser);
 
 Deallocate C<parser> and decrease the refcount of the underlying stream.
 
-=item C<json_token json_parser_parse (fz_context *ctx, json_parser *parser,
-                                  char **value, int *value_len);>
+=item
+
+ json_token json_parser_parse (fz_context *ctx, json_parser *parser,
+                               char **value, int *value_len);
 
 Get the next parsing event and return it's type. For the JSON_STRING and
 JSON_NUMBER events, C<*value> and C<*value_len> will hold the parsed string or
