@@ -98,7 +98,7 @@ Deallocate C<parser> and decrease the refcount of the underlying stream.
 Get the next parsing event and return it's type. For the JSON_STRING and
 JSON_NUMBER events, C<*value> and C<*value_len> will hold the parsed string or
 number. Calling this function again after a JSON_EOF was encountered will
-return JSON_INVALID. 
+return JSON_INVALID.
 
  
 =back

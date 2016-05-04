@@ -521,6 +521,37 @@ static void check_json_synopsis (fz_context *ctx)
 
 }
 
+
+
+static void check_json_emitter (fz_context *ctx)
+{
+  const char *string = "#&ä\1∂ℝ\nΓ";
+  const char *number = "12.12";
+  fz_output *out = fz_new_output_with_file_ptr (ctx, stdout, false);
+  json_emitter *emitter = json_emitter_new (ctx, out);
+
+  json_emitter_set_indent (ctx, emitter, 2);
+  
+  json_emitter_emit (ctx, emitter, JSON_BEGIN_ARRAY, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_BEGIN_OBJECT, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_STRING, string, strlen (string));
+  json_emitter_emit (ctx, emitter, JSON_NUMBER, number, strlen (number));
+    json_emitter_emit (ctx, emitter, JSON_STRING, string, strlen (string));
+
+    json_emitter_emit (ctx, emitter, JSON_BEGIN_ARRAY, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_END_ARRAY, 0, 0);
+  
+  json_emitter_emit (ctx, emitter, JSON_END_OBJECT, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_END_ARRAY, 0, 0);
+  json_emitter_emit (ctx, emitter, JSON_EOF, 0, 0);
+}
+
 static void check_json (void)
 {
   fz_context *ctx = fz_new_context (0, 0, 0);
@@ -534,6 +565,8 @@ static void check_json (void)
   check_json_invalid (ctx);
 
   check_json_synopsis (ctx);
+
+  check_json_emitter (ctx);
   
   exit (0);
 }
