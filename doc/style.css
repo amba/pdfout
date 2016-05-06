@@ -1,0 +1,15 @@
+@charset "UTF-8";
+
+body {
+    color: #000;
+    background: #fff
+}
+
+pre {
+    background: #eeeeee;
+    border: 1px solid #888888;
+    color: black;
+    padding: 1em;
+    white-space: pre;
+    
+}

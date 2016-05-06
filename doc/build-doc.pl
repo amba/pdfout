@@ -31,6 +31,7 @@ my @files = glob catfile ($doc_dir, "*.pod");
 foreach my $file (@files) {
     warn "parsing $file\n";
     my $parser = Pod::Simple::XHTML->new ();
+    $parser->html_css ('style.css');
     $parser->complain_stderr (1);
     my $out_file = catfile ($output_dir, basename ($file) =~ s/\.pod$/.html/r);
     warn "writing to $out_file\n";

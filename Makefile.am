@@ -20,7 +20,10 @@ dist-hook:
 distcheck-hook:
 	chmod -R u+w $(distdir)/mupdf
 
-html-local:
+html/style.css: doc/style.css
+	cp $(srcdir)/doc/style.css html/style.css
+
+html-local: html/style.css
 	mkdir -p html
 	$(srcdir)/doc/build-doc.pl "$(srcdir)/doc" html
 
