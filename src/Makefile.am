@@ -26,7 +26,10 @@ text-extraction.c \
 pdfout-regex.h \
 regex.c \
 json.c \
-json.h
+json.h \
+alloc.c \
+data.c \
+data.h
 
 charset-conversion.c: encodings.h
 encodings.h: encodings.gperf

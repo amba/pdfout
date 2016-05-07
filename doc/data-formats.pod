@@ -1,5 +1,82 @@
 =pod
 
+=head1 Unicode Data
+
+The C<pdfout_data> is a complex data type. This is the data format used to
+interface with the parsers and emitters described below.
+
+It is organized into 3 different types:
+
+=over
+
+=item * Scalar:
+
+A scalar holds an UTF-8 string, which may contain embedded null bytes and does
+not have to be null-terminated.
+
+=item * Array:
+
+An array holds an array of pointers to C<pdfout_data> types.
+
+=item * Hash:
+
+A hash is a set of key-value pairs. Both key and value are pointers to
+C<pdfout_data> types. The keys must be scalars.
+
+=back
+
+=head2 Functions
+
+
+=head3 Type queries
+
+ bool pdfout_data_is_scalar (fz_context *ctx, pdfout_data *data);
+ bool pdfout_data_is_array (fz_context *ctx, pdfout_data *data);
+ bool pdfout_data_is_hash (fz_context *ctx, pdfout_data *data);
+
+=head3 Scalars
+
+Create a new scalar with
+
+ pdfout_data *pdfout_data_create_scalar (fz_context *ctx, const char *value,
+					 int len);
+
+Return the value of a scalar with
+
+ char *pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len);
+
+where the length of the string is stored in C<*len>.
+
+=head3 Arrays
+
+Create a new array with
+
+ pdfout_data *pdfout_data_create_array (fz_context *ctx);
+
+The length of an array is obtained with
+
+ int pdfout_data_array_len (fz_context *ctx, pdfout_data *array);
+
+Elements of an array are accessed with
+
+ pdfout_data *pdfout_data_array_get (fz_context *ctx, pdfout_data *array,
+				     int pos);
+
+New elements are appended with
+
+ void pdfout_data_array_push (fz_context *ctx, pdfout_data *array,
+			      pdfout_data *entry);
+
+=head3 Hashes
+
+=head3 Destructor
+
+ void pdfout_data_drop (fz_context *ctx, pdfout_data *data);
+
+Recursively free.
+
+
+
 =head1 JSON Parsing
 
 Parse and emit JSON, as defined in

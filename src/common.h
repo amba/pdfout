@@ -51,6 +51,12 @@ enum {
 # define PDFOUT_WUR
 # defune PDFOUT_UNUSED
 #endif
+
+#define pdfout_x2nrealloc(ctx, p, pn, t) \
+  ((t *) pdfout_x2nrealloc_imp (ctx, p, pn, sizeof (t)))
+
+void *pdfout_x2nrealloc_imp (fz_context *ctx, void *p, int *pn, unsigned s);
+  
 void pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
 			     int page_number, yaml_emitter_t *emitter,
 			     int mode);

@@ -28,5 +28,7 @@ Used code fragments:
   
 - The autogen.sh script is derived from GNU libunistring.
 
+- The allocators in src/alloc.c are derived from GNU gnulib's xalloc module.
+
 - The mbtowc_xxx and wctomb_xxx functions in src/charset-conversion.c are
   derived from GNU libiconv.

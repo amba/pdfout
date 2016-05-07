@@ -23,8 +23,7 @@
 #include "charset-conversion.h"
 #include "pdfout-regex.h"
 #include "json.h"
-
-
+#include "data.h"
 
 #define test_assert(expr)					\
   do								\
@@ -37,6 +36,22 @@
 	}							\
     }								\
   while (0)
+
+#define test_equal(result, expected, result_len, expected_len)	\
+  do								\
+    {								\
+      if (result_len != expected_len				\
+	  || memcmp (result, expected, result_len))		\
+	{							\
+	  fprintf (stderr, "expected:");			\
+	  print_string (expected, expected_len);		\
+	  fprintf (stderr, "got:");				\
+	  print_string (result, result_len);			\
+	  fprintf (stderr, "at file: %s, line: %d\n",		\
+		   __FILE__, __LINE__);				\
+	  exit(1);						\
+	}							\
+    } while (0)
 
 /* create filename in a temporary directory */
 static char *
@@ -167,21 +182,7 @@ static void print_string (const char *string, size_t len)
   fprintf (stderr, "\n");
 }
 
-#define test_equal(result, expected, result_len, expected_len)	\
-  do								\
-    {								\
-      if (result_len != expected_len				\
-	  || memcmp (result, expected, result_len))		\
-	{							\
-	  fprintf (stderr, "expected:");			\
-	  print_string (expected, expected_len);		\
-	  fprintf (stderr, "got:");				\
-	  print_string (result, result_len);			\
-	  fprintf (stderr, "at file: %s, line: %d\n",		\
-		   __FILE__, __LINE__);				\
-	  exit(1);						\
-	}							\
-    } while (0)
+
 
 /* Check that from -> too -> from is the identity.  */
 #define test_conversion(from, too, src, expected)			\
@@ -571,6 +572,41 @@ static void check_json (void)
   exit (0);
 }
 
+static void check_data (void)
+{
+  fz_context *ctx = fz_new_context (0, 0, 0);
+
+  pdfout_data *hash = pdfout_data_create_hash (ctx);
+
+  const char *s1 = "key1";
+  const char *s2 = "value1";
+  pdfout_data *key1 = pdfout_data_create_scalar (ctx, s1, strlen (s1));
+  pdfout_data *value1 = pdfout_data_create_scalar (ctx, s2, strlen (s2));
+
+  pdfout_data_hash_push (ctx, hash, key1, value1);
+
+  test_assert (pdfout_data_hash_len (ctx, hash) == 1);
+
+  pdfout_data *key2 = pdfout_data_create_scalar (ctx, s1, strlen (s1));
+  pdfout_data *array = pdfout_data_create_array (ctx);
+
+  pdfout_data_hash_push (ctx, hash, key2, array);
+
+  for (int i = 0; i < 100; ++i)
+    {
+      pdfout_data *item = pdfout_data_create_scalar (ctx, s1, strlen (s1));
+      pdfout_data_array_push (ctx, array, item);
+      test_assert (pdfout_data_array_len (ctx, array) == i + 1);
+    }
+
+  test_assert (pdfout_data_array_len (ctx, array) == 100);
+  
+  test_assert (pdfout_data_hash_len (ctx, hash) == 2);
+  
+  pdfout_data_drop (ctx, hash);
+  exit (0);
+}
+  
 static char usage[] = "";
 static char doc[] = "Run checks, called by make check\v";
 
@@ -580,6 +616,7 @@ enum {
   STRING_CONVERSIONS,
   REGEX,
   JSON,
+  DATA,
 };
 
 static struct argp_option options[] = {
@@ -588,6 +625,7 @@ static struct argp_option options[] = {
   {"string-conversions", STRING_CONVERSIONS},
   {"regex", REGEX},
   {"json", JSON},
+  {"data", DATA},
   {0}
 };
 
@@ -601,7 +639,7 @@ parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
     case STRING_CONVERSIONS: check_string_conversions (); break;
     case REGEX: check_regex (); break;
     case JSON: check_json (); break;
-      
+    case DATA: check_data (); break;
     default:
       return ARGP_ERR_UNKNOWN;
     }
