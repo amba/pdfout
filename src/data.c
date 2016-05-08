@@ -1,5 +1,8 @@
 #include "common.h"
 #include "data.h"
+#Include "c-ctype.h"
+#include "unistr.h"
+#include "uniwidth.h"
 
 enum data_type {
   SCALAR,
@@ -256,3 +259,96 @@ pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
     }
   return NULL;
 }
+
+/* Parser and emitter stuff.  */
+
+typedef void (*parser_drop_fn) (fz_context *ctx, pdfout_parser *parser);
+typedef pdfout_data (*parser_parse_fn) (fz_context *ctx,
+					pdfout_parser *parser);
+
+
+struct pdfout_parser_s {
+  parser_drop_fn drop;
+  parser_parse_fn parse;
+};
+
+void
+pdfout_parser_drop (fz_context *ctx, pdfout_parser *parser)
+{
+  parser->drop (ctx, parser);
+}
+
+pdfout_data *
+pdfout_parser_parse (fz_context *ctx, pdfout_parser *parser)
+{
+  return parser->parse (ctx, parser);
+}
+
+typedef void (*emitter_drop_fn) (fz_context *ctx, pdfout_emitter *emitter);
+typedef void (*emitter_emit_fn) (fz_context *ctx, pdfout_emitter *emitter,
+				 pdfout_data *data);
+
+
+struct pdfout_emitter_s {
+  emitter_drop_fn drop;
+  emitter_emit_fn emit;
+};
+
+void
+pdfout_emitter_drop (fz_context *ctx, pdfout_emitter *emitter)
+{
+  emitter->drop (ctx, emitter);
+}
+
+void
+pdfout_emitter_emit (fz_context *ctx, pdfout_emitter *emitter,
+		     pdfout_data *data)
+{
+  return emitter->emit (ctx, emitter, data);
+}
+
+
+
+/* JSON. */
+
+typedef struct json_scanner_s {
+  fz_stream *stream;
+  int lookahead;
+
+  /* value of string/number token.  */
+  fz_buffer *value;
+  
+  /* Current line. Used for error message.  */
+  fz_buffer *line;
+  int line_count;
+  
+  /* Current error position in LINE. Used to draw a '^' at the position of the
+     error. If greater than the line's length, the '^' will be drawn one
+     column beyond the line's end.  */
+  int error;
+
+  /* Position in LINE of the last successfully scanned token. Used for the
+     parsers error messages.  */
+  int token_start;
+} json_scanner;
+
+typedef enum scanner_token_e {
+  JSON_TOK_EOF,
+  				          
+  JSON_TOK_STRING,       /* "..."  */
+  JSON_TOK_NUMBER,       /* [ minus ] int [ frac ] [ exp ]  */
+  JSON_TOK_FALSE,         /* false  */
+  JSON_TOK_NULL,           /* null  */
+  JSON_TOK_TRUE,           /* true  */
+
+  JSON_TOK_BEGIN_ARRAY,
+  JSON_TOK_END_ARRAY,
+  
+  JSON_TOK_BEGIN_OBJECT,
+  JSON_TOK_END_OBJECT,
+
+  JSON_TOK_VALUE_SEPARATOR,
+
+  JSON_TOK_NAME_SEPARATOR,
+  
+} scanner_token;
