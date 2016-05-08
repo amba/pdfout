@@ -117,7 +117,7 @@ pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
   if (info == NULL)
     {
       info = pdf_new_dict (ctx, doc, 9);
-      info_ref = pdf_new_ref (ctx, doc, info);
+      info_ref = pdf_add_object (ctx, doc, info);
       pdf_drop_obj (ctx, info);
       pdf_dict_puts_drop (ctx, pdf_trailer (ctx, doc), "Info", info_ref);
     }

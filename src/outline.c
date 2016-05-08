@@ -112,7 +112,7 @@ pdfout_outline_set (fz_context *ctx, pdf_document *doc,
 
   dict = pdf_new_dict (ctx, doc, 4);
   pdf_dict_puts_drop (ctx, dict, "Type", pdf_new_name (ctx, doc, "Outlines"));
-  outline = pdf_new_ref (ctx, doc, dict);
+  outline = pdf_add_object (ctx, doc, dict);
   pdf_drop_obj (ctx, dict);
   pdf_dict_puts_drop (ctx, root, "Outlines", outline);
 
@@ -161,7 +161,7 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
   for (i = 0; i < length; ++i)
     {
       dict_table[i] = pdf_new_dict (ctx, doc, 8);
-      ref_table[i] = pdf_new_ref (ctx, doc, dict_table[i]);
+      ref_table[i] = pdf_add_object (ctx, doc, dict_table[i]);
       pdf_drop_obj (ctx, dict_table[i]);
     }
 

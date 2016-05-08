@@ -32,7 +32,6 @@ info-dict \
 page-count \
 repair \
 gettxt-plain \
-gettxt-yaml \
 create \
 whitebox-tests \
 top-level

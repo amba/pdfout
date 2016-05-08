@@ -28,17 +28,11 @@ static struct argp_option options[] = {
    "write output to PDF_FILE.txt"},
   {"page-range", 'p', "PAGE1[-PAGE2][,PAGE3[-PAGE4]...]", 0,
    "only print text for the specified page ranges."},
-  {"yaml", 'y', 0, 0,
-   "produce YAML with detailed information on the contents of each page."},
-  {0, 0, 0, 0, "if --yaml is given:"},
-  {"spans", 's', 0, 0, "show the content and bounding box of each span."},
   {0}
 };
 
 static char *pdf_filename;
 static FILE *output;
-static bool use_yaml;
-static int yaml_mode = PDFOUT_TXT_YAML_LINES;
 static char *page_range;
 
 
@@ -51,12 +45,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'd': use_default_filename = true; break;
     case 'p': page_range = arg; break;
       
-    case 's':
-      use_yaml = true;
-      yaml_mode = PDFOUT_TXT_YAML_SPANS;
-      break;
-      
-    case 'y': use_yaml = true; break;
     case ARGP_KEY_ARG:
       switch (state->arg_num)
 	{
@@ -81,7 +69,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 static struct argp_child children[] = {
-   {&pdfout_yaml_emitter_argp, 0, "", -2},
    {&pdfout_general_argp, 0, NULL, 0},
    {0}
 };
@@ -94,7 +81,6 @@ pdfout_command_gettxt (int argc, char **argv)
   fz_context *ctx;
   pdf_document *doc;
   int  i, page_count;
-  yaml_emitter_t emitter;
   int *pages;
 
   /* only move a copy of pages to soothe Memcheck */
@@ -114,21 +100,9 @@ pdfout_command_gettxt (int argc, char **argv)
     pages = pdfout_parse_page_range (page_range, page_count);
   
 
-  if (use_yaml == false)
-    {
-      for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
-	for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
-	  pdfout_text_get_page (output, ctx, doc, i - 1);
-    }
-  else
-    {
-      pdfout_yaml_emitter_initialize (&emitter);
-      yaml_emitter_set_output_file (&emitter, output);
-
-      for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
-	for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
-	  pdfout_print_yaml_page (ctx, doc, i - 1, &emitter, yaml_mode);
-    }
+  for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
+    for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
+      pdfout_text_get_page (output, ctx, doc, i - 1);
     
   exit (0);
 }

@@ -138,16 +138,16 @@ pdfout_command_create (int argc, char **argv)
 static void
 add_pages (fz_context *ctx, pdf_document *doc, int page_count)
 {
-  fz_rect rect = {0, height, width, 0};
+  fz_rect rect = {0, 0, width, height};
 
-  /* FIXME: what is the 4th arg 'res' ? */
-  pdf_page *page = pdf_create_page (ctx, doc, rect, 0, 0);
-  int i;
+  pdf_obj *resources = pdf_new_dict (ctx, doc, 0);
+  fz_buffer *contents = fz_new_buffer (ctx, 0);
 
-  for (i = 0; i < page_count; ++i)
-    pdf_insert_page (ctx, doc, page, i);
-
-  free (page);
+  for (int i = 0; i < page_count; ++i)
+    {
+      pdf_obj *page = pdf_add_page (ctx, doc, &rect, 0, resources, contents);
+      pdf_insert_page (ctx, doc, i, page);
+    }
 }
 
 static float mm_to_pt (float mm)
