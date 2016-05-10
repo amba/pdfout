@@ -46,7 +46,14 @@ pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
 
 /*  Parsers.  */
 
-typedef struct pdfout_parser_s pdfout_parser;
+typedef void (*parser_drop_fn) (fz_context *ctx, pdfout_parser *parser);
+typedef pdfout_data (*parser_parse_fn) (fz_context *ctx, pdfout_parser *parser);
+
+typedef struct {
+  parser_drop_fn drop;
+  parser_parse_fn parse;
+} pdfout_parser;
+
 
 void pdfout_parser_drop (fz_context *ctx, pdfout_parser *parser);
 
@@ -57,7 +64,16 @@ pdfout_parser *pdfout_parser_json_new (fz_context *ctx, fz_stream *stm);
 
 /* Emitters. */
 
-typedef struct pdfout_emitter_s pdfout_emitter;
+typedef void (*emitter_drop_fn) (fz_context *ctx, pdfout_emitter *emitter);
+typedef void (*emitter_emit_fn) (fz_context *ctx, pdfout_emitter *emitter,
+				 pdfout_data *data);
+
+
+typedef struct {
+  emitter_drop_fn drop;
+  emitter_emit_fn emit;
+} pdfout_emitter;
+
 
 void pdfout_emitter_drop (fz_context *ctx, pdfout_emitter *emitter);
 
