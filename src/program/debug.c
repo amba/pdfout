@@ -22,7 +22,6 @@
 #include "tempname.h"
 #include "charset-conversion.h"
 #include "pdfout-regex.h"
-#include "json.h"
 #include "data.h"
 
 #define test_assert(expr)					\
@@ -51,6 +50,19 @@
 		   __FILE__, __LINE__);				\
 	  exit(1);						\
 	}							\
+    } while (0)
+
+#define assert_throw(ctx, expr)					\
+  do								\
+    {								\
+      bool failed = false;					\
+      fz_try (ctx) { expr; } fz_catch (ctx) {failed = true;}		\
+      if (failed == false)						\
+	{								\
+	  fprintf (stderr, "at file: %s, line: %d\n\
+Expression '" #expr "' did not throw as expected\n", __FILE__, __LINE__); \
+	  exit (1);							\
+	}								\
     } while (0)
 
 /* create filename in a temporary directory */
@@ -289,37 +301,41 @@ static void check_regex (void)
 
 
 static void check_json_parser_value (fz_context *ctx, const char *json,
-				     const char *value,
-				     json_token target_token, bool fail)
+				     const char *value, bool fail)
 {
   fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json,
 				   strlen (json));
       
-  json_parser *parser = json_parser_new (ctx, stm);
+  pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
 
-  char *result;
-  int result_len;
-  json_token token = json_parser_parse (ctx, parser, &result, &result_len);
-      
-  if (fail)
+  if (fail == true)
     {
-      if (token != JSON_INVALID) {
-	fprintf (stderr, "for input '%s':\n\
-got token %d, expected JSON_INVALID\n", json, token);
-	exit (1);
-      }
+      assert_throw (ctx, pdfout_parser_parse (ctx, parser));
+      return;
     }
-  else
-    {
-      test_assert (token == target_token);
-      test_equal (result, value, result_len, strlen (value));
-      /* token = json_parser_parse (ctx, parser, &result, &result_len); */
-      /* json_parser_finalize (ctx, parser); */
-    }
-  json_parser_drop (ctx, parser);
+  
+  
+  pdfout_data *data;
+  fz_try (ctx)
+  {
+    data = pdfout_parser_parse (ctx, parser);
+  }
+  fz_catch (ctx)
+  {
+    fprintf (stderr, "Unexpected throw for json string '%s'\n", json);
+    exit (1);
+  }
+  
+  test_assert (pdfout_data_is_scalar (ctx, data));
+  int len;
+  char *result = pdfout_data_scalar_get (ctx, data, &len);
+  test_equal (result, value, len, strlen (value));
+
+  pdfout_parser_drop (ctx, parser);
+  pdfout_data_drop (ctx, data);
   fz_drop_stream (ctx, stm);
       
-    }
+}
 
 static void check_json_parser_values (fz_context *ctx)
 {
@@ -349,7 +365,7 @@ static void check_json_parser_values (fz_context *ctx)
     };
     for (int i = 0; tests[i].text; ++i)
       check_json_parser_value (ctx, tests[i].text, tests[i].text,
-				JSON_NUMBER, tests[i].fail);
+			       tests[i].fail);
   }
   
   {
@@ -380,221 +396,123 @@ static void check_json_parser_values (fz_context *ctx)
     };
     for (int i = 0; tests[i].text; ++i)
       check_json_parser_value (ctx, tests[i].text, tests[i].value,
-			       JSON_STRING, tests[i].fail);
+			       tests[i].fail);
   }
 }
 
 static void
-json_parser_test (fz_context *ctx, const char *text, json_token *list,
-		  const char **value_list)
+json_parser_test (fz_context *ctx, const char *json, pdfout_data *result)
 {
-  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text, strlen (text));
-  json_parser *parser = json_parser_new (ctx, stm);
-  int k = 0;
-  for (int j = 0; ;++j)
-  {
-    char *value;
-    int value_len;
-    
-    json_token token = json_parser_parse (ctx, parser, &value, &value_len);
-    if (token != list[j])
-      {
-	fprintf (stderr, "For text: '%s', Expected token: %d, got: %d\n",
-		 text, list[j], token);
-	abort ();
-      }
-    if (token == JSON_STRING || token == JSON_NUMBER)
-      {
-	test_equal (value, value_list[k], value_len,
-		    strlen (value_list[k]));
-	++k;
-      }
-    if (token == JSON_EOF || token == JSON_INVALID)
-      break;
-  }
-  fz_drop_stream (ctx, stm);
-  json_parser_drop (ctx, parser);
-}
-  
+  fprintf (stderr, "testing json '%s'\n", json);
 
-				    
-static void check_json_parser (fz_context *ctx)
+
+  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json,
+				   strlen (json));
+      
+  pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
+
+  if (result == NULL)
+    {
+      assert_throw (ctx, pdfout_parser_parse (ctx, parser));
+      return;
+    }
+
+  pdfout_data *data = pdfout_parser_parse (ctx, parser);
+
+  test_assert (pdfout_data_cmp (ctx, result, data) == 0);
   
+  pdfout_data_drop (ctx, result);
+  pdfout_data_drop (ctx, data);
+
+  pdfout_parser_drop (ctx, parser);
+  fz_drop_stream (ctx, stm);
+}
+
+static void array_push_string (fz_context *ctx, pdfout_data *array,
+			       const char *string)
+{
+  pdfout_data *s = pdfout_data_scalar_new (ctx, string, strlen (string));
+  pdfout_data_array_push (ctx, array, s);
+}
+
+static void hash_push_string (fz_context *ctx, pdfout_data *hash,
+			      const char *key, const char *value)
+{
+  pdfout_data *k = pdfout_data_scalar_new (ctx, key, strlen (key));
+  pdfout_data *v = pdfout_data_scalar_new (ctx, value, strlen (value));
+  pdfout_data_hash_push (ctx, hash, k, v);
+}
+
+
+static void check_json_parser (fz_context *ctx)
 {
   struct test {
-    const char *text;
-    json_token list[100];
-    const char *value_list[100];
+    const char *json;
+    pdfout_data *result;
   };
-    
+
   struct test tests[] = {
-    {"1", {JSON_NUMBER, JSON_EOF}, {"1"}},
-    {"[1, null, true, [], {}, false, \n\
-{\"abc\": 1, \"def\" : true}, {\"\": [1, {}]}, [1]]",
-     {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_NULL, JSON_TRUE, JSON_BEGIN_ARRAY, JSON_END_ARRAY, JSON_BEGIN_OBJECT,
-     JSON_END_OBJECT, JSON_FALSE, JSON_BEGIN_OBJECT, JSON_STRING, JSON_NUMBER, JSON_STRING, JSON_TRUE, JSON_END_OBJECT,
-     JSON_BEGIN_OBJECT, JSON_STRING, JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_BEGIN_OBJECT, JSON_END_OBJECT,
-      JSON_END_ARRAY, JSON_END_OBJECT, JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_END_ARRAY, JSON_END_ARRAY, JSON_EOF},
-     {"1", "abc", "1", "def", "", "1", "1"}},
-    {"", {-1}},
-    {"x", {-1}},
-    {"1 1", {JSON_NUMBER, -1}, {"1"}},
-    {"[", {JSON_BEGIN_ARRAY, -1}},
-    {"]", {-1}},
-    {"[1, 2", {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_NUMBER, -1}, {"1", "2"}},
-    {"[1 1]", {JSON_BEGIN_ARRAY, JSON_NUMBER, -1}, {"1"}},
-    {"[1 false]", {JSON_BEGIN_ARRAY, JSON_NUMBER, -1}, {"1"}},
-    {"[1, 2 3]", {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_NUMBER, -1}, {"1", "2"}},
-    {"[1]]", {JSON_BEGIN_ARRAY, JSON_NUMBER, JSON_END_ARRAY, -1}, {"1"}},
-    {"{false: 1}", {JSON_BEGIN_OBJECT, -1}},
-    {"{", {JSON_BEGIN_OBJECT, -1}},
-    {"}", {-1}},
-    {"[ \"ρτγℝ∂Γ\\n\", ]", {JSON_BEGIN_ARRAY, JSON_STRING, -1}, {"ρτγℝ∂Γ\n"}},
-    {0}
-  };
+    {""}, {"x"}, {"1 1"}, {"["},{"]"}, {"{"}, {"}"}, {"[1, 2"}, {"[1 1]"},
+    {"[1,]"}, {"[1, 2 3]"}, {"[1]]"}, {"{false: 1}"}, {"{"}, {"}"}, {0}};
+  
+  for (int i = 0; tests[i].json; ++i)
+    json_parser_test (ctx, tests[i].json, tests[i].result);
 
-  for (int i = 0; tests[i].text; ++i)
-    json_parser_test (ctx, tests[i].text, tests[i].list, tests[i].value_list); 
-}
+  const char *json = "[1, null, true, [], {}, false, {\"abc\": 1,\
+ \"def\" : true}]";
 
-static void check_json_eof (fz_context *ctx)
-{
-  /* assert that calling the parser after reaching eof returns
-   JSON_INVALID.  */
-  const char *text = "true";
-  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text, strlen (text));
-  json_parser *parser = json_parser_new (ctx, stm);
+  pdfout_data *a = pdfout_data_array_new (ctx);
+  array_push_string (ctx, a, "1");
+  array_push_string (ctx, a, "null");
+  array_push_string (ctx, a, "true");
+  pdfout_data_array_push (ctx, a, pdfout_data_array_new (ctx));
+  pdfout_data_array_push (ctx, a, pdfout_data_hash_new (ctx));
+  array_push_string (ctx, a, "false");
 
-  char *result;
-  int len;
+  pdfout_data *h = pdfout_data_hash_new (ctx);
+  pdfout_data_array_push (ctx, a, h);
+  hash_push_string (ctx, h, "abc", "1");
+  hash_push_string (ctx, h, "def", "true");
 
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_TRUE);
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_EOF);
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
-}
-
-static void check_json_invalid (fz_context *ctx)
-{
-  /* assert that calling the parser repeatedly after an error returns
-   JSON_INVALID.  */
-  const char *text = "a";
-  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) text, strlen (text));
-  json_parser *parser = json_parser_new (ctx, stm);
-
-  char *result;
-  int len;
-
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
-  test_assert (json_parser_parse (ctx, parser, &result, &len) == JSON_INVALID);
+  json_parser_test (ctx, json, a);
 }
   
-static void check_json_synopsis (fz_context *ctx)
-{
-  /* Synopsis section of manual.  */
-  const char *json = "[42, true, \"xxx\"]";
-
-  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json, strlen (json));
-  json_parser *parser = json_parser_new (ctx, stm);
-
-  char *number;
-  int len;
-
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_BEGIN_ARRAY);
-  
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_NUMBER);
-  assert (strcmp (number, "42") == 0 && len == 2);
-
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_TRUE);
-
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_STRING);
-  assert (strcmp (number, "xxx") == 0 && len == 3);
-
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_END_ARRAY);
-  
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_EOF);
-  
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_INVALID);
-
-  json_parser_drop (ctx, parser);
-  fz_drop_stream (ctx, stm);
-
-}
-
-
-
-static void check_json_emitter (fz_context *ctx)
-{
-  const char *string = "#&ä\1∂ℝ\nΓ";
-  const char *number = "12.12";
-  fz_output *out = fz_new_output_with_file_ptr (ctx, stdout, false);
-  json_emitter *emitter = json_emitter_new (ctx, out);
-
-  json_emitter_set_indent (ctx, emitter, 2);
-  
-  json_emitter_emit (ctx, emitter, JSON_BEGIN_ARRAY, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_BEGIN_OBJECT, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_STRING, string, strlen (string));
-  json_emitter_emit (ctx, emitter, JSON_NUMBER, number, strlen (number));
-    json_emitter_emit (ctx, emitter, JSON_STRING, string, strlen (string));
-
-    json_emitter_emit (ctx, emitter, JSON_BEGIN_ARRAY, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_END_ARRAY, 0, 0);
-  
-  json_emitter_emit (ctx, emitter, JSON_END_OBJECT, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_NULL, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_END_ARRAY, 0, 0);
-  json_emitter_emit (ctx, emitter, JSON_EOF, 0, 0);
-}
-
 static void check_json (void)
 {
   fz_context *ctx = fz_new_context (0, 0, 0);
   
-  check_json_parser_values (ctx);
+  if (0)
+    check_json_parser_values (ctx);
 
   check_json_parser (ctx);
 
-  check_json_eof (ctx);
-
-  check_json_invalid (ctx);
-
-  check_json_synopsis (ctx);
-
-  check_json_emitter (ctx);
-  
   exit (0);
 }
 
-static void check_data (void)
+  static void check_data (void)
 {
   fz_context *ctx = fz_new_context (0, 0, 0);
 
-  pdfout_data *hash = pdfout_data_create_hash (ctx);
+  pdfout_data *hash = pdfout_data_hash_new (ctx);
 
   const char *s1 = "key1";
   const char *s2 = "value1";
-  pdfout_data *key1 = pdfout_data_create_scalar (ctx, s1, strlen (s1));
-  pdfout_data *value1 = pdfout_data_create_scalar (ctx, s2, strlen (s2));
+  const char *s3 = "key2";
+  pdfout_data *key1 = pdfout_data_scalar_new (ctx, s1, strlen (s1));
+  pdfout_data *value1 = pdfout_data_scalar_new (ctx, s2, strlen (s2));
 
   pdfout_data_hash_push (ctx, hash, key1, value1);
 
   test_assert (pdfout_data_hash_len (ctx, hash) == 1);
 
-  pdfout_data *key2 = pdfout_data_create_scalar (ctx, s1, strlen (s1));
-  pdfout_data *array = pdfout_data_create_array (ctx);
+  pdfout_data *key2 = pdfout_data_scalar_new (ctx, s3, strlen (s3));
+  pdfout_data *array = pdfout_data_array_new (ctx);
 
   pdfout_data_hash_push (ctx, hash, key2, array);
 
   for (int i = 0; i < 100; ++i)
     {
-      pdfout_data *item = pdfout_data_create_scalar (ctx, s1, strlen (s1));
+      pdfout_data *item = pdfout_data_scalar_new (ctx, s1, strlen (s1));
       pdfout_data_array_push (ctx, array, item);
       test_assert (pdfout_data_array_len (ctx, array) == i + 1);
     }

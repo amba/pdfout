@@ -23,7 +23,8 @@ AC_PROG_RANLIB
 gl_MANYWARN_ALL_GCC([warnings])
 # Set up the list of the pointless, undesired warnings.
 nw="-W -Wextra -Wdouble-promotion -Wshadow -Wvariadic-macros \
--Wsuggest-attribute=noreturn -Wjump-misses-init -Wmissing-field-initializers"
+-Wsuggest-attribute=noreturn -Wjump-misses-init -Wmissing-field-initializers \
+-Wunused-parameter"
 # Enable all GCC warnings not in this list.
 gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 
@@ -62,7 +63,7 @@ AS_IF([test -r ${srcdir}/mupdf/README], [],
   [AC_MSG_ERROR([mupdf submodule is not checked out.
 Try 'git submodule update --init'])])
 third=${srcdir}/mupdf/thirdparty
-AS_IF([test -r ${third}/openjpeg/libopenjpeg], [],
+AS_IF([test -r ${third}/openjpeg/AUTHORS], [],
       [AC_MSG_ERROR([mupdf's submodules are not checked out.
 Try './git-submodule-update.sh'])])
   

@@ -46,10 +46,12 @@ enum {
   __attribute__ ((format (printf, index, index + 1)))
 # define PDFOUT_WUR __attribute__ ((warn_unused_result))
 # define PDFOUT_UNUSED __attribute__ ((__unused__))
+# define PDFOUT_NORETURN __attribute__ ((__noreturn__))
 #else
 # define PDFOUT_PRINTFLIKE(index) /* empty */
 # define PDFOUT_WUR
-# defune PDFOUT_UNUSED
+# define PDFOUT_UNUSED
+# define PDFOUT_NORETURN
 #endif
 
 #define pdfout_x2nrealloc(ctx, p, pn, t) \

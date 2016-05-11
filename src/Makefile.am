@@ -25,11 +25,10 @@ open-write-pdf.c \
 text-extraction.c \
 pdfout-regex.h \
 regex.c \
-json.c \
-json.h \
 alloc.c \
 data.c \
-data.h
+data.h \
+json.c
 
 charset-conversion.c: encodings.h
 encodings.h: encodings.gperf

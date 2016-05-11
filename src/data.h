@@ -7,10 +7,10 @@ bool pdfout_data_is_scalar (fz_context *ctx, pdfout_data *data);
 bool pdfout_data_is_array (fz_context *ctx, pdfout_data *data);
 bool pdfout_data_is_hash (fz_context *ctx, pdfout_data *data);
 
-pdfout_data *pdfout_data_create_scalar (fz_context *ctx, const char *value,
+pdfout_data *pdfout_data_scalar_new (fz_context *ctx, const char *value,
 					int len);
-pdfout_data *pdfout_data_create_array (fz_context *ctx);
-pdfout_data *pdfout_data_create_hash (fz_context *ctx);
+pdfout_data *pdfout_data_array_new (fz_context *ctx);
+pdfout_data *pdfout_data_hash_new (fz_context *ctx);
 
 /* recursively drop.  */
 void pdfout_data_drop (fz_context *ctx, pdfout_data *data);
@@ -35,12 +35,57 @@ void pdfout_data_hash_push (fz_context *ctx, pdfout_data *hash,
 			    pdfout_data *key, pdfout_data *value);
 
 pdfout_data *pdfout_data_hash_get_key (fz_context *ctx, pdfout_data *hash,
-				       int pos);
+				       int i);
 pdfout_data *pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash,
-					 int pos);
+					 int i);
 
 /* key must be null-terminated.  */
 pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
 				    char *key);
+
+int pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y);
+
+/*  Parsers.  */
+typedef struct pdfout_parser_s pdfout_parser;
+
+
+typedef void (*parser_drop_fn) (fz_context *ctx, pdfout_parser *parser);
+typedef pdfout_data *(*parser_parse_fn) (fz_context *ctx, pdfout_parser *parser);
+
+struct pdfout_parser_s {
+  parser_drop_fn drop;
+  parser_parse_fn parse;
+};
+
+void pdfout_parser_drop (fz_context *ctx, pdfout_parser *parser);
+
+/* Throw on error.  */
+pdfout_data *pdfout_parser_parse (fz_context *ctx, pdfout_parser *parser);
+
+pdfout_parser *pdfout_parser_json_new (fz_context *ctx, fz_stream *stm);
+
+/* Emitters. */
+
+typedef struct pdfout_emitter_s pdfout_emitter;
+
+
+typedef void (*emitter_drop_fn) (fz_context *ctx, pdfout_emitter *emitter);
+typedef void (*emitter_emit_fn) (fz_context *ctx, pdfout_emitter *emitter,
+				 pdfout_data *data);
+
+struct pdfout_emitter_s {
+  emitter_drop_fn drop;
+  emitter_emit_fn emit;
+};
+
+
+
+void pdfout_emitter_drop (fz_context *ctx, pdfout_emitter *emitter);
+
+void pdfout_emitter_emit (fz_context *ctx, pdfout_emitter *emitter,
+			  pdfout_data *data);
+
+pdfout_emitter *pdfout_emitter_json_new (fz_context *ctx, fz_output *out);
+
 
 #endif	/* PDFOUT_DATA_H */

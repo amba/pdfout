@@ -21,7 +21,7 @@ An array holds an array of pointers to C<pdfout_data> types.
 =item * Hash:
 
 A hash is a set of key-value pairs. Both key and value are pointers to
-C<pdfout_data> types. The keys must be scalars.
+C<pdfout_data> types. The keys must be unique scalars.
 
 =back
 
@@ -38,7 +38,7 @@ C<pdfout_data> types. The keys must be scalars.
 
 Create a new scalar with
 
- pdfout_data *pdfout_data_create_scalar (fz_context *ctx, const char *value,
+ pdfout_data *pdfout_data_scalar_new (fz_context *ctx, const char *value,
 					 int len);
 
 Return the value of a scalar with
@@ -51,7 +51,7 @@ where the length of the string is stored in C<*len>.
 
 Create a new array with
 
- pdfout_data *pdfout_data_create_array (fz_context *ctx);
+ pdfout_data *pdfout_data_array_new (fz_context *ctx);
 
 The length of an array is obtained with
 
@@ -68,6 +68,38 @@ New elements are appended with
 			      pdfout_data *entry);
 
 =head3 Hashes
+
+Create a new hash with
+
+ pdfout_data *pdfout_data_hash_new (fz_context *ctx);
+
+The number of key-value pairs in a hash is obtained with
+
+ int pdfout_data_hash_len (fz_context *ctx, pdfout_data *hash);
+
+New key-value pairs are appended with
+
+ void pdfout_data_hash_push (fz_context *ctx, pdfout_data *hash,
+         	             pdfout_data *key, pdfout_data *value);
+
+C<key> has to be a scalar. The keys in a hash must be
+unique. Trying to add a key which is already present in the hash will throw an
+exception.
+
+There are multiple functions to access a hashes key-value pairs.
+
+ pdfout_data *pdfout_data_hash_get_key (fz_context *ctx, pdfout_data *hash,
+				        int i);
+ pdfout_data *pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash,
+					  int i);
+					 
+These extract key and value of the i-th key-value pair.
+
+ pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
+				     char *key);
+
+Searches the hash for the key C<key> and returns the key's value. If no key is
+found, NULL is returned.
 
 =head3 Destructor
 

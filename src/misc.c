@@ -133,4 +133,3 @@ pdfout_check_utf8 (const char *s, size_t n)
 {
   return (char *) u8_check ((const uint8_t *) s, n);
 }
-  
