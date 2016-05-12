@@ -412,18 +412,16 @@ json_parser_test (fz_context *ctx, const char *json, pdfout_data *result)
   pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
 
   if (result == NULL)
-    {
       assert_throw (ctx, pdfout_parser_parse (ctx, parser));
-      return;
-    }
+  else
+    {
+      pdfout_data *data = pdfout_parser_parse (ctx, parser);
 
-  pdfout_data *data = pdfout_parser_parse (ctx, parser);
-
-  test_assert (pdfout_data_cmp (ctx, result, data) == 0);
+      test_assert (pdfout_data_cmp (ctx, result, data) == 0);
   
-  pdfout_data_drop (ctx, result);
-  pdfout_data_drop (ctx, data);
-
+      pdfout_data_drop (ctx, result);
+      pdfout_data_drop (ctx, data);
+    }
   pdfout_parser_drop (ctx, parser);
   fz_drop_stream (ctx, stm);
 }
