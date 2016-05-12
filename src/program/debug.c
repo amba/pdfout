@@ -311,28 +311,28 @@ static void check_json_parser_value (fz_context *ctx, const char *json,
   if (fail == true)
     {
       assert_throw (ctx, pdfout_parser_parse (ctx, parser));
-      return;
+    }
+  else
+    {
+      pdfout_data *data;
+      fz_try (ctx)
+      {
+	data = pdfout_parser_parse (ctx, parser);
+      }
+      fz_catch (ctx)
+      {
+	fprintf (stderr, "Unexpected throw for json string '%s'\n", json);
+	exit (1);
+      }
+  
+      test_assert (pdfout_data_is_scalar (ctx, data));
+      int len;
+      char *result = pdfout_data_scalar_get (ctx, data, &len);
+      test_equal (result, value, len, strlen (value));
+      pdfout_data_drop (ctx, data);
     }
   
-  
-  pdfout_data *data;
-  fz_try (ctx)
-  {
-    data = pdfout_parser_parse (ctx, parser);
-  }
-  fz_catch (ctx)
-  {
-    fprintf (stderr, "Unexpected throw for json string '%s'\n", json);
-    exit (1);
-  }
-  
-  test_assert (pdfout_data_is_scalar (ctx, data));
-  int len;
-  char *result = pdfout_data_scalar_get (ctx, data, &len);
-  test_equal (result, value, len, strlen (value));
-
   pdfout_parser_drop (ctx, parser);
-  pdfout_data_drop (ctx, data);
   fz_drop_stream (ctx, stm);
       
 }
@@ -474,16 +474,95 @@ static void check_json_parser (fz_context *ctx)
 
   json_parser_test (ctx, json, a);
 }
-  
+
+static void json_emitter_test (fz_context *ctx, pdfout_data *data,
+			       const char *expected)
+{
+  fz_buffer *out_buf = fz_new_buffer (ctx, 0);
+  fz_output *out = fz_new_output_with_buffer (ctx, out_buf);
+  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
+  pdfout_emitter_emit (ctx, emitter, data);
+
+  if (strlen (expected) != out_buf->len
+      || memcmp (expected, out_buf->data, out_buf->len))
+    {
+      fprintf (stderr, "json_emitter_test: expected:\n%s"
+	       "got:\n%.*s\n", expected, out_buf->len, (char *) out_buf->data);
+      abort ();
+    }
+      
+  pdfout_emitter_drop (ctx, emitter);
+  fz_drop_output (ctx, out);
+  fz_drop_buffer (ctx, out_buf);
+  pdfout_data_drop (ctx, data);
+}
+
+static void check_json_emitter (fz_context *ctx)
+{
+  {
+    char json[1000];
+    int len = 0;
+
+    /* test escapes */
+    json[len++] = 0;
+    json[len++] = 1;
+    json[len++] = '"';
+    json[len++] = '\\';
+    json[len++] = '/';
+    json[len++] = '\b';
+    json[len++] = '\f';
+    json[len++] = '\n';
+    json[len++] = '\r';
+    json[len++] = '\t';
+    
+    const char *expected = "\"" "\\u0000" "\\u0001" "\\\"" "\\\\" "/" "\\b"
+      "\\f" "\\n" "\\r" "\\t" "\"" "\n";
+    
+    pdfout_data *data = pdfout_data_scalar_new (ctx, json, len);
+    json_emitter_test (ctx, data, expected);
+  }
+  { 
+    pdfout_data *a = pdfout_data_array_new (ctx);
+    array_push_string (ctx, a, "1");
+    array_push_string (ctx, a, "null");
+    array_push_string (ctx, a, "true");
+    pdfout_data_array_push (ctx, a, pdfout_data_array_new (ctx));
+    pdfout_data_array_push (ctx, a, pdfout_data_hash_new (ctx));
+    array_push_string (ctx, a, "false");
+
+    pdfout_data *h = pdfout_data_hash_new (ctx);
+    pdfout_data_array_push (ctx, a, h);
+    hash_push_string (ctx, h, "abc", "1");
+    hash_push_string (ctx, h, "def", "true");
+
+    const char *expected = "\
+[\n\
+    1,\n\
+    null,\n\
+    true,\n\
+    [],\n\
+    {},\n\
+    false,\n\
+    {\n\
+        \"abc\": 1,\n\
+        \"def\": true\n\
+    }\n\
+]\n";
+
+    json_emitter_test (ctx, a, expected);
+  }
+
+
+}
 static void check_json (void)
 {
   fz_context *ctx = fz_new_context (0, 0, 0);
   
-  if (0)
-    check_json_parser_values (ctx);
+  check_json_parser_values (ctx);
 
   check_json_parser (ctx);
 
+  check_json_emitter (ctx);
   exit (0);
 }
 

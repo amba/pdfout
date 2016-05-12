@@ -190,7 +190,7 @@ static const char *json_check_number (const char *number, int len)
   if (len != 0)
     return "Not a valid JSON Number";
   
-  return 0;
+  return NULL;
 }
 
 static token
@@ -203,9 +203,11 @@ scanner_scan_number (fz_context *ctx, scanner *scanner)
     push_byte (ctx, scanner, scanner->lookahead);
 
   char *num = (char *) scanner->value->data;
-  const char *error = json_check_number (num, scanner->value->len);
+  int value_len = scanner->value->len;
+  const char *error = json_check_number (num, value_len);
   if (error)
-    scanner_error (ctx, scanner, "Invalid number '%s': %s", num, error);
+    scanner_error (ctx, scanner, "Invalid number '%.*s': %s", value_len, num,
+		   error);
 
   zero_term (ctx, scanner->value);
   
@@ -598,7 +600,17 @@ parser_parse (fz_context *ctx, pdfout_parser *parser)
   p->finished = true;
   parser_read (ctx, p);
   pdfout_data *result = parse_value (ctx, p);
-  parse_terminal (ctx, p, TOK_EOF);
+
+  fz_try (ctx)
+  {
+    parse_terminal (ctx, p, TOK_EOF);
+  }
+  fz_catch (ctx)
+  {
+    pdfout_data_drop (ctx, result);
+    fz_rethrow (ctx);
+  }
+		      
   return result;
 }
 
@@ -623,302 +635,206 @@ pdfout_parser_json_new (fz_context *ctx, fz_stream *stm)
   return &result->super;
 }
 
-/* /\* Emitter stuff. *\/ */
+/* Emitter stuff. */
 
-/* typedef struct json_emitter_s { */
+typedef struct json_emitter_s {
+  pdfout_emitter super;
   
-/*   fz_output *out; */
-/*   fz_buffer *stack; */
+  fz_output *out;
   
-/*   bool reached_eof; */
+  bool finished;
+
+  unsigned indent;
+  unsigned indent_level;
   
-/*   bool failed; */
+} json_emitter;
 
-/*   unsigned indent; */
+static void
+emitter_drop (fz_context *ctx, pdfout_emitter *emitter)
+{
+  free (emitter);
+}
 
-/*   unsigned indent_level; */
+
+static bool is_literal (const char *value, int len)
+{
+#define literal_equal(literal)				\
+  (sizeof literal == len + 1 && memcmp (literal, value, len) == 0)
+
+  if (literal_equal ("false") || literal_equal ("null")
+      || literal_equal ("true"))
+    return true;
+
+  return false;
+}
+
+static void
+pdfout_json_escape_string (fz_context *ctx, fz_output *out, const char *value,
+			   int value_len)
+{
+  if (is_literal (value, value_len)
+      || json_check_number (value, value_len) == NULL)
+    {
+      fz_write (ctx, out, value, value_len);
+      return;
+    }
   
-/* } json_emitter; */
+  if (pdfout_check_utf8 (value, value_len))
+    fz_throw (ctx, FZ_ERROR_GENERIC, "invalid UTF-8");
+  fz_putc (ctx, out, '"');
+  for (int i = 0; i < value_len; ++i)
+    {
+      unsigned char byte = value[i];
+      if (byte < 0x20 || byte == '"' || byte == '\\')
+	{
+	  /* Needs escaping.  */
+	  switch (byte)
+	    {
+	    case '"':  fz_puts (ctx, out, "\\\""); break;
+	    case '\\': fz_puts (ctx, out, "\\\\"); break;
+	    case '\b': fz_puts (ctx, out, "\\b");  break;
+	    case '\f': fz_puts (ctx, out, "\\f");  break;
+	    case '\n': fz_puts (ctx, out, "\\n");  break;
+	    case '\r': fz_puts (ctx, out, "\\r");  break;
+	    case '\t': fz_puts (ctx, out, "\\t");  break;
+	    default:
+	      {
+		char seq[] = "\\u0000";
+		fz_snprintf(seq + 4, 2, "%02x", byte);
+		fz_write (ctx, out, seq, 6);
+	      }
+	    }
+	}
+      else
+	/* No escaping needed.  */
+	fz_putc (ctx, out, byte);
+    }
+  fz_putc (ctx, out, '"');
+}
+static void
+emit_string (fz_context *ctx, json_emitter *emitter, pdfout_data *data)
+{
+  fz_output *out = emitter->out;
+  int value_len;
+  const char *value = pdfout_data_scalar_get (ctx, data, &value_len);
+  pdfout_json_escape_string (ctx, out, value, value_len);
+}
 
-/* void */
-/* json_emitter_drop (fz_context *ctx, json_emitter *emitter) */
-/* { */
-/*   fz_drop_buffer (ctx, emitter->stack); */
-/*   free (emitter); */
-/* } */
+static void emit_indent (fz_context *ctx, json_emitter *emitter)
+{
+  for (unsigned i= 0; i < emitter->indent * emitter->indent_level; ++i)
+    fz_putc (ctx, emitter->out, ' ');
+}
 
-/* json_emitter * */
-/* json_emitter_new (fz_context *ctx, fz_output *stm) */
-/* { */
-/*   json_emitter *result; */
+static void emit_value_separator (fz_context *ctx, json_emitter *emitter)
+{
+  fz_puts (ctx, emitter->out, ",\n");
+  emit_indent (ctx, emitter);
+}
 
-/*   fz_var (result); */
+static void
+emit_value (fz_context *ctx, json_emitter *emitter, pdfout_data *data);
+
   
-/*   fz_try (ctx) */
-/*   { */
-/*     result = fz_malloc_struct (ctx, json_emitter); */
+static void
+emit_array (fz_context *ctx, json_emitter *emitter, pdfout_data *data)
+{
+  fz_output *out = emitter->out;
+  fz_puts (ctx, out, "[");
+  int len = pdfout_data_array_len (ctx, data);
+  if (len == 0)
+    {
+      fz_puts (ctx, out, "]");
+      return;
+    }
+  fz_puts (ctx, out, "\n");
+  ++emitter->indent_level;
+  emit_indent (ctx, emitter);
 
-/*     result->stack = fz_new_buffer (ctx, 64); */
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *item = pdfout_data_array_get (ctx, data, i);
+      emit_value (ctx, emitter, item);
+      if (i < len - 1)
+	emit_value_separator (ctx, emitter);
+    }
+  fz_puts (ctx, out ,"\n");
+  --emitter->indent_level;
+  emit_indent (ctx, emitter);
+  fz_puts (ctx, out, "]");
+}
 
-/*     result->out = stm; */
+static void
+emit_hash (fz_context *ctx, json_emitter *emitter, pdfout_data *data)
+{
+  fz_output *out = emitter->out;
+  fz_puts (ctx, out, "{");
+  int len = pdfout_data_hash_len (ctx, data);
+  if (len == 0)
+    {
+      fz_puts (ctx, out, "}");
+      return;
+    }
 
-/*     result->indent = 4; */
-
-/*     result->indent_level = 0; */
-    
-/*     stack_push (ctx, result->stack, JSON_TOK_EOF); */
-/*     stack_push (ctx, result->stack, START); */
-/*   } */
-/*   fz_catch (ctx) */
-/*   { */
-/*     json_emitter_drop (ctx, result); */
-/*     fz_rethrow (ctx); */
-/*   } */
-
-/*   return result; */
-/* } */
-
-/* void */
-/* json_emitter_set_indent (fz_context *ctx, json_emitter *emitter, */
-/* 			 unsigned indent) */
-/* { */
-/*   emitter->indent = indent; */
-/* } */
-
-/* static void emit_string (fz_context *ctx, fz_output *out, */
-/* 			 const char *value, int value_len) */
-/* { */
-/*   if (pdfout_check_utf8 (value, value_len)) */
-/*     fz_throw (ctx, FZ_ERROR_GENERIC, "invalid UTF-8 in json_emitter_emit"); */
-/*   fz_putc (ctx, out, '"'); */
-/*   for (int i = 0; i < value_len; ++i) */
-/*     { */
-/*       unsigned char byte = value[i]; */
-/*       if (byte < 0x20 || byte == '"' || byte == '\\') */
-/* 	{ */
-/* 	  /\* Needs escaping.  *\/ */
-/* 	  switch (byte) */
-/* 	    { */
-/* 	    case '"': */
-/* 	      fz_puts (ctx, out, "\\\""); */
-/* 	      break; */
-/* 	    case '\\': */
-/* 	      fz_puts (ctx, out, "\\\\"); */
-/* 	      break; */
-/* 	    case '\b': */
-/* 	      fz_puts (ctx, out, "\\b"); */
-/* 	      break; */
-/* 	    case '\f': */
-/* 	      fz_puts (ctx, out, "\\f"); */
-/* 	      break; */
-/* 	    case '\n': */
-/* 	      fz_puts (ctx, out, "\\n"); */
-/* 	      break; */
-/* 	    case '\r': */
-/* 	      fz_puts (ctx, out, "\\r"); */
-/* 	      break; */
-/* 	    case '\t': */
-/* 	      fz_puts (ctx, out, "\\t"); */
-/* 	    default: */
-/* 	      { */
-/* 		char seq[] = "\\u0000"; */
-/* 		fz_snprintf(seq + 4, 2, "%02x", byte); */
-/* 		fz_write (ctx, out, seq, 6); */
-/* 	      } */
-/* 	    } */
-/* 	} */
-/*       else */
-/* 	/\* No escaping needed.  *\/ */
-/* 	fz_putc (ctx, out, byte); */
-/*     } */
-/*   fz_putc (ctx, out, '"'); */
-/* } */
-
-/* static void emit_indent (fz_context *ctx, json_emitter *emitter) */
-/* { */
-/*   for (unsigned i= 0; i < emitter->indent * emitter->indent_level; ++i) */
-/*     fz_putc (ctx, emitter->out, ' '); */
-/* } */
-      
-
-/* static void emit_event (fz_context *ctx, json_emitter *emitter, symbol s, */
-/* 			const char *value, int value_len) */
-/* { */
-/*   fz_output *out = emitter->out; */
-/*   const char *error; */
-/*   switch (s) */
-/*     { */
-/*     case STRING: */
-/*       emit_string (ctx, out, value, value_len); */
-/*       break; */
-/*     case NUMBER: */
-/*       error = json_check_number (value, value_len); */
-/*       if (error) */
-/* 	fz_throw (ctx, FZ_ERROR_GENERIC, "%s", error); */
-/*       fz_write (ctx, out, value, value_len); */
-/*       break; */
-/*     case FALSE: */
-/*       fz_puts (ctx, out, "false"); */
-/*       break; */
-/*     case NUL: */
-/*       fz_puts (ctx, out, "null"); */
-/*       break; */
-/*     case TRUE: */
-/*       fz_puts (ctx, out, "true"); */
-/*       break; */
-/*     case BEGIN_ARRAY: */
-/*       fz_puts (ctx, out, "[\n"); */
-/*       ++emitter->indent_level; */
-/*       emit_indent (ctx, emitter); */
-/*       break; */
-/*     case END_ARRAY: */
-/*       --emitter->indent_level; */
-/*       fz_putc (ctx, out, '\n'); */
-/*       emit_indent (ctx, emitter); */
-/*       fz_putc (ctx, out, ']'); */
-/*       break; */
-/*     case BEGIN_OBJECT: */
-/*       fz_puts (ctx, out, "{\n"); */
-/*       ++emitter->indent_level; */
-/*       emit_indent (ctx, emitter); */
-/*       break; */
-/*     case END_OBJECT: */
-/*       --emitter->indent_level; */
-/*       fz_putc (ctx, out, '\n'); */
-/*       emit_indent (ctx, emitter); */
-/*       fz_putc (ctx, out, '}'); */
-/*       break; */
-/*     case NAME_SEPARATOR: */
-/*       fz_puts (ctx, out, ": "); */
-/*       break; */
-/*     case VALUE_SEPARATOR: */
-/*       fz_puts (ctx, out, ",\n"); */
-/*       emit_indent (ctx, emitter); */
-/*       break; */
-/*     default: */
-/*       abort (); */
-/*     } */
-      
-/* } */
-   
-/* static const int *const emitter_parse_table[9][9] = { */
-/*   DEF (START, BEGIN_ARRAY, VALUE), */
-/*   DEF (START, BEGIN_OBJECT, VALUE), */
-/*   DEF (START, STRING, VALUE), */
-/*   DEF (START, NUMBER, VALUE), */
-/*   DEF (START, FALSE, VALUE), */
-/*   DEF (START, NUL, VALUE), */
-/*   DEF (START, TRUE, VALUE), */
-
-/*   DEF (VALUE, BEGIN_ARRAY, ARRAY), */
-/*   DEF (VALUE, BEGIN_OBJECT, OBJECT), */
-/*   DEF (VALUE, STRING, STRING), */
-/*   DEF (VALUE, NUMBER, NUMBER), */
-/*   DEF (VALUE, FALSE, FALSE), */
-/*   DEF (VALUE, NUL, NUL), */
-/*   DEF (VALUE, TRUE, TRUE), */
-
-/*   DEF (ARRAY, BEGIN_ARRAY, BEGIN_ARRAY, VALUE_LIST, END_ARRAY), */
-
-/*   DEF (VALUE_LIST, BEGIN_ARRAY, ARRAY, SEP_VALUE_LIST), */
-/*   DEF (VALUE_LIST, END_ARRAY, EMPTY), */
-/*   DEF (VALUE_LIST, BEGIN_OBJECT, OBJECT, SEP_VALUE_LIST), */
-/*   DEF (VALUE_LIST, STRING, STRING, SEP_VALUE_LIST), */
-/*   DEF (VALUE_LIST, NUMBER, NUMBER, SEP_VALUE_LIST), */
-/*   DEF (VALUE_LIST, FALSE, FALSE, SEP_VALUE_LIST), */
-/*   DEF (VALUE_LIST, NUL, NUL, SEP_VALUE_LIST), */
-/*   DEF (VALUE_LIST, TRUE, TRUE, SEP_VALUE_LIST), */
-
-/*   /\* Insert VALUE_SEPARATOR and NAME_SEPARATOR into output.  *\/ */
-
-/*   DEF (SEP_VALUE_LIST, BEGIN_ARRAY, VALUE_SEPARATOR, ARRAY, SEP_VALUE_LIST), */
-/*   DEF (SEP_VALUE_LIST, END_ARRAY, EMPTY), */
-/*   DEF (SEP_VALUE_LIST, BEGIN_OBJECT, VALUE_SEPARATOR, OBJECT, SEP_VALUE_LIST), */
-/*   DEF (SEP_VALUE_LIST, STRING, VALUE_SEPARATOR, STRING, SEP_VALUE_LIST), */
-/*   DEF (SEP_VALUE_LIST, NUMBER, VALUE_SEPARATOR, NUMBER, SEP_VALUE_LIST), */
-/*   DEF (SEP_VALUE_LIST, FALSE, VALUE_SEPARATOR, FALSE, SEP_VALUE_LIST), */
-/*   DEF (SEP_VALUE_LIST, NUL, VALUE_SEPARATOR, NUL, SEP_VALUE_LIST), */
-/*   DEF (SEP_VALUE_LIST, TRUE, VALUE_SEPARATOR, TRUE, SEP_VALUE_LIST), */
+  fz_puts (ctx, out, "\n");
+  ++emitter->indent_level;
+  emit_indent (ctx, emitter);
   
-/*   DEF (OBJECT, BEGIN_OBJECT, BEGIN_OBJECT, PAIR_LIST, END_OBJECT), */
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *key = pdfout_data_hash_get_key (ctx, data, i);
+      emit_value (ctx, emitter, key);
+      fz_puts (ctx, out, ": ");
+      pdfout_data *value = pdfout_data_hash_get_value (ctx, data, i);
+      emit_value (ctx, emitter, value);
+      if (i < len - 1)
+	emit_value_separator (ctx, emitter);
+    }
+  fz_puts (ctx, out, "\n");
+  emitter->indent_level--;
+  emit_indent (ctx, emitter);
+  fz_puts (ctx, out, "}");
 
-/*   DEF (PAIR_LIST, END_OBJECT, EMPTY), */
-/*   DEF (PAIR_LIST, STRING, STRING, NAME_SEPARATOR, VALUE, SEP_PAIR_LIST), */
+}
 
-/*   DEF (SEP_PAIR_LIST, END_OBJECT, EMPTY), */
-/*   DEF (SEP_PAIR_LIST, STRING, VALUE_SEPARATOR, STRING, NAME_SEPARATOR, */
-/*        VALUE, SEP_PAIR_LIST), */
-/* }; */
+static void
+emit_value (fz_context *ctx, json_emitter *emitter, pdfout_data *data)
+{
+  if (pdfout_data_is_scalar (ctx, data))
+    emit_string (ctx, emitter, data);
+  else if (pdfout_data_is_array (ctx, data))
+    emit_array (ctx, emitter, data);
+  else if (pdfout_data_is_hash (ctx, data))
+    emit_hash (ctx, emitter, data);
+}
 
-/* static int emitter_error (fz_context *ctx, json_emitter *emitter, json_token t) */
-/* { */
-/*   /\* FIXME: name tokens *\/ */
-/*   fz_warn (ctx, "json emitter: unexpected token %d", t); */
-/*   emitter->failed = true; */
-/*   return -1; */
-/* } */
+static void
+emitter_emit (fz_context *ctx, pdfout_emitter *emitter, pdfout_data *data)
+{
+  json_emitter *e = (json_emitter *) emitter;
+  if (e->finished)
+    fz_throw (ctx, FZ_ERROR_GENERIC, "Call to finished JSON emitter");
 
-/* int */
-/* json_emitter_emit (fz_context *ctx, json_emitter *emitter, json_token t, */
-/* 		   const char *value, int value_len) */
-/* { */
-/*   if (emitter->failed) */
-/*     return emitter_error (ctx, emitter, t); */
+  e->finished = true;
   
-/*   if (emitter->reached_eof) */
-/*     return emitter_error (ctx, emitter, t); */
-  
-/*   while (1) */
-/*     { */
-/*       symbol X = stack_pop (ctx, emitter->stack); */
-      
-/*       if (ISTERM (X)) */
-/* 	{ */
-/* 	  if (X == NAME_SEPARATOR || X == VALUE_SEPARATOR) */
-/* 	    { */
-/* 	      emit_event (ctx, emitter, X, NULL, 0); */
-/* 	      continue; */
-/* 	    } */
-/* 	  else if (X == (symbol) t) */
-/* 	    { */
-/* 	      if (t == JSON_EOF) */
-/* 		{ */
-/* 		  emitter->reached_eof = true; */
-/* 		  fz_putc (ctx, emitter->out, '\n'); */
-/* /\*      * * * * * * * * * ****  * * * *  *\/ */
-/* /\*      FIXME: assert stack length == 0  *\/ */
-/* /\*  * * * * * * *** * * * * * * *  *\/ */
-/* 		} */
-/* 	      else  */
-/* 		emit_event (ctx, emitter, t, value, value_len); */
-	      
-/* 	      return 0; */
-/* 	    } */
-/* 	  else */
-/* 	    return emitter_error (ctx, emitter, t); */
-/* 	} */
-	  
-/*       /\* Nontermial. Make table lookup.  *\/ */
-/*       if (t - JSON_TOK_STRING < 0) */
-/* 	return emitter_error (ctx, emitter, t); */
-      
-/*       const int *production = */
-/* 	emitter_parse_table[X - START][t - JSON_TOK_STRING]; */
-      
-/*       if (production == NULL) */
-/* 	{ */
-/* 	  fz_warn (ctx, "did not find production in json_emitter_emit"); */
-/* 	  return emitter_error (ctx, emitter, t); */
-/* 	} */
-/*       else if (production[0] == EMPTY) */
-/* 	{ */
-/* 	  /\* Do nothing.  *\/ */
-/* 	} */
-/*       else */
-/* 	for (int i = 4; i >= 0; --i) */
-/* 	  if (production[i]) */
-/* 	    stack_push (ctx, emitter->stack, production[i]); */
-      
-/*     } /\* end of while (1) *\/ */
-/* } */
+  emit_value (ctx, e, data);
 
+  fz_puts (ctx, e->out, "\n");
+}
+  
+
+pdfout_emitter *
+pdfout_emitter_json_new (fz_context *ctx, fz_output *stm)
+{
+  json_emitter *result = fz_malloc_struct (ctx, json_emitter);
+  
+  result->super.drop = emitter_drop;
+  result->super.emit = emitter_emit;
+  
+  result->out = stm;
+
+  result->indent = 4;
+  result->indent_level = 0;
+  
+  return &result->super;
+}
