@@ -62,10 +62,10 @@ dnl is it checked out?
 AS_IF([test -r ${srcdir}/mupdf/README], [],
   [AC_MSG_ERROR([mupdf submodule is not checked out.
 Try 'git submodule update --init'])])
-third=${srcdir}/mupdf/thirdparty
-AS_IF([test -r ${third}/openjpeg/AUTHORS], [],
-      [AC_MSG_ERROR([mupdf's submodules are not checked out.
-Try './git-submodule-update.sh'])])
+dnl third=${srcdir}/mupdf/thirdparty
+dnl AS_IF([test -r ${third}/openjpeg/AUTHORS], [],
+dnl       [AC_MSG_ERROR([mupdf's submodules are not checked out.
+dnl Try './git-submodule-update.sh'])])
   
 AX_CHECK_GNU_MAKE()
 AS_IF([test -n "${_cv_gnu_make_command}"],
