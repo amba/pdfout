@@ -146,7 +146,7 @@ arabic_numbering (int value, char *resultbuf, size_t prefix_len,
       *lengthp = prefix_len + len + 1;
       resultbuf = xcharalloc (*lengthp);
     }
-  pdfout_snprintf (resultbuf + prefix_len, *lengthp - prefix_len, "%d", value);
+  pdfout_snprintf_old (resultbuf + prefix_len, *lengthp - prefix_len, "%d", value);
   return resultbuf;
 }
   

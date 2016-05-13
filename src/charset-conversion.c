@@ -828,14 +828,14 @@ pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
   struct encoding *encoding = get_encoding (fromcode, strlen (fromcode));
   
   if (encoding == NULL)
-    fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", fromcode);
+    pdfout_throw (ctx, "unknown encoding '%s'", fromcode);
   
   mbtowc = encoding->mbtowc;
   
   encoding = get_encoding (tocode, strlen (tocode));
   
   if (encoding == NULL)
-    fz_throw (ctx, FZ_ERROR_GENERIC, "unknown encoding '%s'", tocode);
+    pdfout_throw (ctx, "unknown encoding '%s'", tocode);
   
   wctomb = encoding->wctomb;
 
@@ -849,8 +849,8 @@ pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
       read = mbtowc (&conv, &pwc, (const unsigned char *) src,
 		     MIN (10, srclen));
       if (read < 0)
-	fz_throw (ctx, FZ_ERROR_GENERIC,
-		  "pdfout_charset_conv: invalid %s multibyte", fromcode);
+	pdfout_throw (ctx, "pdfout_charset_conv: invalid %s multibyte",
+		      fromcode);
       src += read;
       srclen -= read;
 

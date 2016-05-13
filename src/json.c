@@ -85,13 +85,10 @@ scanner_error (fz_context *ctx, scanner *scanner, const char *fmt, ...)
   va_list ap;
   va_start (ap, fmt);
 
-  pdfout_msg ("Error In line %d:", scanner->line_count);
-  if (fmt)
-    pdfout_vmsg (fmt, ap);
-  else
-    pdfout_msg ("Syntax error");
-
-  fz_throw (ctx, FZ_ERROR_GENERIC, "Scanner error");
+  char format[2048];
+  pdfout_snprintf (ctx, format, "in input line %d: %s", scanner->line_count,
+		   fmt);
+  pdfout_vthrow (ctx, format, ap);
 }
 
 
@@ -102,7 +99,7 @@ scanner_scan_literal (fz_context *ctx, const char *lit, scanner *scanner)
   while (*p)
     {
       if (scanner->lookahead != *p++)
-	scanner_error (ctx, scanner, "Error in literal '%s'", lit);
+	scanner_error (ctx, scanner, "in literal '%s'", lit);
       scanner_read(ctx, scanner);
     }
   switch (lit[0])
@@ -383,7 +380,8 @@ scanner_scan (fz_context *ctx, scanner *scanner)
     case ',': return_token (TOK_VALUE_SEPARATOR);
     case ':': return_token (TOK_NAME_SEPARATOR);
     default:
-      scanner_error (ctx, scanner, NULL);
+      scanner_error (ctx, scanner, "Unexpected character: '%c'",
+		     scanner->lookahead);
     }
   abort ();
 }
@@ -463,19 +461,26 @@ static void parser_read (fz_context *ctx, json_parser *parser)
 */
 
 static void PDFOUT_NORETURN
-parser_error (fz_context *ctx, json_parser *parser)
+parser_error (fz_context *ctx, json_parser *parser, const char *fmt, ...)
 {
+  va_list ap;
+  va_start (ap, fmt);
+  
   scanner *scanner = parser->scanner;
   parser->finished = true;
 
-  fz_throw (ctx, FZ_ERROR_GENERIC, "Syntax error in line %d",
-	    scanner->line_count);
+  char format[1000];
+  pdfout_snprintf (ctx, format, "in input line %d: %s", scanner->line_count,
+		   fmt);
+
+  pdfout_vthrow (ctx, format, ap);
 }
 
 static void parse_terminal (fz_context *ctx, json_parser *parser, token tok)
 {
   if (parser->lookahead != tok)
-    parser_error (ctx, parser);
+    parser_error (ctx, parser, "Expected token %d, got %d", tok,
+		  parser->lookahead);
   parser_read (ctx, parser);
 }
 
@@ -584,8 +589,7 @@ static pdfout_data *parse_value (fz_context *ctx, json_parser *parser)
     case TOK_NULL:
     case TOK_TRUE: return parse_literal (ctx, parser, tok);
     default:
-      fz_warn (ctx, "unexpected token: %d", tok);
-      parser_error (ctx, parser);
+      parser_error (ctx, parser, "unexpected token %d", tok);
     }
 }
 
@@ -595,7 +599,7 @@ parser_parse (fz_context *ctx, pdfout_parser *parser)
 {
   json_parser *p = (json_parser *) parser;
   if (p->finished)
-    fz_throw (ctx, FZ_ERROR_GENERIC, "call to finished parser");
+    pdfout_throw (ctx, "call to finished parser");
 
   p->finished = true;
   parser_read (ctx, p);
@@ -680,7 +684,7 @@ pdfout_json_escape_string (fz_context *ctx, fz_output *out, const char *value,
     }
   
   if (pdfout_check_utf8 (value, value_len))
-    fz_throw (ctx, FZ_ERROR_GENERIC, "invalid UTF-8");
+    pdfout_throw (ctx, "invalid UTF-8");
   fz_putc (ctx, out, '"');
   for (int i = 0; i < value_len; ++i)
     {
@@ -813,7 +817,7 @@ emitter_emit (fz_context *ctx, pdfout_emitter *emitter, pdfout_data *data)
 {
   json_emitter *e = (json_emitter *) emitter;
   if (e->finished)
-    fz_throw (ctx, FZ_ERROR_GENERIC, "Call to finished JSON emitter");
+    pdfout_throw (ctx, "Call to finished JSON emitter");
 
   e->finished = true;
   

@@ -15,13 +15,13 @@ struct pdfout_data_s {
 };
 
 typedef struct data_scalar_s {
-  pdfout_data SUPER;
+  pdfout_data super;
   int len;
   char *value;
 } data_scalar;
 
 typedef struct data_array_s {
-  pdfout_data SUPER;
+  pdfout_data super;
   int len, cap;
   pdfout_data **list;
 } data_array;
@@ -32,7 +32,7 @@ struct keyval {
 };
 
 typedef struct data_hash_s {
-  pdfout_data SUPER;
+  pdfout_data super;
   int len, cap;
   struct keyval *list;
 } data_hash;
@@ -79,7 +79,7 @@ pdfout_data_scalar_new (fz_context *ctx, const char *value, int len)
 {
   data_scalar *result = fz_malloc_struct (ctx, data_scalar);
   
-  result->SUPER.type = SCALAR;
+  result->super.type = SCALAR;
   
   result->len = len;
 
@@ -95,7 +95,7 @@ pdfout_data_array_new (fz_context *ctx)
 {
   data_array *result = fz_malloc_struct (ctx, data_array);
 
-  result->SUPER.type = ARRAY;
+  result->super.type = ARRAY;
 
   result->len = 0;
   result->cap = 0;
@@ -121,7 +121,7 @@ pdfout_data_hash_new (fz_context *ctx)
 {
   data_hash *result = fz_malloc_struct (ctx, data_hash);
 
-  result->SUPER.type = HASH;
+  result->super.type = HASH;
 
   result->len = 0;
   result->cap = 0;
@@ -235,8 +235,8 @@ pdfout_data_hash_push (fz_context *ctx, pdfout_data *hash,
     {
       data_scalar *k_i = to_scalar (h->list[i].key);
       if (k_i->len == k->len && memcmp (k_i->value, k->value, k->len) == 0)
-	fz_throw (ctx, FZ_ERROR_GENERIC,
-		  "key '%.*s' is already present in hash", k->len, k->value);
+	pdfout_throw (ctx, "key '%.*s' is already present in hash",
+		      k->len, k->value);
     }
 		  
   if (h->cap == h->len)

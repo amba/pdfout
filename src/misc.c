@@ -104,8 +104,53 @@ pdfout_strtof_nan (const char *string)
   return result;
 }
 
+void
+pdfout_vthrow (fz_context *ctx, const char *fmt, va_list ap)
+{
+  fz_vthrow (ctx, FZ_ERROR_GENERIC, fmt, ap);
+}
+
+void
+pdfout_throw (fz_context *ctx, const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  pdfout_vthrow (ctx, fmt, ap);
+}
+
+void
+pdfout_throw_errno (fz_context *ctx, const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  
+  if (errno)
+    {
+      char buf[2048];
+      pdfout_snprintf (ctx, buf, "%s: %s", fmt, strerror (errno));
+      pdfout_vthrow (ctx, buf, ap);
+    }
+  
+  pdfout_vthrow (ctx, fmt, ap);
+}
+
 int
-pdfout_snprintf (char *str, size_t size, const char *fmt, ...)
+pdfout_snprintf_imp (fz_context *ctx, char *buf, int size,
+		     const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  errno = 0;
+  int ret = vsnprintf (buf, size, fmt, ap);
+  if (ret < 0)
+    pdfout_throw_errno (ctx, "output error in pdfout_snprintf");
+  if (ret >= size)
+    pdfout_throw (ctx, "string truncated in pdfout_snprintf");
+  return ret;
+}
+
+int
+pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
 {
   va_list ap;
   int ret;
@@ -114,12 +159,12 @@ pdfout_snprintf (char *str, size_t size, const char *fmt, ...)
   ret = vsnprintf (str, size, fmt, ap);
   if (ret < 0)
     {
-      pdfout_errno_msg (errno, "pdfout_snprintf: output error");
+      pdfout_errno_msg (errno, "pdfout_snprintf_old: output error");
       goto error;
     }
   if ((size_t) ret >= size)
     {
-      pdfout_msg ("pdfout_snprintf: string truncated");
+      pdfout_msg ("pdfout_snprintf_old: string truncated");
       goto error;
     }
   

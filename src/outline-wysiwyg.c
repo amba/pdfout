@@ -250,7 +250,7 @@ get_yaml_sequence (yaml_document_t *doc, bookmark *bookmarks,
       pdfout_yaml_document_append_sequence_item (doc, sequence, mapping);
       pdfout_mapping_push (doc, mapping, "title", bm.title);
 
-      pdfout_snprintf (buffer, sizeof buffer, "%d", bm.page);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%d", bm.page);
       pdfout_mapping_push (doc, mapping, "page", buffer);
 
       if (bookmarks[i + 1].level > bm.level)

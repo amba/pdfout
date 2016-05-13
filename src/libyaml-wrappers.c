@@ -575,7 +575,7 @@ _pdfout_float_sequence (yaml_document_t *doc, ...)
   
   while ((value = va_arg (ap, double)) != INFINITY)
     {
-      pdfout_snprintf (buffer, sizeof buffer, "%g", value);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", value);
       pdfout_sequence_push (doc, sequence, buffer);
     }
   va_end (ap);

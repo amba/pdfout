@@ -324,7 +324,7 @@ calculate_node_count (yaml_document_t *doc, int node_id)
 	}
       if (open == 0)
 	count *= -1;
-      pdfout_snprintf (printf_buffer, sizeof printf_buffer, "%d", count);
+      pdfout_snprintf_old (printf_buffer, sizeof printf_buffer, "%d", count);
       pdfout_mapping_push (doc, node_id, "Count", printf_buffer);
     }
   return count;
@@ -734,7 +734,7 @@ fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
 
   if (outline->dest.kind == FZ_LINK_GOTO)
     {
-      pdfout_snprintf (printf_buffer, sizeof printf_buffer, "%d",
+      pdfout_snprintf_old (printf_buffer, sizeof printf_buffer, "%d",
 		       outline->dest.ld.gotor.page + 1);
       pdfout_mapping_push (doc, mapping_id, "page", printf_buffer);
 
@@ -781,14 +781,14 @@ parse_gotor (yaml_document_t *doc, int flags, fz_point lt, fz_point rb)
       pdfout_sequence_push (doc, array, "XYZ");
       if (flags & fz_link_flag_l_valid)
 	{
-	  pdfout_snprintf (buffer, sizeof buffer, "%g", lt.x);
+	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
 	  pdfout_sequence_push (doc, array, buffer);
 	}
       else
 	pdfout_sequence_push (doc, array, "null");
       if (flags & fz_link_flag_t_valid)
 	{
-	  pdfout_snprintf (buffer, sizeof buffer, "%g", lt.y);
+	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
 	  pdfout_sequence_push (doc, array, buffer);
 	}
       else
@@ -796,7 +796,7 @@ parse_gotor (yaml_document_t *doc, int flags, fz_point lt, fz_point rb)
 
       if (flags & fz_link_flag_r_valid)
 	{
-	  pdfout_snprintf (buffer, sizeof buffer, "%g", rb.x);
+	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.x);
 	  pdfout_sequence_push (doc, array, buffer);
 	}
       else
@@ -813,7 +813,7 @@ parse_gotor (yaml_document_t *doc, int flags, fz_point lt, fz_point rb)
   else if (flags == 022)
     {
       pdfout_sequence_push (doc, array, "FitH");
-      pdfout_snprintf (buffer, sizeof buffer, "%g", lt.y);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
       pdfout_sequence_push (doc, array, buffer);
     }
   else if (flags == 040)
@@ -824,19 +824,19 @@ parse_gotor (yaml_document_t *doc, int flags, fz_point lt, fz_point rb)
   else if (flags == 041)
     {
       pdfout_sequence_push (doc, array, "FitV");
-      pdfout_snprintf (buffer, sizeof buffer, "%g", lt.x);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
       pdfout_sequence_push (doc, array, buffer);
     }
   else if (flags == 077)
     {
       pdfout_sequence_push (doc, array, "FitR");
-      pdfout_snprintf (buffer, sizeof buffer, "%g", lt.x);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
       pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf (buffer, sizeof buffer, "%g", rb.y);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.y);
       pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf (buffer, sizeof buffer, "%g", rb.x);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.x);
       pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf (buffer, sizeof buffer, "%g", lt.y);
+      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
       pdfout_sequence_push (doc, array, buffer);
     }
   else

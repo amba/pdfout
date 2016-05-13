@@ -136,13 +136,31 @@ float pdfout_strtof_nan (const char *string);
 /* dies on all errors */
 float pdfout_strtof (const char *string);
 
+void PDFOUT_NORETURN PDFOUT_PRINTFLIKE (2)
+pdfout_throw_errno (fz_context *ctx, const char *fmt, ...);
+
+void PDFOUT_NORETURN
+pdfout_vthrow (fz_context *ctx, const char *fmt, va_list ap);
+
+void PDFOUT_NORETURN PDFOUT_PRINTFLIKE (2)
+pdfout_throw (fz_context *ctx, const char *fmt, ...);
+
+
+int PDFOUT_PRINTFLIKE (4)
+pdfout_snprintf_imp (fz_context *ctx, char *buf, int size,
+		     const char *fmt, ...);
+
+#define pdfout_snprintf(ctx, buff, fmt, args...)		\
+  pdfout_snprintf_imp (ctx, buff, sizeof buff, fmt, ## args)
+
+
 /* dies if result would be truncated */
-int pdfout_snprintf (char *str, size_t size, const char *fmt, ...)
+int pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
   PDFOUT_PRINTFLIKE (3);
 
 /* buff must be of type char[N].  */
-#define PDFOUT_SNPRINTF(buff, fmt, args...)		\
-  pdfout_snprintf (buff, sizeof buff, fmt, ## args)
+#define PDFOUT_SNPRINTF_OLD(buff, fmt, args...)		\
+  pdfout_snprintf_old (buff, sizeof buff, fmt, ## args)
 
 #define PDFOUT_X2NREALLOC(p, pn, t) ((t *) x2nrealloc (p, pn, sizeof (t)))
 

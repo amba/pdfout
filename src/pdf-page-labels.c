@@ -335,7 +335,7 @@ mapping_to_yaml (yaml_emitter_t *emitter, yaml_event_t *event,
 
   /* page */
   assert (mapping->page >= 0);
-  PDFOUT_SNPRINTF (buffer, "%d", mapping->page + 1);
+  PDFOUT_SNPRINTF_OLD (buffer, "%d", mapping->page + 1);
 
   if (emit_key_val (emitter, event, "page", buffer))
     return 1;
@@ -353,7 +353,7 @@ mapping_to_yaml (yaml_emitter_t *emitter, yaml_event_t *event,
   if (mapping->start)
     {
       assert (mapping->start > 0);
-      PDFOUT_SNPRINTF (buffer, "%d", mapping->start);
+      PDFOUT_SNPRINTF_OLD (buffer, "%d", mapping->start);
       if (emit_key_val (emitter, event, "start", buffer))
 	return 1;
     }

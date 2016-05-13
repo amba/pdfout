@@ -46,7 +46,7 @@ pdfout_x2nrealloc_imp (fz_context *ctx, void *p, int *pn, unsigned s)
          The check may be slightly conservative, but an exact check isn't
          worth the trouble.  */
       if (INT_MAX / 3 * 2 / s <= n)
-        fz_throw (ctx, FZ_ERROR_GENERIC, "int overflow in x2nrealloc");
+        pdfout_throw (ctx, "int overflow in x2nrealloc");
       n += n / 2 + 1;
     }
 
