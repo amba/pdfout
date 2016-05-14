@@ -1,96 +1,47 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "common.h"
+#include "data.h"
 #include "charset-conversion.h"
 
-#define MSG(fmt, args...) pdfout_msg ("check info dict: " fmt, ## args)
-
-static int
-check_yaml_infodict (yaml_document_t *doc)
+static void
+check_key_val_pair (fz_context *ctx, const char *name, const char *string)
 {
-  yaml_node_t *dict, *key, *value;
-  yaml_node_pair_t pair;
-  char *name, *string;
-  int length, i;
-
-  dict = yaml_document_get_root_node (doc);
-  if (dict == NULL)
+  if (!strcmp (name, "CreationDate") || !strcmp (name, "ModDate"))
     {
-      MSG ("empty info dict");
-      return 0;
+      pdfout_check_date_string (ctx, string);
     }
-  if (dict->type != YAML_MAPPING_NODE)
+  else if (!strcmp (name, "Trapped"))
     {
-      MSG ("info dict not a mapping");
-      return -1;
+      if (strcmp(string, "True") && strcmp (string, "False") &&
+	  strcmp (string, "Unknown"))
+	{
+	  pdfout_throw (ctx, "invalid value '%s' of key 'Trapped'.\n"
+			"valid values are True, False, Unknown", string);
+	}
     }
-  
-  length = pdfout_mapping_length (doc, 1);
-
-  if (length == 0)
-    {
-      MSG ("empty info dict");
-      return 0;
-    }
-  
-  for (i = 0; i < length; ++i)
-    {
-      pair = dict->data.mapping.pairs.start[i];
-      key = pdfout_yaml_document_get_node (doc, pair.key);
-      value = pdfout_yaml_document_get_node (doc, pair.value);
-      assert (key && value);
-      if (key->type != YAML_SCALAR_NODE || value->type != YAML_SCALAR_NODE)
-	{
-	  MSG ("infodict entry not a scalar");
-	  return -1;
-	}
-      name = pdfout_scalar_value (key);
-      string = pdfout_scalar_value (value);
-      if (strcmp (name, "CreationDate") == 0
-	  || strcmp (name, "ModDate") == 0)
-	{
-	  if (pdfout_check_date_string (string))
-	    {
-	      MSG ("invalid date string '%s'", string);
-	      return -1;
-	    }
-	}
-      else if (strcmp (name, "Trapped") == 0)
-	{
-	  if (strcmp (string, "True") && strcmp (string, "False") &&
-	      strcmp (string, "Unknown"))
-	    {
-	      MSG ("invalid value '%s' of key 'Trapped'.\n"
-		   "valid values are True,False,Unknown", string);
-	      return -1;
-	    }
-	}
-      else if (strcmp (name, "Title") && strcmp (name, "Author")
-	       && strcmp (name, "Subject") && strcmp (name, "Keywords")
-	       && strcmp (name, "Creator") && strcmp (name, "Producer"))
-	{
-	  MSG ("'%s' is not a valid infodict key. Valid keys are:\n\
+ else if (strcmp (name, "Title") && strcmp (name, "Author")
+	  && strcmp (name, "Subject") && strcmp (name, "Keywords")
+	  && strcmp (name, "Creator") && strcmp (name, "Producer"))
+   pdfout_throw (ctx, "'%s' is not a valid infodict key. Valid keys are:\n\
 Title,Author,Subject,Keywords,Creator,Producer,CreationDate,ModDate,Trapped",
-	       name);
-	  return -1;
-	}
+		 name);
+}
+
+static void
+check_info_dict (fz_context *ctx, pdfout_data *info)
+{
+
+  if (pdfout_data_is_hash (ctx, info) == false)
+    pdfout_throw (ctx, "info dict not a mapping");
+  
+  int len = pdfout_data_hash_len (ctx, info);
+
+  for (int i = 0; i < len; ++i)
+    {
+      const char *name, *string;
+      pdfout_data_hash_get_key_value (ctx, info, &name, &string, i);
+      check_key_val_pair (ctx, name, string);
     }
-  return 0;
+  return;
 }
 
 #undef MSG

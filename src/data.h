@@ -17,6 +17,8 @@ void pdfout_data_drop (fz_context *ctx, pdfout_data *data);
 
 char *pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len);
 
+char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);
+
 
 
 int pdfout_data_array_len (fz_context *ctx, pdfout_data *array);
@@ -42,6 +44,9 @@ pdfout_data *pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash,
 /* key must be null-terminated.  */
 pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
 				    char *key);
+
+void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
+				     char **key, char **value, int i);
 
 int pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y);
 

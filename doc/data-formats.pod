@@ -47,6 +47,13 @@ Return the value of a scalar with
 
 where the length of the string is stored in C<*len>.
 
+Often, it is known, that the key of a hash will be a null-terminated string.
+
+ char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);
+
+Returns a null-terminated string, which does not contain embedded null
+bytes. Throw if the scalar contains embedded null bytes.
+
 =head3 Arrays
 
 Create a new array with
@@ -100,6 +107,15 @@ These extract key and value of the i-th key-value pair.
 
 Searches the hash for the key C<key> and returns the key's value. If no key is
 found, NULL is returned.
+
+If it is known that both key and value are null-terminated strings, you can use
+this convenience function:
+
+ void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
+				     char **key, char **value, int i);
+
+This returns null-terminated strings and throws otherwise.
+
 
 =head3 Destructor
 

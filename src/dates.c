@@ -1,172 +1,112 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "common.h"
-#include "pdfout-regex.h"
+#include "c-ctype.h"
 
-#include <xalloc.h>
-#include <xmemdup0.h>
+#define THROW(ctx, fmt, args...)				\
+  pdfout_throw (ctx, "check date string: " fmt, ## args)
 
-static struct pdfout_re_pattern_buffer *pattern_buffer;
-
-static void
-setup_regexp (void)
+/* Return -1 on error.  */
+static int get_number (const char **s, int num_len, int *len)
 {
-  const char *regex;
-  const char *error_string;
+  if (num_len > *len)
+    return -1;
   
-  if (pattern_buffer)
-    /* Already setup.  */
-    return;
-  
-  regex =
-    "^(D:)?"	     /* optional prefix */
-    "([0-9]{4})"     /* year */
-    "(([0-9]{2})"    /* month */
-    "(([0-9]{2})"    /* day */
-    "(([0-9]{2})"    /* hour */
-    "(([0-9]{2})"    /* minute */
-    "(([0-9]{2})"    /* second */
-    "([-+Z]"         /* relationship of local time to Universal Time (UT) */
-    "(([0-9]{2})"    /* hour offset of UT */
-    "('|'([0-9]{2})'?" /* minute offset to UT */
-    ")?)?)?)?)?)?)?)?$";
-  
-  pattern_buffer = XZALLOC (struct pdfout_re_pattern_buffer);
-  error_string = pdfout_re_compile_pattern (regex, strlen (regex),
-					    RE_SYNTAX_POSIX_EXTENDED, 0,
-					    pattern_buffer);
-  if (error_string)
-    error (1, 0, "re_compile_pattern: %s", error_string);
+  int retval = 0;
+  for (int i = 0; i < num_len; ++i)
+    {
+      if (c_isdigit ((*s)[i]))
+	retval = retval * 10 + ((*s)[i] - '0');
+      else
+	return -1;
+    }
+  *len -= num_len;
+  *s += num_len;
+  return retval;
 }
 
-#define MSG(fmt, args...) pdfout_msg ("check date string: " fmt, ## args)
-
-static int
-get_number (const char *string, int start, int end)
+static void assert_finished (fz_context *ctx, int len)
 {
-  char *buf = xmemdup0 (string + start, end - start);
-  int number = pdfout_strtoint_null (buf);
-  free (buf);
-  return number;
+  if (len == 0)							
+    return;								
+  pdfout_throw (ctx, "trailing garbage in date");	
 }
-
-/* subexpression index */
-enum {
-  PREFIX = 1,
-  YEAR = PREFIX + 1,
-  MONTH = YEAR + 2,
-  DAY = MONTH + 2,
-  HOUR = DAY + 2,
-  MINUTE = HOUR + 2,
-  SECOND = MINUTE + 2,
-  HOUR_OFFSET = SECOND + 3,
-  MINUTE_OFFSET = HOUR_OFFSET + 2,
-};
 
 int
-pdfout_check_date_string (const char *date)
+pdfout_check_date_string (fz_context *ctx, const char *date)
 {
-  int error_code, number;
-  struct re_registers *regs;
-  
-  setup_regexp ();
-  
-  error_code = pdfout_re_match (pattern_buffer, date, strlen (date), 0);
-  
-  if (error_code == -2)
-    error (1, errno, "re_match");
+  /* Date is of the form D:YYYYMMDDHHmmSSOHH'mm.  */
 
-  if (error_code == -1)
-    return -1;
+  int len = strlen (date);
 
-  regs = &pattern_buffer->regs;
-  if (regs->start[MONTH] > 0)
+  if (len >= 2 && !memcmp (date, "D:", 2))
+    len -= 2, date += 2;
+
+  /* YEAR */
+  if (get_number (&date, 4, &len) < 0)
+    pdfout_throw (ctx, "no year in date");
+
+  /* MONTH */
+  int month = get_number (&date, 2, &len);
+  if (month < 0)
+    assert_finished (ctx, len);
+  if (month < 1 || month > 12)
+    pdfout_throw (ctx, "month ouf of range (01-12)");
+
+  /* DAY */
+  int day = get_number (&date, 2, &len);
+  if (day < 0)
+    assert_finished (ctx, len);
+  if (day < 1 || day > 31)
+    pdfout_throw (ctx, "day ouf of range (01-31)");
+
+  /* HOUR */
+  int hour = get_number (&date, 2, &len);
+  if (hour < 0)
+    assert_finished (ctx, len);
+  if (hour > 23)
+    pdfout_throw (ctx, "hour ouf of range (00-23)");
+
+  /* MINUTE */
+  int minute = get_number (&date, 2, &len);
+  if (minute < 0)
+    assert_finished (ctx, len);
+  if (minute > 59)
+    pdfout_throw (ctx, "minute ouf of range (00-59)");
+
+  /* SECOND */
+  int second = get_number (&date, 2, &len);
+  if (second < 0)
+    assert_finished (ctx, len);
+  if (second > 59)
+    pdfout_throw (ctx, "second ouf of range (00-59)");
+
+
+  /* UT offset specifier.  */
+  if (len && (date[0] == '+' || date[0] == '-' || date[0] == 'Z'))
+    --len, ++date;
+  else
+    assert_finished (ctx, len);
+
+  /* HOUR offset */
+  hour = get_number (&date, 2, &len);
+  if (hour < 0)
+    assert_finished (ctx, len);
+  else
     {
-      number = get_number (date, regs->start[MONTH], regs->end[MONTH]);
-      if (number < 1 || number > 12)
-	{
-	  MSG ("month %d out of range 01-12", number);
-	  return -1;
-	}
-    }
-  
-  if (regs->start[DAY] > 0)
-    {
-      number = get_number (date, regs->start[DAY], regs->end[DAY]);
-      if (number < 1 || number > 31)
-  	{
-  	  MSG ("day %d out of range 01-31", number);
-  	  return -1;
-  	}
+      if (hour > 23)
+	pdfout_throw (ctx, "hour offset ouf of range (00-23)");
+      
+      if (len && date[0] == '\'')
+	--len, ++date;
+      else
+	pdfout_throw (ctx, "missing apostrophe after hour offset");
     }
 
-    if (regs->start[HOUR] > 0)
-    {
-      number = get_number (date, regs->start[HOUR], regs->end[HOUR]);
-      if (number < 0 || number > 23)
-  	{
-  	  MSG ("hour %d out of range 00-23", number);
-  	  return -1;
-  	}
-    }
-    
-  if (regs->start[MINUTE] > 0)
-    {
-      number = get_number (date, regs->start[MINUTE], regs->end[MINUTE]);
-      if (number < 0 || number > 59)
-  	{
-  	  MSG ("minute %d out of range 00-59", number);
-  	  return -1;
-  	}
-    }
-  
-  if (regs->start[SECOND] > 0)
-    {
-      number = get_number (date, regs->start[SECOND], regs->end[SECOND]);
-      if (number < 0 || number > 59)
-  	{
-  	  MSG ("second %d out of range 00-59", number);
-  	  return -1;
-  	}
-    }
+  /* MINUTE offset */
+  minute = get_number (&date, 2, &len);
+  if (minute < 0)
+    assert_finished (ctx, len);
+  if (minute > 59)
+    pdfout_throw (ctx, "minute offset ouf of range (00-59)");
 
-  if (regs->start[HOUR_OFFSET] > 0)
-    {
-      number = get_number (date, regs->start[HOUR_OFFSET],
-			   regs->end[HOUR_OFFSET]);
-      if (number < 0 || number > 23)
-	{
-	  MSG ("hour offset to Universial Time '%d' out of range 00-23",
-	       number);
-	  return -1;
-	}
-    }
-  
-  if (regs->start[MINUTE_OFFSET] > 0)
-    {
-      number = get_number (date, regs->start[MINUTE_OFFSET],
-			   regs->end[MINUTE_OFFSET]);
-      if (number < 0 || number > 59)
-  	{
-  	  MSG ("minute offset to Universial Time '%d' out of range 00-59",
-	       number);
-  	  return -1;
-  	}
-    }
-  return 0;
+  assert_finished (ctx, len);
 }

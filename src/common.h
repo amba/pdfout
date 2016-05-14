@@ -101,8 +101,8 @@ int pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
    1: empty info dict and *YAML_DOC is set to NULL */
 int pdfout_get_info_dict (yaml_document_t **yaml_doc, fz_context *ctx,
 			  pdf_document *doc);
-/* see 7.9.4 Dates in pdf-1.7 */
-int pdfout_check_date_string (const char *date);
+
+void pdfout_check_date_string (fz_context *ctx, const char *date);
 
 /* returns values:
    0: *YAML_DOC will point to allocated page labels
