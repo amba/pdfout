@@ -163,3 +163,54 @@ test_data (const char *file)
   
   return xasprintf ("%s/data/%s", srcdir, file);
 }
+
+#define safe_snprintf(buf, fmt, args ...)		\
+  safe_snprintf_imp (buf, sizeof buf, fmt, ## args)
+
+static void PDFOUT_PRINTFLIKE (3)
+safe_snprintf_imp (char *buf, int size, const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  int ret = vsnprintf (buf, size, fmt, ap);
+  if (ret < 0 || ret >= size)
+    abort ();
+}
+
+void
+test_set_get (const char *command, const char *input, const char *expected,
+	      const char *empty, const char **broken_inputs)
+{
+  char setcommand[100];
+  char getcommand[100];
+  
+  safe_snprintf (setcommand, "%s%s", "set", command);
+  safe_snprintf (getcommand, "%s%s", "get", command);
+
+  {
+    /* compare after get and set */
+    char *pdf = test_new_pdf ();
+    test_pdfout (input, 0, setcommand, pdf);
+    test_pdfout (0, expected, getcommand, pdf);
+  }
+
+  {
+    /* remove */
+    char *pdf = test_new_pdf ();
+    test_pdfout (input, 0, setcommand, pdf);
+    test_pdfout (0, 0, setcommand, pdf, "--remove");
+    test_pdfout (0, empty, getcommand, pdf);
+  }
+
+  {
+    char *pdf = test_new_pdf ();
+    /* Check exit status for all broken files.  */
+    for (int i = 0; broken_inputs[i]; ++i)
+      {
+	test_pdfout_status (1, broken_inputs[i], 0, setcommand, pdf);
+
+	/* pdf is untouched.  */
+	test_files_equal (pdf, test_data ("empty10.pdf"));
+      }
+  }
+}

@@ -47,6 +47,13 @@ Return the value of a scalar with
 
 where the length of the string is stored in C<*len>.
 
+Often, it is known, that the key of a hash will be a null-terminated string.
+
+ char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);
+
+Returns a null-terminated string, which does not contain embedded null
+bytes. Throw if the scalar contains embedded null bytes.
+
 =head3 Arrays
 
 Create a new array with
@@ -92,14 +99,31 @@ There are multiple functions to access a hashes key-value pairs.
 				        int i);
  pdfout_data *pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash,
 					  int i);
-					 
+
 These extract key and value of the i-th key-value pair.
+
+
+=head4 Hash Convenience Functions
 
  pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
 				     char *key);
 
 Searches the hash for the key C<key> and returns the key's value. If no key is
 found, NULL is returned.
+
+If it is known that both key and value are null-terminated strings, you can use
+this convenience function:
+
+ void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
+				     char **key, char **value, int i);
+
+This returns null-terminated strings and throws otherwise.
+
+To add a null-terminated key with a scalar value, use this function:
+
+ void pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
+				       const char *key, const char *value,
+				       int value_len)
 
 =head3 Destructor
 
@@ -109,105 +133,66 @@ Recursively free.
 
 
 
-=head1 JSON Parsing
+=head1 Parsing and Emitting
 
-Parse and emit JSON, as defined in
-L<RFC 7159|https://tools.ietf.org/html/rfc7159>.
 
-=head2 Synopsis
+A C<pdfout_parser> reades a C<pdfout_data> object from a
+C<fz_stream>. Conversely, a C<pdfout_emitter> writes a C<pdfout_data> object to
+a C<fz_output>.
 
-  const char *json = "[42, true, \"xxx\"]";
+This is done with these functions:
 
-  fz_stream *stm = fz_open_memory (ctx, (unsigned char *) json, strlen (json));
-  json_parser *parser = json_parser_new (ctx, stm);
+ pdfout_data *pdfout_parser_parse (fz_context *ctx, pdfout_parser *parser);
+ 
+ void pdfout_emitter_emit (fz_context *ctx, pdfout_emitter *emitter,
+			  pdfout_data *data);
+ 
 
-  char *number;
-  int len;
+=head2 JSON
 
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_BEGIN_ARRAY);
-  
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_NUMBER);
-  assert (strcmp (number, "42") == 0 && len == 2);
+A JSON parser/emitter is created with these functions:
 
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_TRUE);
+ pdfout_parser *pdfout_parser_json_new (fz_context *ctx, fz_stream *stm);
 
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_STRING);
-  assert (strcmp (number, "xxx") == 0 && len == 3);
+ pdfout_emitter *pdfout_emitter_json_new (fz_context *ctx, fz_output *out);
+ 
+=head2 Destructors
 
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_END_ARRAY);
-  
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_EOF);
-  
-  assert (json_parser_parse (ctx, parser, &number, &len) == JSON_INVALID);
+ void pdfout_parser_drop (fz_context *ctx, pdfout_parser *parser);
 
-  json_parser_drop (ctx, parser);
-  fz_drop_stream (ctx, stm);
+ void pdfout_emitter_drop (fz_context *ctx, pdfout_emitter *emitter);
 
-=head2 API
+=cut
 
-Each time the JSON Parser is called, it produces a parsing event of type C<enum
-json_token>. The possible events are:
+# =head2 Example
 
-=over
+# This program reads a hash, stored on disc as JSON in F<input.json>, adds a
+# key-value pair and writes the result to F<output.json>.
 
-=item JSON_INVALID
+# Create the parser:
 
-The parser encountered invalid JSON.
+#  fz_stream *stm = fz_open_file (ctx, "input.json");
+#  pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
 
-=item JSON_EOF
+# Parse:
 
-The parser reached the end of file. In particular, the JSON is valid.
+#  pdfout_data *hash = pdfout_parser_parse (ctx, parser);
+#  assert (pdfout_data_is_hash (ctx, hash));
 
-=item JSON_STRING
+# Append a key-value pair:
 
-The event includes the contents and length of the string.
+#  const char *value = "Ronja Räubertochter";
+#  pdfout_data_hash_push_key_value (ctx, hash, "title", value, strlen (value));
 
-=item JSON_NUMBER
+# Create the emitter:
 
-The event includes the contents and length of the number.
+#  fz_output *out = fz_new_output_with_path (ctx, "output.json", false);
+#  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
 
-=item JSON_FALSE
+# Emit:
 
-=item JSON_NULL
-
-=item JSON_TRUE
-
-=item JSON_BEGIN_ARRAY
-
-=item JSON_END_ARRAY
-
-=item JSON_BEGIN_OBJECT
-
-=item JSON_END_OBJECT
-
-=back
-
-=head3 Functions
-
-=over
-
-=item
-
- json_parser *json_parser_new (fz_context *ctx, fz_stream *stm);
-
-Return a new parser, which will read from C<stm>. Increase the refcount of
-C<stm>. Throw on error.
-
-=item
-
- void json_parser_drop (fz_context *ctx, json_parser *parser);
-
-Deallocate C<parser> and decrease the refcount of the underlying stream.
-
-=item
-
- json_token json_parser_parse (fz_context *ctx, json_parser *parser,
-                               char **value, int *value_len);
-
-Get the next parsing event and return it's type. For the JSON_STRING and
-JSON_NUMBER events, C<*value> and C<*value_len> will hold the parsed string or
-number. Calling this function again after a JSON_EOF was encountered will
-return JSON_INVALID.
+#  pdfout_emitter_emit (ctx, emitter, hash);
 
  
-=back
+ 
+   

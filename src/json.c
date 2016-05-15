@@ -297,15 +297,14 @@ utf8_sequence (fz_context *ctx, scanner *scanner)
 {
   fz_buffer *value = scanner->value;
   int start_len = value->len;
-  char *data = (char *) value->data;
   while (1)
     {
       int lah = scanner->lookahead;
       
       if (lah <= 0x1f || lah == '\\' || lah == '"')
 	{
-	  char *problem = pdfout_check_utf8 (data + start_len, value->len
-					     - start_len);
+	  char *problem = pdfout_check_utf8 ((char *) value->data + start_len,
+					     value->len - start_len);
 	  if (problem)
 	    scanner_error (ctx, scanner, "Invalid UTF-8.");
 	  

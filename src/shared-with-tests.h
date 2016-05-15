@@ -7,8 +7,14 @@
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7)
 # define PDFOUT_PRINTFLIKE(index)			\
   __attribute__ ((format (printf, index, index + 1)))
+# define PDFOUT_WUR __attribute__ ((warn_unused_result))
+# define PDFOUT_UNUSED __attribute__ ((__unused__))
+# define PDFOUT_NORETURN __attribute__ ((__noreturn__))
 #else
 # define PDFOUT_PRINTFLIKE(index) /* empty */
+# define PDFOUT_WUR
+# define PDFOUT_UNUSED
+# define PDFOUT_NORETURN
 #endif
 
 /* if set, do not print any status messages to stderr  */

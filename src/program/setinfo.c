@@ -16,6 +16,8 @@
 
 
 #include "common.h"
+#include "data.h"
+#include "info-dict.h"
 #include "shared.h"
 
 static char usage[] = "PDF-FILE [INFO-FILE]";
@@ -80,22 +82,22 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_setinfo (int argc, char **argv)
 {
-  yaml_document_t *yaml_doc = NULL;
-  fz_context *ctx;
-  pdf_document *doc;
-  
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
-  ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  fz_context *ctx = pdfout_new_context ();
+  pdf_document *doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
-  if (remove_info == false)
-    if (pdfout_load_yaml (&yaml_doc, input))
-      exit (1);
+  pdfout_data *info = NULL;
   
-  if (pdfout_update_info_dict (ctx, doc, yaml_doc, append))
-    exit (EX_DATAERR);
+  if (remove_info == false)
+    {
+      fz_stream *stm = fz_open_file_ptr (ctx, input);
+      pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
+      info = pdfout_parser_parse (ctx, parser);
+    }
 
+  pdfout_info_dict_set (ctx, doc, info, append);
+  
   pdfout_write_document (ctx, doc, pdf_filename, pdf_output_filename);
   exit (0);
 }

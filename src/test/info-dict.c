@@ -22,55 +22,59 @@ main (void)
 {
   test_init ();
 
-#define COMMAND "info"
-#define INPUT "\
-Title: pdfout info dict test\n\
-Author: pdfout\n\
-Subject: testing\n\
-Keywords: la la la\n\
-Creator: none\n\
-Producer: la la\n\
-CreationDate: 20150701\n\
-ModDate: D:20150702\n\
-Trapped: Unknown\n"
+  const char *input =  "\{\n\
+    \"Title\": \"pdfout info dict test\",\n\
+    \"Author\": \"pdfout\",\n\
+    \"Subject\": \"testing\",\n\
+    \"Keywords\": \"la la la\",\n\
+    \"Creator\": \"none\",\n\
+    \"Producer\": \"la la\",\n\
+    \"CreationDate\": 20150701,\n\
+    \"ModDate\": \"D:20150702\",\n\
+    \"Trapped\": \"Unknown\"\n\
+}\n";
 
-#define BROKEN_INPUT					\
-  "Titel: myfile",		/* should be 'Title' */ \
-    "Trapped: true",		/* should be 'True' */	\
-    "ModDate: D:20151"		/* illegal date */
+  const char *broken_inputs[] = {			
+    "{\"Titel\": \"myfile\"}",		/* should be 'Title' */ 
+    "{\"Trapped\": \"true\"}",		/* should be 'True' */	
+    "{\"ModDate\": \"D:20151\"}",		/* illegal date */
+    NULL
+  };
   
-#include "set-get-template.c"
-  
+  test_set_get ("info", input, input, "{}\n", broken_inputs);
+		
   /* non-incremental update */
   {
     char *pdf = test_new_pdf ();
     char *output_pdf = test_tempname ();
 
-    test_pdfout (INPUT, 0, "setinfo", pdf, "-o", output_pdf);
+    test_pdfout (input, 0, "setinfo", pdf, "-o", output_pdf);
 
     /* pdf is untouched */
     test_files_equal (pdf, test_data ("empty10.pdf"));
 
-    test_pdfout (0, INPUT, "getinfo", output_pdf);
+    test_pdfout (0, input, "getinfo", output_pdf);
   }
 
   /* append option */
   {
     char *pdf = test_new_pdf ();
 
-    test_pdfout (INPUT, 0, "setinfo", pdf);
-    test_pdfout ("CreationDate: D:20150804", 0, "setinfo", pdf, "--append");
+    test_pdfout (input, 0, "setinfo", pdf);
+    test_pdfout ("{\"CreationDate\": \"D:20150804\"}", 0, "setinfo", pdf,
+		 "--append");
 
-    test_pdfout (0, "\
-Title: pdfout info dict test\n\
-Author: pdfout\n\
-Subject: testing\n\
-Keywords: la la la\n\
-Creator: none\n\
-Producer: la la\n\
-CreationDate: D:20150804\n\
-ModDate: D:20150702\n\
-Trapped: Unknown\n", "getinfo", pdf);
+    test_pdfout (0, "\{\n\
+    \"Title\": \"pdfout info dict test\",\n\
+    \"Author\": \"pdfout\",\n\
+    \"Subject\": \"testing\",\n\
+    \"Keywords\": \"la la la\",\n\
+    \"Creator\": \"none\",\n\
+    \"Producer\": \"la la\",\n\
+    \"CreationDate\": \"D:20150804\",\n\
+    \"ModDate\": \"D:20150702\",\n\
+    \"Trapped\": \"Unknown\"\n\
+}\n", "getinfo", pdf);
   }
     
   return 0;

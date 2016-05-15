@@ -189,6 +189,19 @@ pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len)
   return s->value;
 }
 
+char *
+pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar)
+{
+  int len;
+  char *string = pdfout_data_scalar_get (ctx, scalar, &len);
+
+  for (int i = 0; i < len; ++i)
+    if (string[i] == 0)
+      pdfout_throw (ctx, "string contains embedded null byte");
+
+  return string;
+}
+
 int
 pdfout_data_array_len (fz_context *ctx, pdfout_data *array)
 {
@@ -264,7 +277,31 @@ pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash, int pos)
 
   return h->list[pos].value;
 }
+
+void
+pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
+				char **key, char **value, int i)
+{
+  pdfout_data *k = pdfout_data_hash_get_key (ctx, hash, i);
+  *key = pdfout_data_scalar_get_string (ctx, k);
   
+  pdfout_data *v = pdfout_data_hash_get_value (ctx, hash, i);
+  if (pdfout_data_is_scalar (ctx , v) == false)
+    pdfout_throw (ctx, "value not a scalar in pdfout_data_hash_get_key_value");
+
+  *value = pdfout_data_scalar_get_string (ctx, v);
+}
+
+void
+pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
+				 const char *key, const char *value,
+				 int value_len)
+{
+  pdfout_data *k = pdfout_data_scalar_new (ctx, key, strlen (key));
+  pdfout_data *v = pdfout_data_scalar_new (ctx, value, value_len);
+  pdfout_data_hash_push (ctx, hash, k, v);
+}
+
 pdfout_data *
 pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
 {
@@ -280,6 +317,8 @@ pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
     }
   return NULL;
 }
+
+/* Comparison  */
 
 static int cmp_array (fz_context *ctx, pdfout_data *x, pdfout_data *y)
 {
