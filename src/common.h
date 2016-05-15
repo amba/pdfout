@@ -41,18 +41,7 @@ enum {
   PDFOUT_TXT_YAML_SPANS,
   PDFOUT_TXT_YAML_CHARACTERS,
 };
-#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7)
-# define PDFOUT_PRINTFLIKE(index)			\
-  __attribute__ ((format (printf, index, index + 1)))
-# define PDFOUT_WUR __attribute__ ((warn_unused_result))
-# define PDFOUT_UNUSED __attribute__ ((__unused__))
-# define PDFOUT_NORETURN __attribute__ ((__noreturn__))
-#else
-# define PDFOUT_PRINTFLIKE(index) /* empty */
-# define PDFOUT_WUR
-# define PDFOUT_UNUSED
-# define PDFOUT_NORETURN
-#endif
+
 
 #define pdfout_x2nrealloc(ctx, p, pn, t) \
   ((t *) pdfout_x2nrealloc_imp (ctx, p, pn, sizeof (t)))
@@ -88,21 +77,6 @@ int pdfout_outline_set (fz_context *ctx, pdf_document *doc,
    1: no outline, *YAML_DOC is set to NULL  */
 int pdfout_outline_get (yaml_document_t **yaml_doc, fz_context *ctx,
 			pdf_document *pdf_doc);
-
-
-/* remove all keys if YAML_DOC is NULL or empty.
-   set APPEND to keep the existing entries */
-int pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
-			     yaml_document_t *yaml_doc, bool append);
-
-/* return values:
-   0: *YAML_DOC will point to allocated info dict, a list of scalar
-   key-value pairs.
-   1: empty info dict and *YAML_DOC is set to NULL */
-int pdfout_get_info_dict (yaml_document_t **yaml_doc, fz_context *ctx,
-			  pdf_document *doc);
-
-void pdfout_check_date_string (fz_context *ctx, const char *date);
 
 /* returns values:
    0: *YAML_DOC will point to allocated page labels

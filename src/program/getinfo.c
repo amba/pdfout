@@ -17,6 +17,8 @@
 
 #include "common.h"
 #include "shared.h"
+#include "data.h"
+#include "info-dict.h"
 
 static char usage[] = "PDF_FILE";
 static char doc[] = "Dump the information dictionary to standard output.\n";
@@ -63,7 +65,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 static struct argp_child children[] = {
-  {&pdfout_yaml_emitter_argp, 0, "", -2},
   {&pdfout_general_argp, 0, NULL, 0},
   {0}
 };
@@ -73,7 +74,7 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_getinfo (int argc, char **argv)
 {
-  yaml_document_t *yaml_doc;
+  pdfout_data *hash;
   fz_context *ctx;
   pdf_document *doc;
     
@@ -81,14 +82,13 @@ pdfout_command_getinfo (int argc, char **argv)
   
   ctx = pdfout_new_context ();
   doc = pdfout_pdf_open_document (ctx, pdf_filename);
-  
-  if (pdfout_get_info_dict (&yaml_doc, ctx, doc))
-    {
-      pdfout_no_output_msg ();
-      exit (1);
-    }
-  
-  pdfout_dump_yaml (output, yaml_doc);
 
+  hash = pdfout_info_dict_get (ctx, doc);
+
+  fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
+  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
+    
+  pdfout_emitter_emit (ctx, emitter, hash);
+  
   exit (0);
 }

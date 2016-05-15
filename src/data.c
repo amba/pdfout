@@ -292,6 +292,16 @@ pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
   *value = pdfout_data_scalar_get_string (ctx, v);
 }
 
+void
+pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
+				 const char *key, const char *value,
+				 int value_len)
+{
+  pdfout_data *k = pdfout_data_scalar_new (ctx, key, strlen (key));
+  pdfout_data *v = pdfout_data_scalar_new (ctx, value, value_len);
+  pdfout_data_hash_push (ctx, hash, k, v);
+}
+
 pdfout_data *
 pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
 {

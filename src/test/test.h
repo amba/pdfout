@@ -52,7 +52,8 @@ void test_write_string_to_file (const char *file, const char *string);
 /* concatenate $srcdir with FILE   */
 char *test_data (const char *file);
 
-
+void test_set_get (const char *command, const char *input, const char *expected,
+		   const char *empty, const char **broken_inputs);
 
 /* call exit (1) if FILE1 and FILE2 differ.
    If they differ, run diff on them to show the differences*/

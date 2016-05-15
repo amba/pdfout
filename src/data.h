@@ -40,6 +40,9 @@ pdfout_data *pdfout_data_hash_get_key (fz_context *ctx, pdfout_data *hash,
 				       int i);
 pdfout_data *pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash,
 					 int i);
+void pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
+				      const char *key, const char *value,
+				      int value_len);
 
 /* key must be null-terminated.  */
 pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,

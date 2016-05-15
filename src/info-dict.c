@@ -1,13 +1,124 @@
 #include "common.h"
 #include "data.h"
 #include "charset-conversion.h"
+#include "info-dict.h"
+#include "c-ctype.h"
+
+/* FIXME: test date check function.  */
+
+/* Return -1 on error.  */
+static int get_number (const char **s, int num_len, int *len)
+{
+  if (num_len > *len)
+    return -1;
+  
+  int retval = 0;
+  for (int i = 0; i < num_len; ++i)
+    {
+      if (c_isdigit ((*s)[i]))
+	retval = retval * 10 + ((*s)[i] - '0');
+      else
+	return -1;
+    }
+  *len -= num_len;
+  *s += num_len;
+  return retval;
+}
+
+static void assert_finished (fz_context *ctx, int len)
+{
+  if (len == 0)							
+    return;								
+  pdfout_throw (ctx, "trailing garbage in date");	
+}
+
+static void
+check_date_string (fz_context *ctx, const char *date)
+{
+  /* Date is of the form D:YYYYMMDDHHmmSSOHH'mm.  */
+
+  int len = strlen (date);
+
+  if (len >= 2 && !memcmp (date, "D:", 2))
+    len -= 2, date += 2;
+
+  /* YEAR */
+  if (get_number (&date, 4, &len) < 0)
+    pdfout_throw (ctx, "no year in date");
+
+  /* MONTH */
+  int month = get_number (&date, 2, &len);
+  if (month < 0)
+    assert_finished (ctx, len);
+  if (month < 1 || month > 12)
+    pdfout_throw (ctx, "month ouf of range (01-12)");
+
+  /* DAY */
+  int day = get_number (&date, 2, &len);
+  if (day < 0)
+    assert_finished (ctx, len);
+  if (day < 1 || day > 31)
+    pdfout_throw (ctx, "day ouf of range (01-31)");
+
+  /* HOUR */
+  int hour = get_number (&date, 2, &len);
+  if (hour < 0)
+    assert_finished (ctx, len);
+  if (hour > 23)
+    pdfout_throw (ctx, "hour ouf of range (00-23)");
+
+  /* MINUTE */
+  int minute = get_number (&date, 2, &len);
+  if (minute < 0)
+    assert_finished (ctx, len);
+  if (minute > 59)
+    pdfout_throw (ctx, "minute ouf of range (00-59)");
+
+  /* SECOND */
+  int second = get_number (&date, 2, &len);
+  if (second < 0)
+    assert_finished (ctx, len);
+  if (second > 59)
+    pdfout_throw (ctx, "second ouf of range (00-59)");
+
+
+  /* UT offset specifier.  */
+  if (len && (date[0] == '+' || date[0] == '-' || date[0] == 'Z'))
+    --len, ++date;
+  else
+    assert_finished (ctx, len);
+
+  /* HOUR offset */
+  hour = get_number (&date, 2, &len);
+  if (hour < 0)
+    assert_finished (ctx, len);
+  else
+    {
+      if (hour > 23)
+	pdfout_throw (ctx, "hour offset ouf of range (00-23)");
+      
+      if (len && date[0] == '\'')
+	--len, ++date;
+      else
+	pdfout_throw (ctx, "missing apostrophe after hour offset");
+    }
+
+  /* MINUTE offset */
+  minute = get_number (&date, 2, &len);
+  if (minute < 0)
+    assert_finished (ctx, len);
+  if (minute > 59)
+    pdfout_throw (ctx, "minute offset ouf of range (00-59)");
+
+  assert_finished (ctx, len);
+}
 
 static void
 check_key_val_pair (fz_context *ctx, const char *name, const char *string)
 {
   if (!strcmp (name, "CreationDate") || !strcmp (name, "ModDate"))
     {
-      pdfout_check_date_string (ctx, string);
+      check_date_string (ctx, string);
     }
   else if (!strcmp (name, "Trapped"))
     {
@@ -37,208 +148,118 @@ check_info_dict (fz_context *ctx, pdfout_data *info)
 
   for (int i = 0; i < len; ++i)
     {
-      const char *name, *string;
+      char *name, *string;
       pdfout_data_hash_get_key_value (ctx, info, &name, &string, i);
       check_key_val_pair (ctx, name, string);
     }
   return;
 }
 
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("update info dict: " fmt, ## args)
-
-int
-pdfout_update_info_dict (fz_context *ctx, pdf_document *doc,
-			 yaml_document_t *yaml_doc, bool append)
+static void
+insert_key_value (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
+		  const char *key, const char *value)
 {
-  pdf_obj *info = NULL, *info_ref, *new_info;
-  yaml_node_pair_t pair;
-  yaml_node_t *key, *value, *mapping;
-  char *text_string, *key_string, *value_string;
-  int length, i;
-  int text_string_len;
+  /* FIXME: do proper try/catch.  */
+  int string_len;
+  char *string = pdfout_utf8_to_pdf (ctx, value, strlen (value), &string_len);
+  pdf_obj *string_obj = pdf_new_string (ctx, doc, string, string_len);
+  pdf_dict_puts_drop (ctx, dict, key, string_obj);
 
-  if (yaml_doc && check_yaml_infodict (yaml_doc))
-    {
-      MSG ("invalid info dict");
-      return 1;
-    }
+  free (string);
+}
 
-  info = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Info");
-  if (info == NULL)
+void
+pdfout_info_dict_set (fz_context *ctx, pdf_document *doc,
+		      pdfout_data *info, bool append)
+{
+  if (info)
+    check_info_dict (ctx, info);
+
+  
+  pdf_obj *pdf_info = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Info");
+  pdf_obj *info_ref = NULL, *new_info = NULL;
+
+  /* FIXME: do proper try/catch.  */
+  
+  if (pdf_info == NULL)
     {
-      info = pdf_new_dict (ctx, doc, 9);
-      info_ref = pdf_add_object (ctx, doc, info);
-      pdf_drop_obj (ctx, info);
+      pdf_info = pdf_new_dict (ctx, doc, 9);
+      info_ref = pdf_add_object_drop (ctx, doc, pdf_info);
       pdf_dict_puts_drop (ctx, pdf_trailer (ctx, doc), "Info", info_ref);
     }
   else if (append == false)
     {
       new_info = pdf_new_dict (ctx, doc, 9);
-      pdf_update_object (ctx, doc, pdf_to_num (ctx, info), new_info);
+      pdf_update_object (ctx, doc, pdf_to_num (ctx, pdf_info), new_info);
       pdf_drop_obj (ctx, new_info);
-      info = new_info;
+      pdf_info = new_info;
     }
   
-  if (yaml_doc)
-    mapping = yaml_document_get_root_node (yaml_doc);
-  
-  if (yaml_doc == NULL || mapping == NULL)
+  if (info == NULL)
+    /* Empty info dict.  */
+    return;
+
+  int len = pdfout_data_hash_len (ctx, info);
+  for (int i = 0; i < len; ++i)
     {
-      MSG ("removing info dict");
-      return 0;
-    }
-  length = pdfout_mapping_length (yaml_doc, 1);
-  if (length == 0)
-    {
-      MSG ("removing info dict");
-      return 0;
-    }
-  for (i = 0; i < length; ++i)
-    {
-      pair = mapping->data.mapping.pairs.start[i];
-      key = pdfout_yaml_document_get_node (yaml_doc, pair.key);
-      key_string = pdfout_scalar_value (key);
-      value = pdfout_yaml_document_get_node (yaml_doc, pair.value);
-      value_string = pdfout_scalar_value (value);
-      if (strcmp (key_string, "ModDate") == 0
-	  || strcmp (key_string, "CreationDate") == 0)
-	{
-	  /* no reencoding needed */
-	  pdf_dict_puts_drop (ctx, info, key_string,
-			      pdf_new_string (ctx, doc, value_string,
-					      strlen (value_string)));
-	}
-      else if (strcmp (key_string, "Trapped") == 0)
-	{
-	  /* create name object */
-	  pdf_dict_puts_drop (ctx, info, key_string,
-			      pdf_new_name (ctx, doc, value_string));
-	}
+      char *key, *value;
+      pdfout_data_hash_get_key_value (ctx, info, &key, &value, i);
+      
+      if (!strcmp (key, "Trapped"))
+	/* create name object */
+	pdf_dict_puts_drop (ctx, pdf_info, key,
+			      pdf_new_name (ctx, doc, value));
       else
-	{
-	  /* reencode and create string object */
-	  text_string = pdfout_utf8_to_pdf (ctx, value_string,
-					    strlen (value_string),
-					    &text_string_len);
-	  /* FIXME: check for INT_MAX.  */
-	  pdf_dict_puts_drop (ctx, info, key_string,
-			      pdf_new_string (ctx, doc, text_string,
-					      text_string_len));
-	  free (text_string);
-	}
+	insert_key_value (ctx, doc, pdf_info, key, value);
     }
-  return 0;
 }
 
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("get info dict: " fmt, ## args)
-
-static int
-get_info_dict (yaml_document_t *yaml_doc, fz_context *ctx, pdf_document *doc)
+pdfout_data *
+pdfout_info_dict_get (fz_context *ctx, pdf_document *doc)
 {
-  pdf_obj *info;
-  int i, mapping, len;
+  /* FIXME: do proper try/catch.  */
+  pdf_obj *info = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Info");
+  int len = pdf_dict_len (ctx, info);
+
+  pdfout_data *result = pdfout_data_hash_new (ctx);
   
-  info = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Info");
-  len = pdf_dict_len (ctx, info);
-  
-  if (len <= 0)
+  for (int i = 0; i < len; ++i)
     {
-      MSG ("empty info dict");
-      return 1;
-    }
+      pdf_obj *key = pdf_dict_get_key (ctx, info, i);
+      if (pdf_is_name (ctx, key) == false)
+	pdfout_throw (ctx, "key in info dict not a name object");
 
-  mapping = pdfout_yaml_document_add_mapping (yaml_doc, NULL, 0);
-  for (i = 0; i < len; ++i)
-    {
-      pdf_obj *key, *val;
-      int value_string_len;
-      char *name, *value_string;
-      
-      key = pdf_dict_get_key (ctx, info, i);
-      if (pdf_is_name (ctx, key) == 0)
+      const char *name = pdf_to_name (ctx, key);
+      pdf_obj *val = pdf_dict_get_val (ctx, info, i);
+      if (!strcmp (name, "Title") || !strcmp (name, "Author")
+	  || !strcmp (name, "Subject")|| !strcmp (name, "Keywords")
+	  || !strcmp (name, "Creator") || !strcmp (name, "Producer")
+	  || !strcmp (name, "CreationDate") || !strcmp (name, "ModDate"))
 	{
-	  MSG ("key not a name object, skipping");
-	  continue;
-	}
-      name = pdf_to_name (ctx, key);
-      val = pdf_dict_get_val (ctx, info, i);
-      if (strcmp (name, "Title") == 0 || strcmp (name, "Author") == 0
-	  || strcmp (name, "Subject") == 0 || strcmp (name, "Keywords") == 0
-	  || strcmp (name, "Creator") == 0 || strcmp (name, "Producer") == 0
-	  || strcmp (name, "CreationDate") == 0
-	  || strcmp (name, "ModDate") == 0)
-	{
-	  /* value must be string */
-	  
-	  if (pdf_is_string (ctx, val) == 0)
-	    {
-	      MSG ("value for key '%s' not a string", name);
-	      continue;
-	    }
+	  if (pdf_is_string (ctx, val) == false)
+	    pdfout_throw (ctx, "value of info dict key '%s' not a string",
+			  name);
 
-	  value_string = pdfout_pdf_to_utf8 (ctx, pdf_to_str_buf (ctx, val),
-					     pdf_to_str_len (ctx, val),
-					     &value_string_len);
-	  /* FIXME: check INT_MAX overflow.  */
-
-	  if (strcmp (name, "CreationDate") == 0
-	      || strcmp (name, "ModDate") == 0)
-	    {
-	      if (pdfout_check_date_string (value_string))
-		MSG ("broken %s: %s", name, value_string);
-	    }
-
-	  pdfout_mapping_push (yaml_doc, mapping, name, value_string);
-	  free (value_string);
+	  int string_len;
+	  char *string =
+	    pdfout_pdf_to_utf8 (ctx, pdf_to_str_buf (ctx, val),
+				pdf_to_str_len (ctx, val), &string_len);
+	  pdfout_data_hash_push_key_value (ctx, result, name, string,
+					  string_len);
+	  free (string);
 	}
       else if (strcmp (name, "Trapped") == 0)
 	{
 	  if (pdf_is_name (ctx, val) == 0)
-	    {
-	      MSG ("value of key '%s' not a name object, skipping", name);
-	      continue;
-	    }
-
-	  value_string = pdf_to_name (ctx, val);
-
-	  if (strcmp (value_string, "True") && strcmp (value_string, "False")
-	      && strcmp (value_string, "Unknown"))
-	    MSG ("illegal value '%s' of key 'Trapped' encountered",
-		 value_string);
+	    pdfout_throw (ctx, "key '%s' in info dict not a name object", name);
 	  
-	  pdfout_mapping_push (yaml_doc, mapping, name, value_string);
+	  char *value_string = pdf_to_name (ctx, val);
+	  
+	  pdfout_data_hash_push_key_value (ctx, result, name, value_string,
+					   strlen (value_string));
 
 	}
     }
-
-  if (pdfout_mapping_length (yaml_doc, mapping) == 0)
-    {
-      MSG ("empty info dict");
-      return 1;
-    }
-  
-  return 0;
+  return result;
 }
 
-int
-pdfout_get_info_dict (yaml_document_t **yaml_doc_ptr, fz_context *ctx,
-		      pdf_document *doc)
-{
-  yaml_document_t *yaml_doc;
-
-  *yaml_doc_ptr = yaml_doc = XZALLOC (yaml_document_t);
-  
-  pdfout_yaml_document_initialize (yaml_doc, NULL, NULL, NULL, 1, 1);
-
-  if (get_info_dict (yaml_doc, ctx, doc))
-    {
-      yaml_document_delete (yaml_doc);
-      free (yaml_doc);
-      *yaml_doc_ptr = NULL;
-      return 1;
-    }
-    
-  return 0;
-}
