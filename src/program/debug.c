@@ -369,6 +369,16 @@ static void check_json_parser_values (fz_context *ctx)
   }
   
   {
+    /* Check reallocation in the value buffer.  */
+    char big[1000];
+    char big_expected[1000];
+    big[0] = '"';
+    memset (big + 1, 'x', 997);
+    big[998] = '"';
+    big[999] = 0;
+    memset (big_expected, 'x', 997);
+    big_expected[997] = 0;
+    
     struct test {
       const char *text;
       const char *value;
@@ -381,6 +391,7 @@ static void check_json_parser_values (fz_context *ctx)
       {"\"\\u000a\"", "\n"},
       {"\"\\uD834\\udd1e\\uD834\\udd1eabc\"", "𝄞𝄞abc"},
       {"\"\\uD853\\uDF5C\"", "\U00024F5C"},
+      {big, big_expected},
       {"\"x", 0, true},
       {"\"x\x01\"", 0, true},
       {"\"x\n\"", 0, true},
