@@ -111,13 +111,14 @@ These extract key and value of the i-th key-value pair.
 Searches the hash for the key C<key> and returns the key's value. If no key is
 found, NULL is returned.
 
-If it is known that both key and value are null-terminated strings, you can use
-this convenience function:
+If it is known that the key is a null-terminated string, and the value is a
+scalar, use this convenience function:
 
  void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
-				     char **key, char **value, int i);
+				      char **key, char **value, int *value_len,
+				      int i);
 
-This returns null-terminated strings and throws otherwise.
+Throw if the value is not a scalar.
 
 To add a null-terminated key with a scalar value, use this function:
 

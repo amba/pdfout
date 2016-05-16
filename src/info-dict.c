@@ -114,7 +114,8 @@ check_date_string (fz_context *ctx, const char *date)
 }
 
 static void
-check_key_val_pair (fz_context *ctx, const char *name, const char *string)
+check_key_val_pair (fz_context *ctx, const char *name, const char *string,
+		    int string_len)
 {
   if (!strcmp (name, "CreationDate") || !strcmp (name, "ModDate"))
     {
@@ -122,11 +123,14 @@ check_key_val_pair (fz_context *ctx, const char *name, const char *string)
     }
   else if (!strcmp (name, "Trapped"))
     {
+      if (strlen (string) != string_len)
+	pdfout_throw (ctx, "value of key 'Trapped' has embedded null byte");
       if (strcmp(string, "True") && strcmp (string, "False") &&
 	  strcmp (string, "Unknown"))
 	{
-	  pdfout_throw (ctx, "invalid value '%s' of key 'Trapped'.\n"
-			"valid values are True, False, Unknown", string);
+	  pdfout_throw (ctx, "invalid value '%.*s' of key 'Trapped'.\n"
+			"valid values are True, False, Unknown",
+			string_len, string);
 	}
     }
  else if (strcmp (name, "Title") && strcmp (name, "Author")
@@ -149,19 +153,21 @@ check_info_dict (fz_context *ctx, pdfout_data *info)
   for (int i = 0; i < len; ++i)
     {
       char *name, *string;
-      pdfout_data_hash_get_key_value (ctx, info, &name, &string, i);
-      check_key_val_pair (ctx, name, string);
+      int string_len;
+      pdfout_data_hash_get_key_value (ctx, info, &name, &string, &string_len,
+				      i);
+      check_key_val_pair (ctx, name, string, string_len);
     }
   return;
 }
 
 static void
 insert_key_value (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
-		  const char *key, const char *value)
+		  const char *key, const char *value, int value_len)
 {
   /* FIXME: do proper try/catch.  */
   int string_len;
-  char *string = pdfout_utf8_to_pdf (ctx, value, strlen (value), &string_len);
+  char *string = pdfout_utf8_to_pdf (ctx, value, value_len, &string_len);
   pdf_obj *string_obj = pdf_new_string (ctx, doc, string, string_len);
   pdf_dict_puts_drop (ctx, dict, key, string_obj);
 
@@ -203,14 +209,15 @@ pdfout_info_dict_set (fz_context *ctx, pdf_document *doc,
   for (int i = 0; i < len; ++i)
     {
       char *key, *value;
-      pdfout_data_hash_get_key_value (ctx, info, &key, &value, i);
+      int value_len;
+      pdfout_data_hash_get_key_value (ctx, info, &key, &value, &value_len, i);
       
       if (!strcmp (key, "Trapped"))
 	/* create name object */
 	pdf_dict_puts_drop (ctx, pdf_info, key,
 			      pdf_new_name (ctx, doc, value));
       else
-	insert_key_value (ctx, doc, pdf_info, key, value);
+	insert_key_value (ctx, doc, pdf_info, key, value, value_len);
     }
 }
 

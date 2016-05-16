@@ -280,7 +280,8 @@ pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash, int pos)
 
 void
 pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
-				char **key, char **value, int i)
+				char **key, char **value, int *value_len,
+				int i)
 {
   pdfout_data *k = pdfout_data_hash_get_key (ctx, hash, i);
   *key = pdfout_data_scalar_get_string (ctx, k);
@@ -289,7 +290,7 @@ pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
   if (pdfout_data_is_scalar (ctx , v) == false)
     pdfout_throw (ctx, "value not a scalar in pdfout_data_hash_get_key_value");
 
-  *value = pdfout_data_scalar_get_string (ctx, v);
+  *value = pdfout_data_scalar_get (ctx, v, value_len);
 }
 
 void

@@ -49,7 +49,8 @@ pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
 				    char *key);
 
 void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
-				     char **key, char **value, int i);
+				     char **key, char **value, int *value_len,
+				     int i);
 
 int pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y);
 
