@@ -16,7 +16,6 @@ libyaml-wrappers.c \
 outline.c \
 page-labels.h \
 page-labels.c \
-pdf-page-labels.c \
 info-dict.c \
 info-dict.h \
 charset-conversion.c \
