@@ -1,5 +1,6 @@
 # Run gnulib tests last (see sec. 3.9 in gnulib manual).
 SUBDIRS = . gl src gl-tests
+BUILD_DOC = perl -I "$(srcdir)/doc" "$(srcdir)/doc/build-doc.pl"
 
 all-local:
 	+ cd $(srcdir)/mupdf && $(GNU_MAKE) libs third build=debug \
@@ -7,7 +8,8 @@ all-local:
 	  $(MUPDF_MAKE_COMMAND) XCFLAGS="$(MUPDF_XCFLAGS)"
 
 clean-local:
-	rm -rf "$(abs_top_builddir)/mupdf" 
+	rm -rf "$(abs_top_builddir)/mupdf"
+	$(BUILD_DOC) --clean
 
 distclean-local:
 	+ cd $(srcdir)/mupdf && $(GNU_MAKE) nuke build=debug \
@@ -20,12 +22,8 @@ dist-hook:
 distcheck-hook:
 	chmod -R u+w $(distdir)/mupdf
 
-html/style.css: doc/style.css
-	cp $(srcdir)/doc/style.css html/style.css
-
-html-local: html/style.css
-	mkdir -p html
-	$(srcdir)/doc/build-doc.pl "$(srcdir)/doc" html
+html-local:
+	 $(BUILD_DOC) --build "$(srcdir)/doc"
 
 EXTRA_DIST = COPYING COPYRIGHT README AUTHORS INSTALL TODO
 

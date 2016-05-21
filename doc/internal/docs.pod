@@ -1,0 +1,39 @@
+=pod
+
+=head1 Contributing to pdfout's documentation
+
+The documentation is maintained as L<Pod|http://perldoc.perl.org/perlpod.html>
+in the F<doc/> subdirectory.
+
+Running the command
+
+ make html
+
+will build the documentation in F<html/>.
+
+Internally this uses
+L<Pod::Simple::XHTML|http://search.cpan.org/perldoc?Pod::Simple::XHTML>.
+
+=head2 The TOC
+
+FIXME
+
+=head2 Links
+
+For internal links we use the following mechanism:
+
+ L<Description|file-name>
+
+, where C<file-name> does not have a '.html' or '.pod' suffix.
+
+
+To link to a subheading, use
+
+ L<Description|file-name#name of subheading>
+
+Linking to a subheading in the current file is done with
+
+ L<Description|#name of subheading>
+
+Fixme: L<#The TOC>.
+

@@ -39,7 +39,7 @@ C<pdfout_data> types. The keys must be unique scalars.
 Create a new scalar with
 
  pdfout_data *pdfout_data_scalar_new (fz_context *ctx, const char *value,
-					 int len);
+			              int len);
 
 Return the value of a scalar with
 
@@ -162,6 +162,7 @@ A JSON parser/emitter is created with these functions:
  void pdfout_parser_drop (fz_context *ctx, pdfout_parser *parser);
 
  void pdfout_emitter_drop (fz_context *ctx, pdfout_emitter *emitter);
+
 
 =cut
 
