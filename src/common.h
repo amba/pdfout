@@ -32,6 +32,7 @@
 
 #include "shared-with-tests.h"
 #include "libyaml-wrappers.h"
+#include "data.h"
 /* global variables */
 
 extern yaml_document_t *pdfout_default_dest_array;

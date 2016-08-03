@@ -2,7 +2,8 @@
 
 =head1 Unicode Data
 
-The C<pdfout_data> is a complex data type. This is the data format used to
+The C<pdfout_data> type holds a complex data structure. This is the data format
+used to 
 interface with the parsers and emitters described below.
 
 It is organized into 3 different types:
@@ -28,11 +29,28 @@ C<pdfout_data> types. The keys must be unique scalars.
 =head2 Functions
 
 
+Calling one of the C<pdfout_data_scalar_*> functions on an ARRAY or HASH will
+throw an 
+exception. Likewise for the C<pdfout_data_array_*> and C<pdfout_data_hash_*>
+functions.
+
 =head3 Type queries
+
+These never throw.
 
  bool pdfout_data_is_scalar (fz_context *ctx, pdfout_data *data);
  bool pdfout_data_is_array (fz_context *ctx, pdfout_data *data);
  bool pdfout_data_is_hash (fz_context *ctx, pdfout_data *data);
+
+=cut
+
+# =head3 Type asserts
+
+#  void pdfout_data_assert_scalar (fz_context *ctx, pdfout_data *data);
+#  void pdfout_data_assert_array (fz_context *ctx, pdfout_data *data);
+#  void pdfout_data_assert_hash (fz_context *ctx, pdfout_data *data);
+
+# Throw if C<data> is not of the expected type.
 
 =head3 Scalars
 
@@ -47,12 +65,14 @@ Return the value of a scalar with
 
 where the length of the string is stored in C<*len>.
 
-Often, it is known, that the key of a hash will be a null-terminated string.
+=cut
 
- char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);
+# Often, it is known, that the key of a hash will be a null-terminated string.
 
-Returns a null-terminated string, which does not contain embedded null
-bytes. Throw if the scalar contains embedded null bytes.
+#  char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);
+
+# Returns a null-terminated string, which does not contain embedded null
+# bytes. Throw if the scalar contains embedded null bytes.
 
 =head3 Arrays
 

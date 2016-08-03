@@ -144,10 +144,6 @@ Title,Author,Subject,Keywords,Creator,Producer,CreationDate,ModDate,Trapped",
 static void
 check_info_dict (fz_context *ctx, pdfout_data *info)
 {
-
-  if (pdfout_data_is_hash (ctx, info) == false)
-    pdfout_throw (ctx, "info dict not a mapping");
-  
   int len = pdfout_data_hash_len (ctx, info);
 
   for (int i = 0; i < len; ++i)

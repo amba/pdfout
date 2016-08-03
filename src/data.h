@@ -7,8 +7,12 @@ bool pdfout_data_is_scalar (fz_context *ctx, pdfout_data *data);
 bool pdfout_data_is_array (fz_context *ctx, pdfout_data *data);
 bool pdfout_data_is_hash (fz_context *ctx, pdfout_data *data);
 
+/* void pdfout_data_assert_scalar (fz_context *ctx, pdfout_data *data); */
+/* void pdfout_data_assert_array (fz_context *ctx, pdfout_data *data); */
+/* void pdfout_data_assert_hash (fz_context *ctx, pdfout_data *data); */
+
 pdfout_data *pdfout_data_scalar_new (fz_context *ctx, const char *value,
-					int len);
+				     int len);
 pdfout_data *pdfout_data_array_new (fz_context *ctx);
 pdfout_data *pdfout_data_hash_new (fz_context *ctx);
 
@@ -17,7 +21,7 @@ void pdfout_data_drop (fz_context *ctx, pdfout_data *data);
 
 char *pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len);
 
-char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);
+/* char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar); */
 
 
 

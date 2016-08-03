@@ -1,5 +1,4 @@
 #include "common.h"
-#include "data.h"
 #include "c-ctype.h"
 #include "unistr.h"
 #include "uniwidth.h"
@@ -37,6 +36,32 @@ typedef struct data_hash_s {
   struct keyval *list;
 } data_hash;
 
+static const char*
+type_to_string (enum data_type type)
+{
+  switch (type)
+    {
+    case SCALAR:
+      return "Scalar";
+    case ARRAY:
+      return "ARRAY";
+    case HASH:
+      return "HASH";
+    default:
+      abort();
+    }
+}
+
+static void
+assert_type (fz_context *ctx, pdfout_data *data, enum data_type expected)
+{
+  enum data_type type = data->type;
+  
+  if (type != expected)
+    pdfout_throw (ctx, "Expected pdfout_data type %s, got %s",
+		  type_to_string(expected), type_to_string(type));
+}
+
 bool
 pdfout_data_is_scalar (fz_context *ctx, pdfout_data *data)
 {
@@ -55,21 +80,41 @@ pdfout_data_is_hash (fz_context *ctx, pdfout_data *data)
   return (data->type == HASH);
 }
 
+/* void */
+/* pdfout_data_assert_scalar (fz_context *ctx, pdfout_data *data) */
+/* { */
+/*   assert_type (ctx, data, SCALAR); */
+/* } */
+
+/* void */
+/* pdfout_data_assert_array (fz_context *ctx, pdfout_data *data) */
+/* { */
+/*   assert_type (ctx, data, ARRAY); */
+/* } */
+
+/* void */
+/* pdfout_data_assert_hash (fz_context *ctx, pdfout_data *data) */
+/* { */
+/*     assert_type (ctx, data, HASH); */
+/* } */
+
+
+
 static data_hash *to_hash (pdfout_data *data)
 {
-  assert (data->type == HASH);
+  assert_type (ctx, data, HASH);
   return (data_hash *) data;
 }
 
 static data_array *to_array (pdfout_data *data)
 {
-  assert (data->type == ARRAY);
+  assert_type (ctx, data, ARRAY);
   return (data_array *) data;
 }
 
 static data_scalar *to_scalar (pdfout_data *data)
 {
-  assert (data->type == SCALAR);
+  assert_type (ctx, data, SCALAR);
   return (data_scalar *) data;
 }
 
@@ -189,18 +234,18 @@ pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len)
   return s->value;
 }
 
-char *
-pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar)
-{
-  int len;
-  char *string = pdfout_data_scalar_get (ctx, scalar, &len);
+/* char * */
+/* pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar) */
+/* { */
+/*   int len; */
+/*   char *string = pdfout_data_scalar_get (ctx, scalar, &len); */
 
-  for (int i = 0; i < len; ++i)
-    if (string[i] == 0)
-      pdfout_throw (ctx, "string contains embedded null byte");
+/*   for (int i = 0; i < len; ++i) */
+/*     if (string[i] == 0) */
+/*       pdfout_throw (ctx, "string contains embedded null byte"); */
 
-  return string;
-}
+/*   return string; */
+/* } */
 
 int
 pdfout_data_array_len (fz_context *ctx, pdfout_data *array)

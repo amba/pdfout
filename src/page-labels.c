@@ -5,6 +5,83 @@
 
 /* Update PDF's page labels.  */
 
+
+static bool
+has_null_bytes (const char *s, int len)
+{
+  for (int i = 0; i < len; ++i)
+    if (s[i] == 0)
+      return true;
+  
+  return false;
+}
+
+const char *
+get_hash_string (fz_context *ctx, pdfout_data *hash, const char *key)
+{
+  pdfout_data *key_data = pdfout_data_hash_gets (ctx, hash, key);
+
+  if (key_data == NULL)
+    return NULL;
+  
+  if (pdfout_data_is_scalar (ctx, key_data) == false)
+    pdfout_throw (ctx, "expected scalar for key '%s'", key);
+
+  int len;
+  const char *s = pdfout_data_scalar_get (ctx, key_data, &len);
+
+  if (has_null_bytes(s, len))
+    pdfout_throw (ctx, "value of key '%s' has embedded null bytes", key);
+
+  return s;
+}
+
+static void
+check_page_labels (fz_context *ctx, pdfout_data *labels)
+{
+  int len = pdfout_data_array_len (ctx, labels);
+  int previous_page;
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *hash = pdfout_data_array_get (ctx, labels, i);
+      if (pdfout_data_is_hash (ctx, hash) == false)
+	pdfout_throw (ctx, "expected hash element in page label");
+
+      const char *page_string = get_hash_string (ctx, hash, "page");
+      if (page_string == NULL)
+	pdfout_throw (ctx, "missing mandatory key 'page'");
+      
+      unsigned page = pdfout_strtoui(ctx, page_string);
+      if (page < 1)
+	pdfout_throw (ctx, "page must be >= 1");
+      
+      if (i == 0 && page > 1)
+	pdfout_throw (ctx, "first page must be 1");
+
+      if (page <= previous_page)
+	pdfout_throw (ctx, "page numbers must increase");
+
+      const char* first_str = get_hash_string (ctx, hash, "first");
+
+      if (first_str)
+	{
+	  if (pdfout_strtoui (ctx, first_str) < 1)
+	    pdfout_throw (ctx, "value of key 'first' must be >= 1");
+	}
+      
+      get_hash_string (ctx, hash, "prefix");
+      
+      const char *style = get_hash_string (ctx, hash, "style");
+      if (style
+	  && strcmp (style, "arabic") && strcmp (style, "Roman")
+	  && strcmp (style, "roman") && strcmp (style, "Letters")
+	  && strcmp (style, "letters"))
+	pdfout_throw (ctx, "invalid style '%s'", style);
+	
+    }
+  
+}
+
 #define MSG(fmt, args...)					\
   pdfout_msg ("updating PDF: " fmt, ## args)
 /* FIXME: const char **parameter for all functions that produce messages?  */
