@@ -5,128 +5,129 @@
 
 /* Update PDF's page labels.  */
 
-
-static bool
-has_null_bytes (const char *s, int len)
+static void
+assert_c_string(fz_context *ctx, const char *s, int len)
 {
-  for (int i = 0; i < len; ++i)
-    if (s[i] == 0)
-      return true;
-  
-  return false;
+  if (strlen(s) != len)
+    pdfout_throw (ctx, "unexpected string with embedded null bytes");
 }
 
-const char *
-get_hash_string (fz_context *ctx, pdfout_data *hash, const char *key)
+static bool
+streq (const char *a, const char *b)
 {
-  pdfout_data *key_data = pdfout_data_hash_gets (ctx, hash, key);
+  return strcmp (a, b) == 0;
+}
 
-  if (key_data == NULL)
-    return NULL;
+static bool
+strneq (const char *a, const char *b)
+{
+  return strcmp (a, b) != 0;
+}
+
+/* Return page number.  */
+static int
+check_hash (fz_context *ctx, pdfout_data *hash, int previous_page)
+{
+  int len = pdfout_data_hash_len (ctx, hash);
+  int page;
+  for (int i = 0; i < len; ++i)
+    {
+      char *key, *value;
+      int value_len;
+      
+      pdfout_data_hash_get_key_value (ctx, hash, &key, &value, &value_len, i);
+      
+      if (streq (key, "page"))
+	{
+	  assert_c_string (value, value_len);
+	  page = pdfout_strtoint_null (ctx, value);
+	}
+      else if (streq (key, "first"))
+	{
+	  assert_c_string (value, value_len);
+	  int first = pdfout_strtoint_null (ctx, value);
+	  if (first < 1)
+	    pdfout_throw (ctx, "value of key 'first' must be >= 1");
+	}
+      else if (streq (key, "style"))
+	{
+	  assert_c_string (value, value_len);
+	  if (strneq (value, "arabic") && strneq (value, "Roman")
+	      && strneq (value, "roman") && strneq (value, "Letters")
+	      && strneq (value, "letters"))
+	    pdfout_throw (ctx, "invalid style '%s'", value);
+	}
+      /* prefix is arbitrary -> no check. */
+    }
+  if (previous_page == 0 && page != 1)
+    pdfout_throw (ctx, "first page must be 1");
+  if (page <= previous_page)
+    pdfout_throw (ctx, "page numbers must increase");
   
-  if (pdfout_data_is_scalar (ctx, key_data) == false)
-    pdfout_throw (ctx, "expected scalar for key '%s'", key);
-
-  int len;
-  const char *s = pdfout_data_scalar_get (ctx, key_data, &len);
-
-  if (has_null_bytes(s, len))
-    pdfout_throw (ctx, "value of key '%s' has embedded null bytes", key);
-
-  return s;
+  return page;
 }
 
 static void
 check_page_labels (fz_context *ctx, pdfout_data *labels)
 {
   int len = pdfout_data_array_len (ctx, labels);
-  int previous_page;
+  if (len < 1)
+    pdfout_throw (ctx, "empty page labels");
+  
+  int previous_page = 0;
   for (int i = 0; i < len; ++i)
     {
       pdfout_data *hash = pdfout_data_array_get (ctx, labels, i);
-      if (pdfout_data_is_hash (ctx, hash) == false)
-	pdfout_throw (ctx, "expected hash element in page label");
-
-      const char *page_string = get_hash_string (ctx, hash, "page");
-      if (page_string == NULL)
-	pdfout_throw (ctx, "missing mandatory key 'page'");
-      
-      unsigned page = pdfout_strtoui(ctx, page_string);
-      if (page < 1)
-	pdfout_throw (ctx, "page must be >= 1");
-      
-      if (i == 0 && page > 1)
-	pdfout_throw (ctx, "first page must be 1");
-
-      if (page <= previous_page)
-	pdfout_throw (ctx, "page numbers must increase");
-
-      const char* first_str = get_hash_string (ctx, hash, "first");
-
-      if (first_str)
-	{
-	  if (pdfout_strtoui (ctx, first_str) < 1)
-	    pdfout_throw (ctx, "value of key 'first' must be >= 1");
-	}
-      
-      get_hash_string (ctx, hash, "prefix");
-      
-      const char *style = get_hash_string (ctx, hash, "style");
-      if (style
-	  && strcmp (style, "arabic") && strcmp (style, "Roman")
-	  && strcmp (style, "roman") && strcmp (style, "Letters")
-	  && strcmp (style, "letters"))
-	pdfout_throw (ctx, "invalid style '%s'", style);
-	
+      previous_page = check_hash (ctx, hash, previous_page);
     }
   
 }
 
-#define MSG(fmt, args...)					\
-  pdfout_msg ("updating PDF: " fmt, ## args)
-/* FIXME: const char **parameter for all functions that produce messages?  */
-int pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
-			    const pdfout_page_labels_t *labels)
+static pdf_obj *
+hash_to_pdf_dict (fz_contex *ctx, pdf_document *doc, pdfout_data *hash)
 {
-  int num, i;
-  pdf_obj *root, *labels_obj, *array_obj;
 
+}
+
+void pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
+			     pdfout_data *labels)
+{
   if (labels)
-    {
-      num = pdfout_page_labels_length (labels);
-      assert (num >= 1);
-      /* FIXME */
-      /* assert (labels->array[0].page == 0); */
-    }
+    check_page_labels (ctx, labels);
   
-  root = pdf_dict_get (ctx, pdf_trailer (ctx, doc), PDF_NAME_Root);
+  pdf_obj *root = pdf_dict_get (ctx, pdf_trailer (ctx, doc), PDF_NAME_Root);
   
   if (root == NULL)
-    {
-      MSG ("no document catalog, cannot set/unset page labels");
-      return 1;
-    }
+    pdfout_throw (ctx, "no document catalog, cannot set/unset page labels");
   
   if (labels == NULL)
     {
-      MSG ("removing page labels");
+      /* Remove page labels.  */
       pdf_dict_dels (ctx, root, "PageLabels");
-      return 0;
+      return;
     }
 
-  array_obj = pdf_new_array (ctx, doc, 2 * num);
+  int num = pdfout_data_array_len (ctx, labels);
+  pdf_obj *array_obj = pdf_new_array (ctx, doc, 2 * num);
   
   for (i = 0; i < num; ++i)
     {
-      pdf_obj *dict_obj, *string_obj;
+      pdf_obj *string_obj;
       pdfout_page_labels_style_t style;
       char *text, *prefix;
       int text_len;
-      pdfout_page_labels_mapping_t *mapping;
 
-      mapping = pdfout_page_labels_get_mapping (labels, i);
-      dict_obj = pdf_new_dict (ctx, doc, 3);
+      pdfout_data *hash = pdfout_data_array_get (ctx, labels, i);
+      
+      pdf_obj *dict_obj = pdf_new_dict (ctx, doc, 3);
 
+      int len = pdfout_data_hash_len (ctx, hash);
+      for (int j = 0; j < len; ++j)
+	{
+	  char *key;
+	  char *value;
+	  int value_len;
+	  
       prefix = mapping->prefix;
       if (prefix)
 	{
