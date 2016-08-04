@@ -18,6 +18,8 @@ parsing, rendering , creation and manipulation.
 
 =item L<Manual internals|internal/docs>
 
+=item L<Metadata getters and setters|internal/get_set>
+
 =item L<The pdfout_data type|internal/data-formats>
 
 =item L<Character set conversion|internal/charset-conversion>

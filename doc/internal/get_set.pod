@@ -1,0 +1,21 @@
+=pod
+
+=head1 Metadata getters and setters
+
+
+The setters receive a pdfout_data argument.
+
+The getters return a pdfout_data object.
+
+E.g.
+
+ void
+ pdfout_page_labels_set (fz_context *ctx, pdf_document *doc, pdfout_data *labels);
+ 
+ pdfout_data *
+ pdfout_page_labels_get (fz_context *ctx, pdf_document *doc);
+
+Remove the data if the setter is given a C<NULL> argument.
+Return a zero-length pdfout_data object in the getter, if the data is not
+contained in the PDF.
+
