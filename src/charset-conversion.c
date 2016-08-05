@@ -912,3 +912,24 @@ pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, int inbuf_len,
   return pdfout_char_conv (ctx, "UTF-8", "UTF-16", inbuf, inbuf_len,
 			   outbuf_len);
 }
+
+pdf_obj *
+pdfout_utf8_to_str_obj (fz_context *ctx, pdf_document *doc,
+		       const char *inbuf, int inbuf_len)
+{
+  int pdf_text_len;
+  char *pdf_text = pdfout_utf8_to_pdf (ctx, inbuf, inbuf_len, &pdf_text_len);
+
+  /* FIXME: proper try/catch */
+  return pdf_new_string (ctx, doc, pdf_text, pdf_text_len);
+}
+
+const char *
+pdfout_str_obj_to_utf8 (fz_context *ctx, pdf_obj *string, int *len)
+{
+  const char *text = pdf_to_str_buf (ctx, string);
+  int text_len = pdf_to_str_len (ctx, string);
+
+  /* FIXME: proper try/catch */
+  return pdfout_pdf_to_utf8 (ctx, text, text_len, len);
+}

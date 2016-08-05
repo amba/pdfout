@@ -9,6 +9,13 @@ char *
 pdfout_utf8_to_pdf (fz_context *ctx, const char *inbuf, int inbuf_len,
 		    int *outbuf_len);
 
+pdf_obj *
+pdfout_utf8_to_str_obj (fz_context *ctx, pdf_document *doc,
+		       const char *inbuf, int inbuf_len);
+
+char *
+pdfout_str_obj_to_utf8 (fz_context *ctx, pdf_obj *string, int *len);
+
 /* If a codepoint cannot be stored in the target encoding, throw
    FZ_ERROR_ABORT. On all other errors throw FZ_ERROR_GENERIC.  */
 void

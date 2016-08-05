@@ -84,21 +84,6 @@ check_page_labels (fz_context *ctx, pdfout_data *labels)
 }
 
 static pdf_obj *
-utf8_to_pdf_string (fz_context *ctx, pdf_document *doc, const char *utf8,
-		    int utf8_len)
-{
-  int text_len;
-  char *text = pdfout_utf8_to_pdf (ctx, utf8, utf8_len, &text_len);
-
-  /* FIXME: do proper try/catch for the allocations. */
-  pdf_obj *string_obj = pdf_new_string (ctx, doc, text, text_len);
-
-  free (text);
-
-  return string_obj;
-}
-
-static pdf_obj *
 hash_to_pdf_dict (fz_context *ctx, pdf_document *doc, pdfout_data *hash,
 		  int *page)
 {
@@ -114,7 +99,8 @@ hash_to_pdf_dict (fz_context *ctx, pdf_document *doc, pdfout_data *hash,
 	*page = pdfout_strtoint_null (ctx, value);
       else if (streq (key, "prefix"))
 	{
-	  pdf_obj *string = utf8_to_pdf_string (ctx, doc, value, value_len);
+	  pdf_obj *string = pdfout_utf8_to_str_obj (ctx, doc, value,
+						    value_len);
 	  pdf_dict_puts_drop (ctx, dict_obj, "P", string);
 	}
       else if (streq (key, "first"))
@@ -187,153 +173,106 @@ pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
   
 }
 
-static int
-page_labels_get (pdfout_page_labels_t *labels, fz_context *ctx,
-		 pdf_document *doc)
+static void
+push_int_key (fz_context *ctx, pdfout_data *hash, const char *key, int num)
 {
-  bool broken = false;
-  pdf_obj *array, *labels_obj;
-  int length, i;
-  
-  labels_obj = pdf_dict_getp (ctx, pdf_trailer (ctx, doc), "Root/PageLabels");
-  
-  if (labels_obj == NULL)
-    MSG_RETURN (0, "no 'PageLabels' entry in document catalogue");
-  
-  array = pdf_dict_gets (ctx, labels_obj, "Nums");
-  if (pdf_is_array (ctx, array) == false)
-    MSG_RETURN (1, "key 'Nums' not an array");
-  
-  length = pdf_array_len (ctx, array);
-  if (length == 0)
-    MSG_RETURN (1, "empty 'PageLabels' entry");
-  
-  if (length % 2)
-    {
-      MSG ("uneven number in Nums array");
-      broken = true;
-    }
-  
-  for (i = 0; i < length / 2; ++i)
-    {
-      pdfout_page_labels_mapping_t mapping = {0};
-      pdf_obj *dict, *object;
-
-      object = pdf_array_get (ctx, array, 2 * i);
-      
-      if (pdf_is_int (ctx, object) == false)
-	{
-	  MSG ("key in number tree not an int");
-	  broken = true;
-	  continue;
-	}
-      
-      mapping.page = pdf_to_int (ctx, object);
-      
-      if (mapping.page < 0)
-	{
-	  MSG ("key in number tree is < 0");
-	  broken = true;
-	  continue;
-	}
-      
-      dict = pdf_array_get (ctx, array, 2 * i + 1);
-      if (pdf_is_dict (ctx, dict) == false)
-	{
-	  MSG ("value in number tree not a dict");
-	  broken = true;
-	  continue;
-	}
-      
-      object = pdf_dict_get (ctx, dict, PDF_NAME_S);
-      if (object)
-	{
-	  if (pdf_is_name (ctx, object) == false)
-	    {
-	      MSG ("'S' not a name object");
-	      broken = true;
-	    }
-	  else
-	    {
-	      /* pdf_to_name returns the empty string, not NULL, on all errors,
-		 so the strcmps are allowed.  */
-	      if (pdf_name_eq (ctx, object, PDF_NAME_D))
-		mapping.style = PDFOUT_PAGE_LABELS_ARABIC;
-	      else if (pdf_name_eq (ctx, object, PDF_NAME_R))
-		mapping.style = PDFOUT_PAGE_LABELS_UPPER_ROMAN;
-	      else if (pdf_name_eq (ctx, object, PDF_NAME_A))
-		mapping.style = PDFOUT_PAGE_LABELS_UPPER;
-	      else
-		{
-		  /* FIXME once PDF_NAMES for "r" and "a" available.  */
-		  const char *style = pdf_to_name (ctx, object);
-		  if (STREQ (style, "r"))
-		    mapping.style = PDFOUT_PAGE_LABELS_LOWER_ROMAN;
-		  else if (STREQ (style, "a"))
-		    mapping.style = PDFOUT_PAGE_LABELS_LOWER;
-		  else
-		    {
-		      MSG ("unknown numbering style '%s'", style);
-		      broken = true;
-		    }
-		}
-	    }
-	}
-      object = pdf_dict_gets (ctx, dict, "St");
-      if (object)
-	{
-	  if (pdf_is_int (ctx, object) == false)
-	    {
-	      MSG ("'St' not an int");
-	      broken = true;
-	    }
-	  mapping.start = pdf_to_int (ctx, object);
-	  if (mapping.start < 1)
-	    {
-	      MSG ("value %d of 'St' is < 1", mapping.start);
-	      broken = true;
-	      mapping.start = 0;
-	    }
-	}
-      
-      object = pdf_dict_get (ctx, dict, PDF_NAME_P);
-      if (object)
-	{
-	  if (pdf_is_string (ctx, object) == false)
-	    {
-	      MSG ("'P' not a string");
-	      broken = true;
-	    }
-	  else
-	    {
-	      const char *pdf_buf = pdf_to_str_buf (ctx, object);
-	      int pdf_buf_len = pdf_to_str_len (ctx, object);
-	      if (pdf_buf_len)
-		{
-		  int utf8_buf_len;
-		  mapping.prefix = pdfout_pdf_to_utf8 (ctx, pdf_buf,
-						       pdf_buf_len,
-						       &utf8_buf_len);
-		}
-	    }
-	}
-      
-      pdfout_page_labels_push (labels, &mapping);
-      free (mapping.prefix);
-    }
-  
-  return broken;
+  char buf[200];
+  pdfout_snprintf(ctx, buf, "%d", num);
+  int buf_len = strlen(buf);
+  pdfout_data_hash_push_key_value (ctx, hash, key, buf, buf_len);
 }
 
+static void
+parse_dict (fz_context *ctx, pdf_obj *dict, pdfout_data *hash)
+{
+  /* Check Style key. */
+  
+  pdf_obj *style = pdf_dict_get (ctx, dict, PDF_NAME_S);
+  if (style)
+    {
+      char *value;
+      if (pdf_is_name (ctx, style) == false)
+	pdfout_throw (ctx, "style key 'S' not a name object");
+      /* pdf_to_name returns the empty string, not NULL, on all errors,
+	 so the strcmps are allowed.  */
+      if (pdf_name_eq (ctx, object, PDF_NAME_D))
+	value = "arabic";
+      else if (pdf_name_eq (ctx, object, PDF_NAME_R))
+	value = "Roman";
+      else if (pdf_name_eq (ctx, object, PDF_NAME_A))
+	value = "Letters";
+      else
+	{
+	  /* FIXME once PDF_NAMES for "r" and "a" available.  */
+	  const char *style = pdf_to_name (ctx, object);
+	  if (STREQ (style, "r"))
+	    value = "roman";
+	  else if (STREQ (style, "a"))
+	    value = "letters";
+	  else
+	    pdfout_throw (ctx, "unknown numbering style '%s'", style);
+	}
+
+      int len = strlen (value);
+      pdfout_data_hash_push_key_value (ctx, hash, "style", value, len);
+    }
+  
+  pdf_obj *first = pdf_dict_gets (ctx, dict, "St");
+  if (first)
+    {
+      int value  = pdf_to_int (ctx, first);
+      if (value < 1)
+	pdfout_throw (ctx, "value %d of 'St' is < 1 or not an int", value);
+
+      push_int_key (ctx, hash, "first", value);
+    }
+      
+  pdf_obj *prefix = pdf_dict_get (ctx, dict, PDF_NAME_P);
+  if (prefix)
+    {
+      if (pdf_is_string (ctx, pr) == false)
+	pdfout_throw (ctx, "value of 'P' not a string");
+
+      int utf8_len;
+      char *utf8 = pdfout_str_obj_to_utf8 (ctx, prefix, &utf8_len);
+      pdfout_data_hash_push_key_value (ctx, hash, "prefix", utf8, utf8_len);
+    }
+}  
+      
 pdfout_data *
 pdfout_page_labels_get (fz_context *ctx, pdf_document *doc)
 {
-  *labels = pdfout_page_labels_new ();
-  rv = page_labels_get (*labels, ctx, doc);
-  if (pdfout_page_labels_length (*labels) == 0)
+  pdf_obj *trailer = pdf_trailer (ctx, doc);
+  pdf_obj *labels_obj = pdf_dict_getp (ctx, trailer, "Root/PageLabels");
+  pdf_obj *array = pdf_dict_gets (ctx, labels_obj, "Nums");
+
+  int length = pdf_array_len (ctx, array);
+
+  pdfout_data *labels = pdfout_data_array_new ();
+  
+  for (int i = 0; i < length / 2; ++i)
     {
-      pdfout_page_labels_free (*labels);
-      *labels = NULL;
+      pdf_obj *object = pdf_array_get (ctx, array, 2 * i);
+      
+      if (pdf_is_int (ctx, object) == false)
+	pdfout_throw (ctx, "key in number tree not an int");
+
+      pdfout_data *hash = pdf_data_hash_new (ctx);
+      
+      int page = pdf_to_int (ctx, object);
+      if (page < 0)
+	pdfout_throw (ctx, "key in number tree is < 0");
+
+      push_int_key (ctx, hash, "page", page);
+      
+      pdf_obj *dict = pdf_array_get (ctx, array, 2 * i + 1);
+      if (pdf_is_dict (ctx, dict) == false)
+	pdfout_throw (ctx, "value in number tree not a dict");
+
+      parse_dict (ctx, dict, hash);
+      
+      pdfout_data_array_push (ctx, labels, hash);
     }
-  return rv;
+  
+  return labels;
 }

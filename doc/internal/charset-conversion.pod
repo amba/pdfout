@@ -73,6 +73,19 @@ null-terminated.
 
 =item
 
+ pdf_obj *pdfout_utf8_to_str_obj (fz_context *ctx, pdf_document *doc,
+                                  const char *inbuf, int inbuf_len);
+
+Convert UTF-8 string to PDF string object.
+
+=item
+
+ char *pdfout_str_obj_to_utf8 (fz_context *ctx, pdf_obj *string, int *len);
+
+Convert PDF string object to UTF-8 string.
+
+=item
+
  char *pdfout_pdf_to_utf8 (fz_context *ctx, const char *inbuf, int inbuf_len,
                            int *outbuf_len);
 
