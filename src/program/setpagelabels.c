@@ -14,10 +14,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "common.h"
 #include "shared.h"
-#include "../page-labels.h"
+
 static char usage[] = "PDF_FILE";
-static char doc[] = "Read page labels from standard input.\n";
+static char doc[] = "Modify page labels\n";
 
 static struct argp_option options[] = {
   {"default-filename", 'd', 0, 0, "read input from PDF_FILE.pagelabels"},
@@ -39,8 +40,6 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
     case 'o': output_filename = arg; break;
     case 'r': remove_page_labels = true; break;
     case 'd': use_default_filename = true; break;
-
-      break;
       
     case ARGP_KEY_ARG:
       if (state->arg_num == 0)
@@ -75,28 +74,25 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_setpagelabels (int argc, char **argv)
 {
-  fz_context *ctx;
-  pdf_document *doc;
-  yaml_parser_t *parser;
-  pdfout_page_labels_t *labels;
-  
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
-  ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  fz_context *ctx = pdfout_new_context ();
+  pdf_document *doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
+  pdfout_data *labels;
   if (remove_page_labels == false)
     {
-      parser = yaml_parser_new (input);
-      if (pdfout_page_labels_from_yaml (&labels, parser))
-	exit (EX_DATAERR);
+      fz_stream *stm = fz_open_file_ptr (ctx, input);
+      pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
+      labels = pdfout_parser_parse (ctx, parser);
     }
   else
     labels = NULL;
   
-  if (pdfout_page_labels_set (ctx, doc, labels))
-    exit (EX_DATAERR);
+
+  pdfout_page_labels_set (ctx, doc, labels);
   
   pdfout_write_document (ctx, doc, pdf_filename, output_filename);
+
   exit (0);
 }

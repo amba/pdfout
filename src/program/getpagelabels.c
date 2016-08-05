@@ -17,16 +17,9 @@
 
 #include "common.h"
 #include "shared.h"
-#include "../page-labels.h"
 
 static char usage[] = "PDF_FILE";
-static char doc[] = "Dump page labels to standard output.\n"
-
-  "\vReturn values:\n\
-0: PDF_FILE has valid page labels.\n\
-1: PDF_FILE has no page labels. No output is produced.\n\
-2: PDF_FILE's page labels are damaged, but part of them could be extracted.\n\
-3: PDF_FILE's page labels are damaged. No output is produced.";
+static char doc[] = "Dump the page labels to standard output.\n";
 
 
 static struct argp_option options[] = {
@@ -70,7 +63,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 static struct argp_child children[] = {
-  {&pdfout_yaml_emitter_argp, 0, "", -2},
   {&pdfout_general_argp, 0, NULL, 0},
   {0}
 };
@@ -80,29 +72,17 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_getpagelabels (int argc, char **argv)
 {
-  fz_context *ctx;
-  pdf_document *doc;
-  pdfout_page_labels_t *labels;
-  yaml_emitter_t *emitter;
-  int rv;
-
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
-  ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  fz_context *ctx = pdfout_new_context ();
+  pdf_document *doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
-  rv = pdfout_page_labels_get (&labels, ctx, doc);
-  
-  if (labels == NULL)
-    {
-      pdfout_no_output_msg ();
-      exit (2 * rv + 1);
-    }
+  pdfout_data *labels = pdfout_page_labels_get (ctx, doc);
 
-  emitter = yaml_emitter_new (output);
-  
-  if (pdfout_page_labels_to_yaml (emitter, labels))
-    exit (EX_IOERR);
-  
-  exit (2 * rv);
+  fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
+  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
+
+  pdfout_emitter_emit (ctx, emitter, labels);
+
+  exit (0);
 }

@@ -18,7 +18,6 @@
 #include "common.h"
 #include "shared.h"
 #include "data.h"
-#include "info-dict.h"
 
 static char usage[] = "PDF_FILE";
 static char doc[] = "Dump the information dictionary to standard output.\n";
@@ -89,6 +88,6 @@ pdfout_command_getinfo (int argc, char **argv)
   pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
     
   pdfout_emitter_emit (ctx, emitter, hash);
-  
+
   exit (0);
 }

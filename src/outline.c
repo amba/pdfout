@@ -203,7 +203,7 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
       node = pdfout_mapping_gets_node (yaml_doc, mapping, "page");
       assert (node && node->type == YAML_SCALAR_NODE
 	      && pdfout_scalar_value (node));
-      page = pdfout_strtoint_null (pdfout_scalar_value (node));
+      page = pdfout_strtoint_null_old (pdfout_scalar_value (node));
       page_ref = pdf_lookup_page_obj (ctx, doc, page - 1);
       assert (page_ref);
       pdf_array_push (ctx, dest, page_ref);
@@ -226,7 +226,7 @@ convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
 	  /* Count */
 	  node = pdfout_mapping_gets_node (yaml_doc, mapping, "Count");
 	  assert (node && node->type == YAML_SCALAR_NODE);
-	  Count = pdfout_strtoint_null (pdfout_scalar_value (node));
+	  Count = pdfout_strtoint_null_old (pdfout_scalar_value (node));
 	  pdf_dict_puts_drop (ctx, dict, "Count",
 			      pdf_new_int (ctx, doc, Count));
 	}
@@ -270,7 +270,7 @@ convert_yaml_dest (fz_context *ctx, yaml_document_t *yaml_doc,
 	pdf_array_push_drop (ctx, dest, pdf_new_null (ctx, doc));
       else
 	{
-	  real = pdfout_strtof (pdfout_scalar_value (scalar));
+	  real = pdfout_strtof_old (pdfout_scalar_value (scalar));
 	  pdf_array_push_drop (ctx, dest, pdf_new_real (ctx, doc, real));
 	}
     }
@@ -414,7 +414,7 @@ check_yaml_outline_mapping_node (pdf_document *doc,
       MSG ("no page number for title '%s'", title);
       return -1;
     }
-  page = pdfout_strtoint (pdfout_scalar_value (node), &endptr);
+  page = pdfout_strtoint_old (pdfout_scalar_value (node), &endptr);
   if (pdfout_scalar_value (node) == endptr)
     {
       MSG ("invalid page number: '%s'", pdfout_scalar_value (node));

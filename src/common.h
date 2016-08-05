@@ -33,6 +33,10 @@
 #include "shared-with-tests.h"
 #include "libyaml-wrappers.h"
 #include "data.h"
+#include "charset-conversion.h"
+#include "page-labels.h"
+#include "info-dict.h"
+
 /* global variables */
 
 extern yaml_document_t *pdfout_default_dest_array;
@@ -97,19 +101,24 @@ pdf_document *pdfout_pdf_open_document (fz_context *ctx, const char *file);
 char *pdfout_check_utf8 (const char *s, size_t n);
   
 /* On error, return -1.  */
-int pdfout_strtoui (const char *string);
+int pdfout_strtoui (fz_context *ctx, const char *string);
 
 /* sets *endptr to nptr on overflow */
-int pdfout_strtoint (const char *nptr, char **endptr);
+int pdfout_strtoint (fz_context *ctx, const char *nptr, char **endptr);
+
+int pdfout_strtoint_old (const char *nptr, char **endptr);
 
 /* dies on all errors */
-int pdfout_strtoint_null (const char *string);
+int pdfout_strtoint_null (fz_context *ctx, const char *string);
+
+int pdfout_strtoint_null_old (const char *string);
 
 /* returns NaN on all errors */
 float pdfout_strtof_nan (const char *string);
 
 /* dies on all errors */
-float pdfout_strtof (const char *string);
+float pdfout_strtof (fz_context *ctx, const char *string);
+float pdfout_strtof_old (const char *string);
 
 void PDFOUT_NORETURN PDFOUT_PRINTFLIKE (2)
 pdfout_throw_errno (fz_context *ctx, const char *fmt, ...);

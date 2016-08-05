@@ -1,7 +1,4 @@
 #include "common.h"
-#include "data.h"
-#include "charset-conversion.h"
-#include "info-dict.h"
 #include "c-ctype.h"
 
 /* FIXME: test date check function.  */
@@ -161,7 +158,7 @@ static void
 insert_key_value (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
 		  const char *key, const char *value, int value_len)
 {
-  pdf_obj *string_obj = pdfout_utf8_to_string (ctx, doc, value, value_len);
+  pdf_obj *string_obj = pdfout_utf8_to_str_obj (ctx, doc, value, value_len);
   pdf_dict_puts_drop (ctx, dict, key, string_obj);
 }
 
@@ -239,7 +236,7 @@ pdfout_info_dict_get (fz_context *ctx, pdf_document *doc)
 			  name);
 
 	  int string_len;
-	  char *string = pdfout_string_to_utf8 (ctx, val, &string_len);
+	  char *string = pdfout_str_obj_to_utf8 (ctx, val, &string_len);
 	  pdfout_data_hash_push_key_value (ctx, result, name, string,
 					  string_len);
 	  free (string);

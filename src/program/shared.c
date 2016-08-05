@@ -122,14 +122,14 @@ yaml_emitter_parse_opt (int key, char *arg, struct argp_state *state)
   int i;
   switch (key) {
   case 'i':
-    i = pdfout_strtoint_null (arg);
+    i = pdfout_strtoint_null_old (arg);
     if (i <= 1 || i >= 10)
       argp_error (state, "value of '--yaml-indent' must be in range 2-10");
     yaml_emitter_indent = i;
     break;
     
   case 'w':
-    yaml_emitter_line_width = pdfout_strtoint_null (arg);
+    yaml_emitter_line_width = pdfout_strtoint_null_old (arg);
     break;
     
   case 'e':
@@ -277,7 +277,7 @@ get_range (int *result, char *ranges, int page_count)
 	  return 1;
 	}
 
-      number = pdfout_strtoint (number_token, &tailptr);
+      number = pdfout_strtoint_old (number_token, &tailptr);
       if (tailptr[0] != '\0')
 	{
 	  MSG ("not part of an integer: '%s'", tailptr);
@@ -306,7 +306,7 @@ get_range (int *result, char *ranges, int page_count)
 	}
       
       /* parse second number after the hyphen*/
-      number = pdfout_strtoint (range_token, &tailptr);
+      number = pdfout_strtoint_old (range_token, &tailptr);
       if (tailptr[0] != '\0')
 	{
 	  MSG ("not part of an integer: '%s'", tailptr);

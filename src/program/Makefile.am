@@ -24,12 +24,10 @@ getpagelabels.c \
 setpagelabels.c \
 gettxt.c \
 repair.c \
-grep.c \
 create.c \
 debug.c \
 test.h \
 test.c \
-test-page-labels.c \
 libyaml-wrappers.h \
 libyaml-wrappers.c
 

@@ -148,8 +148,7 @@ main (int argc, char **argv)
 
   /* finally call the command... */
   command_list[argmatch_result].function (argc - 1, &argv[1]);
-  error (1, 0, "ERROR: command %s did not exit",
-	 command_name_list[argmatch_result]);
+  exit (0);
 }
 
 static void

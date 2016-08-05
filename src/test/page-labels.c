@@ -30,24 +30,24 @@ main (void)
 {
   test_init ();
   
-  test_pdfout (0, 0, "page_labels_test");
+  /* test_pdfout (0, 0, "page_labels_test"); */
   
-#define COMMAND "pagelabels"
-#define INPUT "-   page: 1\n"
-#define BROKEN_INPUT "abc"
-#define BROKEN_FILE "page-labels-broken.pdf"
-#define BROKEN_EXPECTED INPUT
-#define REALLY_BROKEN_FILE "page-labels-really-broken.pdf"
+const char *input = "\
+[\n\
+    {\n\
+        \"page\": 1\n\
+    }\n\
+]\n";
+
+ const char *broken_inputs[] = {"abc", NULL};
   
-#include "set-get-template2.c"
-  
+ test_set_get ("pagelabels", input, input, "[]\n", broken_inputs);
   /* check default filename option */
   {
     char *pdf = test_new_pdf ();
     char *default_filename = pdfout_append_suffix (pdf, ".pagelabels");
-    const char *string = "-   page: 1\n";
-
-    test_write_string_to_file (default_filename, string);
+    
+    test_write_string_to_file (default_filename, input);
     
     test_pdfout (0, 0, "setpagelabels", pdf, "-d");
 
@@ -55,7 +55,7 @@ main (void)
     
     test_pdfout (0, 0, "getpagelabels", pdf, "-d");
 
-    test_file_matches_string (default_filename, string);
+    test_file_matches_string (default_filename, input);
     xunlink (default_filename);
   }
       

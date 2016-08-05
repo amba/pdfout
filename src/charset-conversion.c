@@ -921,10 +921,14 @@ pdfout_utf8_to_str_obj (fz_context *ctx, pdf_document *doc,
   char *pdf_text = pdfout_utf8_to_pdf (ctx, inbuf, inbuf_len, &pdf_text_len);
 
   /* FIXME: proper try/catch */
-  return pdf_new_string (ctx, doc, pdf_text, pdf_text_len);
+  pdf_obj *result =  pdf_new_string (ctx, doc, pdf_text, pdf_text_len);
+
+  free (pdf_text);
+
+  return result;
 }
 
-const char *
+char *
 pdfout_str_obj_to_utf8 (fz_context *ctx, pdf_obj *string, int *len)
 {
   const char *text = pdf_to_str_buf (ctx, string);

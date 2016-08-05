@@ -179,7 +179,7 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
 	      return 1;
 	    }
 	  /* match */
-	  offset = pdfout_strtoint (line + pattern_buffer[1]->regs.start[1],
+	  offset = pdfout_strtoint_old (line + pattern_buffer[1]->regs.start[1],
 				    NULL);
 	  if (offset > INT_MAX / 10 || offset < INT_MIN / 10)
 	    {
@@ -205,7 +205,7 @@ line_table_to_bookmarks (bookmark *bookmarks, int num_lines,
 	  
       bm->title = xmemdup0 (line + indent, bm->title_len);
 
-      page = pdfout_strtoint (line + pattern_buffer[0]->regs.start[1], NULL);
+      page = pdfout_strtoint_old (line + pattern_buffer[0]->regs.start[1], NULL);
       if (page > INT_MAX / 10 || page < INT_MIN / 10)
 	{
 	  MSG ("overflow in input line %d:\n%s", i + 1, line);
@@ -387,7 +387,7 @@ yaml_sequence_node_to_wysiwyg (yaml_document_t *doc, int sequence, int level,
 	  return 1;
 	}
       page = pdfout_scalar_value (node);
-      page_test = pdfout_strtoint (page, &endptr);
+      page_test = pdfout_strtoint_old (page, &endptr);
       if (page_test <= 0 || endptr == page || endptr[0] != '\0')
 	{
 	  MSG ("invalid page '%s' for title '%s'", page, title);

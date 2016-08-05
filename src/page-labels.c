@@ -1,7 +1,4 @@
 #include "common.h"
-#include "page-labels.h"
-#include "charset-conversion.h"
-#include <argmatch.h>
 
 /* Update PDF's page labels.  */
 
@@ -39,19 +36,19 @@ check_hash (fz_context *ctx, pdfout_data *hash, int previous_page)
       
       if (streq (key, "page"))
 	{
-	  assert_c_string (value, value_len);
+	  assert_c_string (ctx, value, value_len);
 	  page = pdfout_strtoint_null (ctx, value);
 	}
       else if (streq (key, "first"))
 	{
-	  assert_c_string (value, value_len);
+	  assert_c_string (ctx, value, value_len);
 	  int first = pdfout_strtoint_null (ctx, value);
 	  if (first < 1)
 	    pdfout_throw (ctx, "value of key 'first' must be >= 1");
 	}
       else if (streq (key, "style"))
 	{
-	  assert_c_string (value, value_len);
+	  assert_c_string (ctx, value, value_len);
 	  if (strneq (value, "arabic") && strneq (value, "Roman")
 	      && strneq (value, "roman") && strneq (value, "Letters")
 	      && strneq (value, "letters"))
@@ -93,7 +90,7 @@ hash_to_pdf_dict (fz_context *ctx, pdf_document *doc, pdfout_data *hash,
     {
       char *key, *value;
       int value_len;
-      pdfout_data_hash_get_key_value (ctx, hash, &key, &value, &value_len);
+      pdfout_data_hash_get_key_value (ctx, hash, &key, &value, &value_len, j);
 
       if (streq (key, "page"))
 	*page = pdfout_strtoint_null (ctx, value);
@@ -111,7 +108,7 @@ hash_to_pdf_dict (fz_context *ctx, pdf_document *doc, pdfout_data *hash,
 	}
       else if (streq (key, "style"))
 	{
-	  char *name;
+	  const char *name;
 	  if (streq (value, "arabic"))
 	    name = "D";
 	  else if (streq (value, "Roman"))
@@ -155,11 +152,11 @@ pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
   int num = pdfout_data_array_len (ctx, labels);
   pdf_obj *array_obj = pdf_new_array (ctx, doc, 2 * num);
   
-  for (i = 0; i < num; ++i)
+  for (int i = 0; i < num; ++i)
     {
       pdfout_data *hash = pdfout_data_array_get (ctx, labels, i);
       int page;
-      pdf_obj *dict_obj = hash_to_pdf_dict (ctx, doc, hash);
+      pdf_obj *dict_obj = hash_to_pdf_dict (ctx, doc, hash, &page);
 
       pdf_obj *page_obj = pdf_new_int (ctx, doc, page);
       pdf_array_push_drop (ctx, array_obj, page_obj);
@@ -167,7 +164,7 @@ pdfout_page_labels_set (fz_context *ctx, pdf_document *doc,
       pdf_array_push_drop (ctx, array_obj, dict_obj);
     }
       
-  pdfo_obj *labels_obj = pdf_new_dict (ctx, doc, 1);
+  pdf_obj *labels_obj = pdf_new_dict (ctx, doc, 1);
   pdf_dict_puts_drop (ctx, labels_obj, "Nums", array_obj);
   pdf_dict_puts_drop (ctx, root, "PageLabels", labels_obj);
   
@@ -190,27 +187,27 @@ parse_dict (fz_context *ctx, pdf_obj *dict, pdfout_data *hash)
   pdf_obj *style = pdf_dict_get (ctx, dict, PDF_NAME_S);
   if (style)
     {
-      char *value;
+      const char *value;
       if (pdf_is_name (ctx, style) == false)
 	pdfout_throw (ctx, "style key 'S' not a name object");
       /* pdf_to_name returns the empty string, not NULL, on all errors,
 	 so the strcmps are allowed.  */
-      if (pdf_name_eq (ctx, object, PDF_NAME_D))
+      if (pdf_name_eq (ctx, style, PDF_NAME_D))
 	value = "arabic";
-      else if (pdf_name_eq (ctx, object, PDF_NAME_R))
+      else if (pdf_name_eq (ctx, style, PDF_NAME_R))
 	value = "Roman";
-      else if (pdf_name_eq (ctx, object, PDF_NAME_A))
+      else if (pdf_name_eq (ctx, style, PDF_NAME_A))
 	value = "Letters";
       else
 	{
 	  /* FIXME once PDF_NAMES for "r" and "a" available.  */
-	  const char *style = pdf_to_name (ctx, object);
-	  if (STREQ (style, "r"))
+	  const char *string = pdf_to_name (ctx, style);
+	  if (streq(string, "r"))
 	    value = "roman";
-	  else if (STREQ (style, "a"))
+	  else if (streq (string, "a"))
 	    value = "letters";
 	  else
-	    pdfout_throw (ctx, "unknown numbering style '%s'", style);
+	    pdfout_throw (ctx, "unknown numbering style '%s'", string);
 	}
 
       int len = strlen (value);
@@ -230,7 +227,7 @@ parse_dict (fz_context *ctx, pdf_obj *dict, pdfout_data *hash)
   pdf_obj *prefix = pdf_dict_get (ctx, dict, PDF_NAME_P);
   if (prefix)
     {
-      if (pdf_is_string (ctx, pr) == false)
+      if (pdf_is_string (ctx, prefix) == false)
 	pdfout_throw (ctx, "value of 'P' not a string");
 
       int utf8_len;
@@ -246,10 +243,13 @@ pdfout_page_labels_get (fz_context *ctx, pdf_document *doc)
   pdf_obj *labels_obj = pdf_dict_getp (ctx, trailer, "Root/PageLabels");
   pdf_obj *array = pdf_dict_gets (ctx, labels_obj, "Nums");
 
+  if (array && pdf_is_array (ctx, array) == false)
+    pdfout_throw (ctx, "Nums is not an array");
+		  
   int length = pdf_array_len (ctx, array);
 
-  pdfout_data *labels = pdfout_data_array_new ();
-  
+  pdfout_data *labels = pdfout_data_array_new (ctx);
+
   for (int i = 0; i < length / 2; ++i)
     {
       pdf_obj *object = pdf_array_get (ctx, array, 2 * i);
@@ -257,7 +257,7 @@ pdfout_page_labels_get (fz_context *ctx, pdf_document *doc)
       if (pdf_is_int (ctx, object) == false)
 	pdfout_throw (ctx, "key in number tree not an int");
 
-      pdfout_data *hash = pdf_data_hash_new (ctx);
+      pdfout_data *hash = pdfout_data_hash_new (ctx);
       
       int page = pdf_to_int (ctx, object);
       if (page < 0)

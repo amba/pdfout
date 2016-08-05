@@ -16,8 +16,6 @@
 
 
 #include "common.h"
-#include "data.h"
-#include "info-dict.h"
 #include "shared.h"
 
 static char usage[] = "PDF-FILE [INFO-FILE]";

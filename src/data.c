@@ -100,19 +100,19 @@ pdfout_data_is_hash (fz_context *ctx, pdfout_data *data)
 
 
 
-static data_hash *to_hash (pdfout_data *data)
+static data_hash *to_hash (fz_context *ctx, pdfout_data *data)
 {
   assert_type (ctx, data, HASH);
   return (data_hash *) data;
 }
 
-static data_array *to_array (pdfout_data *data)
+static data_array *to_array (fz_context *ctx, pdfout_data *data)
 {
   assert_type (ctx, data, ARRAY);
   return (data_array *) data;
 }
 
-static data_scalar *to_scalar (pdfout_data *data)
+static data_scalar *to_scalar (fz_context *ctx, pdfout_data *data)
 {
   assert_type (ctx, data, SCALAR);
   return (data_scalar *) data;
@@ -217,9 +217,9 @@ pdfout_data_drop (fz_context *ctx, pdfout_data *data)
 {
   switch (data->type)
     {
-    case SCALAR: drop_scalar (ctx, to_scalar (data)); break;
-    case ARRAY: drop_array (ctx, to_array (data)); break;
-    case HASH:  drop_hash (ctx, to_hash (data)); break;
+    case SCALAR: drop_scalar (ctx, to_scalar (ctx, data)); break;
+    case ARRAY: drop_array (ctx, to_array (ctx, data)); break;
+    case HASH:  drop_hash (ctx, to_hash (ctx, data)); break;
     default:
       abort ();
     }
@@ -229,35 +229,24 @@ pdfout_data_drop (fz_context *ctx, pdfout_data *data)
 char *
 pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len)
 {
-  data_scalar *s = to_scalar (scalar);
+  data_scalar *s = to_scalar (ctx, scalar);
   *len = s->len;
   return s->value;
 }
 
-/* char * */
-/* pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar) */
-/* { */
-/*   int len; */
-/*   char *string = pdfout_data_scalar_get (ctx, scalar, &len); */
 
-/*   for (int i = 0; i < len; ++i) */
-/*     if (string[i] == 0) */
-/*       pdfout_throw (ctx, "string contains embedded null byte"); */
-
-/*   return string; */
-/* } */
 
 int
 pdfout_data_array_len (fz_context *ctx, pdfout_data *array)
 {
-  data_array *a = to_array (array);
+  data_array *a = to_array (ctx, array);
   return a->len;
 }
 
 void
 pdfout_data_array_push (fz_context *ctx, pdfout_data *array, pdfout_data *entry)
 {
-  data_array *a = to_array (array);
+  data_array *a = to_array (ctx, array);
 
   if (a->cap == a->len)
     a->list = pdfout_x2nrealloc (ctx, a->list, &a->cap, pdfout_data *);
@@ -268,7 +257,7 @@ pdfout_data_array_push (fz_context *ctx, pdfout_data *array, pdfout_data *entry)
 pdfout_data *
 pdfout_data_array_get (fz_context *ctx, pdfout_data *array, int pos)
 {
-  data_array *a = to_array (array);
+  data_array *a = to_array (ctx, array);
   assert (pos < a->len);
   return a->list[pos];
 }
@@ -276,7 +265,7 @@ pdfout_data_array_get (fz_context *ctx, pdfout_data *array, int pos)
 int
 pdfout_data_hash_len (fz_context *ctx, pdfout_data *hash)
 {
-  data_hash *h = to_hash (hash);
+  data_hash *h = to_hash (ctx, hash);
 
   return h->len;
 }
@@ -285,13 +274,13 @@ void
 pdfout_data_hash_push (fz_context *ctx, pdfout_data *hash,
 		       pdfout_data *key, pdfout_data *value)
 {
-  data_hash *h = to_hash (hash);
-  data_scalar *k = to_scalar (key);
+  data_hash *h = to_hash (ctx, hash);
+  data_scalar *k = to_scalar (ctx, key);
   
   /* Is the key already there?  */
   for (int i = 0; i < h->len; ++i)
     {
-      data_scalar *k_i = to_scalar (h->list[i].key);
+      data_scalar *k_i = to_scalar (ctx, h->list[i].key);
       if (k_i->len == k->len && memcmp (k_i->value, k->value, k->len) == 0)
 	pdfout_throw (ctx, "key '%.*s' is already present in hash",
 		      k->len, k->value);
@@ -308,7 +297,7 @@ pdfout_data_hash_push (fz_context *ctx, pdfout_data *hash,
 pdfout_data *
 pdfout_data_hash_get_key (fz_context *ctx, pdfout_data *hash, int pos)
 {
-  data_hash *h = to_hash (hash);
+  data_hash *h = to_hash (ctx, hash);
   assert (pos < h->len);
 
   return h->list[pos].key;
@@ -317,10 +306,23 @@ pdfout_data_hash_get_key (fz_context *ctx, pdfout_data *hash, int pos)
 pdfout_data *
 pdfout_data_hash_get_value (fz_context *ctx, pdfout_data *hash, int pos)
 {
-  data_hash *h = to_hash (hash);
+  data_hash *h = to_hash (ctx, hash);
   assert (pos < h->len);
 
   return h->list[pos].value;
+}
+
+static char *
+scalar_get_string (fz_context *ctx, pdfout_data *scalar)
+{
+  int len;
+  char *string = pdfout_data_scalar_get (ctx, scalar, &len);
+
+  for (int i = 0; i < len; ++i)
+    if (string[i] == 0)
+      pdfout_throw (ctx, "string contains embedded null byte");
+
+  return string;
 }
 
 void
@@ -329,7 +331,7 @@ pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
 				int i)
 {
   pdfout_data *k = pdfout_data_hash_get_key (ctx, hash, i);
-  *key = pdfout_data_scalar_get_string (ctx, k);
+  *key = scalar_get_string (ctx, k);
   
   pdfout_data *v = pdfout_data_hash_get_value (ctx, hash, i);
   if (pdfout_data_is_scalar (ctx , v) == false)
@@ -351,13 +353,13 @@ pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
 pdfout_data *
 pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
 {
-  data_hash *h = to_hash (hash);
+  data_hash *h = to_hash (ctx, hash);
   
   size_t len = strlen (key);
 
   for (int i = 0; i < len; ++i)
     {
-      data_scalar *k = to_scalar (h->list[i].key);
+      data_scalar *k = to_scalar (ctx, h->list[i].key);
       if (len == k->len && memcmp (key, k->value, len) == 0)
 	return (pdfout_data *) k;
     }
@@ -368,8 +370,8 @@ pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
 
 static int cmp_array (fz_context *ctx, pdfout_data *x, pdfout_data *y)
 {
-  data_array *a = to_array (x);
-  data_array *b = to_array (y);
+  data_array *a = to_array (ctx, x);
+  data_array *b = to_array (ctx, y);
 
   if (a->len != b->len)
     return 1;
@@ -384,8 +386,8 @@ static int cmp_array (fz_context *ctx, pdfout_data *x, pdfout_data *y)
 
 static int cmp_hash (fz_context *ctx, pdfout_data *x, pdfout_data *y)
 {
-  data_hash *a = to_hash (x);
-  data_hash *b = to_hash (y);
+  data_hash *a = to_hash (ctx, x);
+  data_hash *b = to_hash (ctx, y);
 
   if (a->len != b->len)
     return 1;
@@ -409,8 +411,8 @@ pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y)
   else if (x->type == HASH)
     return cmp_hash (ctx, x, y);
 
-  data_scalar *a = to_scalar (x);
-  data_scalar *b = to_scalar (y); 
+  data_scalar *a = to_scalar (ctx, x);
+  data_scalar *b = to_scalar (ctx, y); 
 
   if (a->len == b->len && memcmp (a->value, b->value, a->len) == 0)
     return 0;

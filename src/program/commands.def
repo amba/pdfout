@@ -70,11 +70,11 @@ DEF_COMMAND ("repair",
 	     "Repair broken files"
 	     )
 
-DEF_COMMAND ("grep",
-	     REGULAR,
-	     pdfout_command_grep,
-	     "Search with regular expressions."
-	     )
+/* DEF_COMMAND ("grep", */
+/* 	     REGULAR, */
+/* 	     pdfout_command_grep, */
+/* 	     "Search with regular expressions." */
+/* 	     ) */
 
 DEF_COMMAND ("debug",
 	     DEBUG,
@@ -82,11 +82,11 @@ DEF_COMMAND ("debug",
 	     ""
 	     )
 
-DEF_COMMAND ("page_labels_test",
-	     DEBUG,
-	     pdfout_command_page_labels_test,
-	     ""
-	     )
+/* DEF_COMMAND ("page_labels_test", */
+/* 	     DEBUG, */
+/* 	     pdfout_command_page_labels_test, */
+/* 	     "" */
+/* 	     ) */
 
 /* Local Variables: */
 /* mode: c */

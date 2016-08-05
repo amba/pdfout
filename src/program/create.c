@@ -59,19 +59,19 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'l': landscape = true; break;
     case 'o': output_filename = arg; break;
     case 'p':
-      page_count = pdfout_strtoint_null (arg);
+      page_count = pdfout_strtoint_null_old (arg);
       if (page_count < 0)
 	argp_error (state, "argument of option --page has to be positiv");
       break;
       
     case 'h':
-      height = pdfout_strtof (arg);
+      height = pdfout_strtof_old (arg);
       if (height <= 0)
 	argp_error (state, "height must be positive");
       break;
       
     case 'w':
-      width = pdfout_strtof (arg);
+      width = pdfout_strtof_old (arg);
       if (width <= 0)
 	argp_error (state, "width must be positive");
       break;
@@ -194,7 +194,7 @@ get_size (struct argp_state *state, const char *paper_size, float *width,
     {
       char *tailptr;
       int width0, height0;	/* size of A0/B0/C0 in mm */
-      int n = pdfout_strtoint (upcased + 1, &tailptr);
+      int n = pdfout_strtoint_old (upcased + 1, &tailptr);
       if (tailptr[0] != '\0' || n < 0 || n > 10)
 	DIE (state, paper_size);
       if (upcased[0] == 'A')
