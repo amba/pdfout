@@ -25,3 +25,11 @@ parsing, rendering , creation and manipulation.
 =item L<Character set conversion|internal/charset-conversion>
 
 =back
+
+=head2 MuPDF API
+
+=over
+
+=item L<Objects|mupdf/objects>
+
+=back

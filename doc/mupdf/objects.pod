@@ -1,0 +1,116 @@
+=pod
+
+=head1 PDF objects in MuPDF
+
+=head2 Object types
+
+=over
+
+=item C<null>
+
+represents the null PDF object.
+
+=item C<bool>
+
+either true or false.
+
+=item C<int>
+
+holds a C C<int>.
+
+=item C<int_offset>
+
+holds a C<fz_off_t>.
+
+=item C<real>
+
+holds a C C<float>.
+
+=item C<name>
+
+holds a null-terminated string.
+
+=item C<string>
+
+holds a buffer and it's length.
+
+=item C<array>
+
+holds a list of other object.
+
+=item C<dict>
+
+holds a list of key value pairs of other objects.
+
+=item C<indirect>
+
+holds a pointer to an indirect object (object und generation numbers).
+
+=back
+
+=head2 Common properties and methods.
+
+The opaque C<pdf_obj *> type is used to represent all types of objects.
+
+Each object has a reference counter. The counter is incremented with
+
+ pdf_obj *pdf_keep_obj(fz_context *ctx, pdf_obj *obj);
+
+and decreased with
+
+ void pdf_drop_obj(fz_context *ctx, pdf_obj *obj);
+
+Once the counter gets 0, the object will be deallocated.
+
+TODO: flags marked, dirty, ...
+
+
+=head2 Type queries
+
+ int pdf_is_null(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_bool(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_int(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_real(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_number(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_name(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_string(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_array(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_dict(fz_context *ctx, pdf_obj *obj);
+ int pdf_is_indirect(fz_context *ctx, pdf_obj *obj);
+ int pdf_obj_num_is_stream(fz_context *ctx, pdf_document *doc, int num);
+ int pdf_is_stream(fz_context *ctx, pdf_obj *obj);
+
+
+=head2 null objects
+
+These are constructed with
+
+ pdf_obj *pdf_new_null(fz_context *ctx, pdf_document *doc);
+
+=head2 bool objects
+
+These are constructed with
+
+ pdf_obj *pdf_new_bool(fz_context *ctx, pdf_document *doc, int b);
+
+The value is read with
+
+ int pdf_to_bool(fz_context *ctx, pdf_obj *obj);
+
+=head2 number (int, int_offset, real) objects
+
+These are constructed with
+
+ pdf_obj *pdf_new_int(fz_context *ctx, pdf_document *doc, int i);
+ pdf_obj *pdf_new_int_offset(fz_context *ctx, pdf_document *doc, fz_off_t off);
+ pdf_obj *pdf_new_real(fz_context *ctx, pdf_document *doc, float f);
+
+The values are read with
+
+ int pdf_to_int(fz_context *ctx, pdf_obj *obj);
+ fz_off_t pdf_to_offset(fz_context *ctx, pdf_obj *obj);
+ float pdf_to_real(fz_context *ctx, pdf_obj *obj);
+
+
+
+

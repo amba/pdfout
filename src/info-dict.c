@@ -3,6 +3,7 @@
 
 /* FIXME: test date check function.  */
 
+/* atoi replacement for non null-terminated strings.  */
 /* Return -1 on error.  */
 static int get_number (const char **s, int num_len, int *len)
 {
