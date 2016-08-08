@@ -1,831 +1,568 @@
-
 #include "common.h"
-#include "outline-wysiwyg.h"
 
-static int fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
-			       yaml_document_t *doc, int sequence);
-static void convert_yaml_sequence_to_outline (fz_context *ctx,
-					      yaml_document_t *yaml_doc,
-					      pdf_document *doc,
-					      int sequence, pdf_obj *Parent,
-					      pdf_obj **First,
-					      pdf_obj **Last);
-static void convert_yaml_dest (fz_context *ctx, yaml_document_t *yaml_doc,
-			       pdf_document *doc, yaml_node_t *node,
-			       pdf_obj *dest);
-static int check_yaml_outline (pdf_document *doc, yaml_document_t *yaml_doc);
-static int check_yaml_outline_sequence_node (pdf_document *doc,
-					     yaml_document_t *yaml_doc,
-					     int sequence);
-static int check_yaml_outline_mapping_node (pdf_document *doc,
-					    yaml_document_t *yaml_doc,
-					    int mapping);
-static int check_yaml_dest_sequence (yaml_document_t *doc,
-				     yaml_node_t *node);
-static int check_yaml_dest_sequence_numbers (yaml_document_t *doc,
-					     yaml_node_t *node);
-static void calculate_counts (yaml_document_t *doc);
-static int calculate_node_count (yaml_document_t *doc, int node_id);
-static yaml_node_t *create_default_dest_sequence (yaml_document_t *doc,
-						  int mapping_id);
-static int parse_gotor (yaml_document_t *doc, int flags, fz_point lt,
-			fz_point rb);
-
-yaml_document_t *pdfout_default_dest_array;
-
-int
-pdfout_outline_load (yaml_document_t **doc, FILE *input,
-		     enum pdfout_outline_format format)
+static bool
+streq (const char *a, const char *b)
 {
-  if (format == PDFOUT_OUTLINE_YAML)
-    return pdfout_load_yaml (doc, input);
-  else if (format == PDFOUT_OUTLINE_WYSIWYG)
-    return pdfout_outline_wysiwyg_to_yaml (doc, input);
-  else
-    error (1, 0, "pdfout_outline_load: invalid format");
-
-  return 0;
+  return strcmp (a, b) == 0;
 }
 
-int
-pdfout_outline_dump (FILE *output, yaml_document_t *doc,
-		     enum pdfout_outline_format format)
+static const char *
+data_hash_get_string_key (fz_context *ctx, pdfout_data *hash,
+			  const char *key)
 {
-  if (format == PDFOUT_OUTLINE_YAML)
-    {
-      pdfout_dump_yaml (output, doc);
-      return 0;
-    }
-  else if (format == PDFOUT_OUTLINE_WYSIWYG)
-    return pdfout_outline_dump_to_wysiwyg (output, doc);
-  else
-    error (1, 0, "pdfout_outline_dump: invalid format");
-
-  return 0;
+  pdfout_data *scalar = pdfout_data_hash_gets (ctx, hash, key);
+  int len;
+  char *value = pdfout_data_scalar_get (ctx, scalar, &len);
+  if (strlen (value) != len)
+    pdfout_throw (ctx, "embedded null byte for key '%s'", key);
+  return value;
 }
 
-/* set outline */
-
-#define MSG(fmt, args...) pdfout_msg ("set outline: " fmt, ## args)
-
-int
-pdfout_outline_set (fz_context *ctx, pdf_document *doc,
-		    yaml_document_t *yaml_doc)
+static const char *
+data_array_get_string (fz_context *ctx, pdfout_data *array, int i)
 {
-  pdf_obj *outline, *dict, *root, *First, *Last;
-  yaml_node_t *node;
-  int length;
+  pdfout_data *scalar = pdfout_data_array_get (ctx, array, i);
+  int len;
+  const char *result = pdfout_data_scalar_get (ctx, scalar, &len);
+  if (len != strlen (result))
+    pdfout_throw (ctx, "string with embedded null byte");
+  return result;
+}
 
-  if (yaml_doc)
-    {
-      /*initialize doc->page_count */
-      pdf_count_pages (ctx, doc);
-      
-      if (check_yaml_outline (doc, yaml_doc))
-	return 1;
-    }
-  
-  root = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Root");
-  if (root == NULL)
-    {
-      MSG ("no document catalog, cannot update outline");
-      return 2;
-    }
+static const char *
+data_scalar_get_string (fz_context *ctx, pdfout_data *scalar)
+{
+  int len;
+  const char *value = pdfout_data_scalar_get (ctx, scalar, &len);
+  if (strlen (value) != len)
+    pdfout_throw (ctx, "embedded null byte");
+  return value;
+}
 
-  dict = pdf_new_dict (ctx, doc, 4);
-  pdf_dict_puts_drop (ctx, dict, "Type", pdf_new_name (ctx, doc, "Outlines"));
-  outline = pdf_add_object (ctx, doc, dict);
-  pdf_drop_obj (ctx, dict);
-  pdf_dict_puts_drop (ctx, root, "Outlines", outline);
-
-  if (yaml_doc)
-    node = yaml_document_get_node (yaml_doc, 1);
-  
-  if (yaml_doc == NULL || node == NULL)
-    {
-      MSG ("removing outline");
-      return 0;
-    }
-  assert (node->type == YAML_SEQUENCE_NODE);
-  length = pdfout_sequence_length (yaml_doc, 1);
-  if (length == 0)
-    {
-      MSG ("no input (empty YAML root sequence), removing outline");
-      return 0;
-    }
-  calculate_counts (yaml_doc);
-  convert_yaml_sequence_to_outline (ctx, yaml_doc, doc, 1, outline, &First,
-				    &Last);
-  assert (First && Last);
-  pdf_dict_puts_drop (ctx, outline, "First", First);
-  pdf_dict_puts_drop (ctx, outline, "Last", Last);
-
-  return 0;
+static int
+dest_sequence_length (fz_context *ctx, const char *label)
+{
+  if (streq (label, "XYZ"))
+    return 4;
+  else if (streq (label, "Fit"))
+    return 1;
+  else if (streq (label, "FitH") || streq (label, "FitV"))
+    return 2;
+  else if (streq (label, "FitR"))
+    return 5;
+  else
+    pdfout_throw (ctx, "unknown destination: '%s'", label);
 }
 
 static void
-convert_yaml_sequence_to_outline (fz_context *ctx, yaml_document_t *yaml_doc,
-				  pdf_document *doc, int sequence,
-				  pdf_obj *Parent, pdf_obj **First,
-				  pdf_obj **Last)
+check_sequence_numbers (fz_context *ctx, pdfout_data *dest)
 {
-  pdf_obj *dict, *value, *page_ref, *dest, *Kids_First, *Kids_Last,
-    **ref_table, **dict_table;
-  yaml_node_t *node;
-  int i, length, page, Count, mapping, kids;
-  int title_len;
-  char *title;
-  length = pdfout_sequence_length (yaml_doc, sequence);
-  assert (length > 0);
-  /* allocate objects */
-  ref_table = xnmalloc (length, sizeof (pdf_obj *));
-  dict_table = xnmalloc (length, sizeof (pdf_obj *));
-  for (i = 0; i < length; ++i)
+  int len = pdfout_data_array_len (ctx, dest);
+  for (int i = 1; i < len; ++i)
+    {
+      const char *num = data_array_get_string (ctx, dest, i);
+      if (streq (num, "null"))
+	continue;
+      else if (isnan (pdfout_strtof_nan (num)))
+	pdfout_throw (ctx, "not a float: '%s'", num);
+    }
+}
+			
+static void
+check_dest_sequence (fz_context *ctx, pdfout_data *dest)
+{
+  int len = pdfout_data_array_len (ctx, dest);
+  if (len < 1 || len > 5)
+    pdfout_throw (ctx, "illegal View sequence with length %d", len);
+
+  const char *label = data_array_get_string (ctx, dest, 0);
+  
+  if (len != dest_sequence_length (ctx, label))
+    pdfout_throw (ctx, "illegal %s sequence with length %d", label, len);
+
+  check_sequence_numbers (ctx, dest);
+}
+
+static void
+check_outline_array (fz_context *ctx, pdf_document *doc, pdfout_data *outline);
+
+static void
+check_outline_hash (fz_context *ctx, pdf_document *doc, pdfout_data *hash)
+{
+  int len = pdfout_data_hash_len (ctx, hash);
+  bool has_title = false, has_page = false;
+  
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *key = pdfout_data_hash_get_key (ctx, hash, i);
+      pdfout_data *value = pdfout_data_hash_get_value (ctx, hash, i);
+      if (pdfout_data_scalar_eq (ctx, key, "title"))
+	{
+	  if (pdfout_data_is_scalar (ctx, value) == false)
+	    pdfout_throw (ctx, "value of key 'title' not a scalar");
+	  has_page = true;
+	}
+      else if (pdfout_data_scalar_eq (ctx, key, "page"))
+	{
+	  const char *s = data_scalar_get_string (ctx, value);
+	  int page = pdfout_strtoint_null (ctx, s);
+	  int count = pdf_count_pages (ctx, doc);
+	  if (page < 1)
+	    pdfout_throw (ctx, "page number '%d' is not positive", page);
+	  if (page > count)
+	    pdfout_throw (ctx,
+			  "page number '%d' is bigger than page count %d",
+			  page, count);
+
+	  has_page = true;
+	}
+      else if (pdfout_data_scalar_eq (ctx, key, "view"))
+	check_dest_sequence (ctx, value);
+      else if (pdfout_data_scalar_eq (ctx, key, "open"))
+	{
+	  if (pdfout_data_scalar_eq (ctx, value, "true") == false
+	      && pdfout_data_scalar_eq (ctx, value, "false") == false)
+	    pdfout_throw (ctx, "value of key 'open' not a bool");
+	}
+      else if (pdfout_data_scalar_eq (ctx, key, "kids"))
+	check_outline_array (ctx, doc, value);
+    }
+
+  if (has_title == false)
+    pdfout_throw (ctx, "missing title in outline hash");
+  if (has_page == false)
+    pdfout_throw (ctx, "missing page in outline hash");
+  
+}
+
+static void
+check_outline_array (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+  if (len < 1)
+    pdfout_throw (ctx, "empty outline array");
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *hash = pdfout_data_array_get (ctx, outline, i);
+      check_outline_hash (ctx, doc, hash);
+    }
+}
+
+static void
+check_outline (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+
+  if (len == 0)
+    return;
+  
+  check_outline_array (ctx, doc, outline);
+}
+
+static int
+calculate_kids_count (fz_context *ctx, pdfout_data *hash)
+{
+  pdfout_data *kids = pdfout_data_hash_gets (ctx, hash, "kids");
+  if (kids == NULL)
+    return 0;
+  int kids_len = pdfout_data_array_len (ctx, kids);
+  int count = kids_len;
+  for (int i = 0; i < kids_len; ++i)
+    {
+      pdfout_data *kid_hash = pdfout_data_array_get (ctx, kids, i);
+      int kid_count = calculate_kids_count (ctx, kid_hash);
+      if (kid_count > 0)
+	count += kid_count;
+    }
+
+  const char *open = data_hash_get_string_key (ctx, hash, "open");
+  if (streq (open, "false"))
+    count *= -1;
+  char buf[200];
+  pdfout_snprintf (ctx, buf, "%d", count);
+  pdfout_data *key = pdfout_data_scalar_new (ctx, "open", strlen (open));
+  pdfout_data *value = pdfout_data_scalar_new (ctx, buf, strlen (buf));
+  pdfout_data_hash_push (ctx, hash, key, value);
+
+  return count;
+}
+
+static void
+calculate_counts (fz_context *ctx, pdfout_data *outline)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *hash = pdfout_data_array_get (ctx, outline, i);
+      calculate_kids_count (ctx, hash);
+    }
+}
+
+static pdf_obj *
+copy_indirect_ref (fz_context *ctx, pdf_document *doc, pdf_obj *ref)
+{
+  int num = pdf_to_num (ctx, ref);
+  int gen = pdf_to_gen (ctx, ref);
+  return pdf_new_indirect (ctx, doc, num, gen);
+}
+
+static pdf_obj *
+default_view_array (fz_context *ctx, pdf_document *doc, pdf_obj *dest_array)
+{
+  pdf_array_push (ctx, dest_array, pdf_new_name (ctx, doc, "XYZ"));
+  for (int i = 0; i < 3; ++i)
+    pdf_array_push (ctx, dest_array, pdf_new_null (ctx, doc));
+
+  return dest_array;
+}
+
+static pdf_obj *
+convert_dest_array (fz_context *ctx, pdf_document *doc, pdfout_data *view,
+		    int page)
+{
+  pdf_obj *dest_array = pdf_new_array (ctx, doc, 5);
+  pdf_obj *page_ref = pdf_lookup_page_obj (ctx, doc, page - 1);
+  pdf_array_push (ctx, dest_array, page_ref);
+  if (view == NULL)
+    return default_view_array (ctx, doc, dest_array);
+  int len = pdfout_data_array_len (ctx, view);
+  for (int i = 0; i < len; ++i)
+    {
+      pdf_obj *null_or_real;
+      pdfout_data *scalar = pdfout_data_array_get (ctx, view, i);
+      if (pdfout_data_scalar_eq (ctx, scalar, "null"))
+	null_or_real = pdf_new_null(ctx, doc);
+      else
+	{
+	  null_or_real = pdfout_data_scalar_to_pdf_real (ctx, doc, scalar);
+	}
+      pdf_array_push (ctx, dest_array, null_or_real);
+    }
+
+  return dest_array;
+}
+
+static void
+create_outline_kids_array (fz_context *ctx, pdf_document *doc,
+			   pdfout_data *outline, pdf_obj *parent,
+			   pdf_obj **first, pdf_obj **last);
+
+static void
+create_outline_dict (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
+		     pdfout_data *hash, pdf_obj *parent,
+		     pdf_obj *prev, pdf_obj *next)
+{
+  /* Title.  */
+  pdfout_data *value = pdfout_data_hash_gets (ctx, hash, "title");
+  pdf_obj *title = pdfout_data_scalar_to_pdf_str (ctx, doc, value);
+  pdf_dict_puts_drop (ctx, dict, "Title", title);
+
+  /* Dest.  */
+  const char *page_string = data_hash_get_string_key (ctx, hash, "page");
+  int page = pdfout_strtoint_null (ctx, page_string);
+
+  pdfout_data *view = pdfout_data_hash_gets (ctx, hash, "view");
+  pdf_obj *dest_array = convert_dest_array (ctx, doc, view, page);
+  pdf_dict_puts_drop (ctx, dict, "Dest", dest_array);
+
+  /* Kids.  */
+  pdfout_data *kids = pdfout_data_hash_gets (ctx, hash, "kids");
+  if (kids)
+    {
+      pdf_obj *first, *last;
+      create_outline_kids_array (ctx, doc, kids, dict, &first, &last);
+      pdf_dict_puts_drop (ctx, dict, "First", first);
+      pdf_dict_puts_drop (ctx, dict, "Last", last);
+    }
+  
+  /* Parent.  */
+  pdf_obj *parent_copy = copy_indirect_ref (ctx, doc, parent);
+  pdf_dict_puts_drop (ctx, dict, "Parent", parent_copy);
+
+  /* Prev and Next. */
+  if (prev)
+    {
+      pdf_obj *prev_copy = copy_indirect_ref (ctx, doc, prev);
+      pdf_dict_puts_drop (ctx, dict, "Prev", prev_copy);
+    }
+  if (next)
+    {
+      pdf_obj *prev_copy = copy_indirect_ref (ctx, doc, prev);
+      pdf_dict_puts_drop (ctx, dict, "Prev", prev_copy);
+    }
+  
+    
+}
+
+static void
+create_outline_kids_array (fz_context *ctx, pdf_document *doc,
+			   pdfout_data *outline, pdf_obj *parent,
+			   pdf_obj **first, pdf_obj **last)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+
+  /* Create a table of indirect references. To avoid circular references, all
+     the created objects will make their own copies from these.  */
+  pdf_obj **ref_table = fz_malloc_array (ctx, len, sizeof (pdf_obj *));
+  pdf_obj **dict_table = fz_malloc_array (ctx, len, sizeof (pdf_obj *));
+  for (int i = 0; i < len; ++i)
     {
       dict_table[i] = pdf_new_dict (ctx, doc, 8);
-      ref_table[i] = pdf_add_object (ctx, doc, dict_table[i]);
-      pdf_drop_obj (ctx, dict_table[i]);
+      ref_table[i] = pdf_add_object_drop (ctx, doc, dict_table[i]);
     }
-
-  /* populate objects */
-  for (i = 0; i < length; ++i)
+  
+  /* Populate objects.  */
+  for (int i = 0; i < len; ++i)
     {
-      mapping = pdfout_sequence_get (yaml_doc, sequence, i);
-      assert (mapping);
-      dict = dict_table[i];
-
-      /* Title */
-      node = pdfout_mapping_gets_node (yaml_doc, mapping, "title");
-      assert (node && node->type == YAML_SCALAR_NODE
-	      && pdfout_scalar_value (node));
-      title = pdfout_utf8_to_pdf (ctx, pdfout_scalar_value (node),
-				  node->data.scalar.length, &title_len);
-      value = pdf_new_string (ctx, doc, title, title_len);
-      free (title);
-      pdf_dict_puts_drop (ctx, dict, "Title", value);
-
-      /* Parent */
-      pdf_dict_puts_drop
-	(ctx, dict, "Parent", pdf_new_indirect
-	 (ctx, doc, pdf_to_num (ctx, Parent), pdf_to_gen (ctx, Parent)));
-      
-      /* Prev */
-      if (i > 0)
-	pdf_dict_puts_drop (ctx, dict, "Prev", pdf_new_indirect
-			    (ctx, doc, pdf_to_num (ctx, ref_table[i - 1]),
-			     pdf_to_gen (ctx, ref_table[i - 1])));
-      /* Next */
-      if (i < length - 1)
-	pdf_dict_puts_drop (ctx, dict, "Next", pdf_new_indirect
-			    (ctx, doc, pdf_to_num (ctx, ref_table[i + 1]),
-			     pdf_to_gen (ctx, ref_table[i + 1])));
-
-      /* Dest */
-      dest = pdf_new_array (ctx, doc, 6);
-      node = pdfout_mapping_gets_node (yaml_doc, mapping, "page");
-      assert (node && node->type == YAML_SCALAR_NODE
-	      && pdfout_scalar_value (node));
-      page = pdfout_strtoint_null_old (pdfout_scalar_value (node));
-      page_ref = pdf_lookup_page_obj (ctx, doc, page - 1);
-      assert (page_ref);
-      pdf_array_push (ctx, dest, page_ref);
-      node = pdfout_mapping_gets_node (yaml_doc, mapping, "view");
-      assert (node);
-      convert_yaml_dest (ctx, yaml_doc, doc, node, dest);
-      pdf_dict_puts_drop (ctx, dict, "Dest", dest);
-
-      /* Kids */
-      kids = pdfout_mapping_gets (yaml_doc, mapping, "kids");
-      if (kids)
-	{
-	  convert_yaml_sequence_to_outline (ctx, yaml_doc, doc, kids,
-					    ref_table[i], &Kids_First,
-					    &Kids_Last);
-	  assert (Kids_First && Kids_Last);
-	  pdf_dict_puts_drop (ctx, dict, "First", Kids_First);
-	  pdf_dict_puts_drop (ctx, dict, "Last", Kids_Last);
-
-	  /* Count */
-	  node = pdfout_mapping_gets_node (yaml_doc, mapping, "Count");
-	  assert (node && node->type == YAML_SCALAR_NODE);
-	  Count = pdfout_strtoint_null_old (pdfout_scalar_value (node));
-	  pdf_dict_puts_drop (ctx, dict, "Count",
-			      pdf_new_int (ctx, doc, Count));
-	}
+      pdfout_data *hash = pdfout_data_array_get (ctx, outline, i);
+      create_outline_dict (ctx, doc, dict_table[i], hash, parent,
+			   i > 0 ? ref_table[i - 1] : NULL,
+			   i < len - 1 ? ref_table[i + 1]: NULL);
     }
-
-  /* return First and Last to caller */
-  *First = pdf_new_indirect (ctx, doc, pdf_to_num (ctx, ref_table[0]),
+  *first = pdf_new_indirect (ctx, doc, pdf_to_num (ctx, ref_table[0]),
 			     pdf_to_gen (ctx, ref_table[0]));
-  *Last = pdf_new_indirect (ctx, doc, pdf_to_num (ctx, ref_table[length - 1]),
-			    pdf_to_gen (ctx, ref_table[length - 1]));
-  /* cleanup */
-  for (i = 0; i < length; ++i)
+  *last = pdf_new_indirect (ctx, doc, pdf_to_num (ctx, ref_table[len - 1]),
+			    pdf_to_gen (ctx, ref_table[len - 1]));
+
+  /* Cleanup. */
+  for (int i = 0; i < len; ++i)
     free (ref_table[i]);
   free (ref_table);
   free (dict_table);
 }
 
-static void
-convert_yaml_dest (fz_context *ctx, yaml_document_t *yaml_doc,
-		   pdf_document *doc, yaml_node_t *node, pdf_obj *dest)
+void
+pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
 {
-  yaml_node_t *scalar;
-  float real;
-  int length, i;
-  assert (node->type = YAML_SEQUENCE_NODE && node->data.sequence.items.start
-	  != node->data.sequence.items.top);
-  length = node->data.sequence.items.top - node->data.sequence.items.start;
-  assert (length > 0);
-  scalar =
-    yaml_document_get_node (yaml_doc, *node->data.sequence.items.start);
-  assert (scalar && scalar->type == YAML_SCALAR_NODE);
-  pdf_array_push_drop (ctx, dest,
-		       pdf_new_name (ctx, doc, pdfout_scalar_value (scalar)));
-  for (i = 1; i < length; ++i)
-    {
-      scalar =
-	yaml_document_get_node (yaml_doc,
-				*node->data.sequence.items.start + i);
-      assert (scalar && scalar->type == YAML_SCALAR_NODE);
-      if (pdfout_is_null (pdfout_scalar_value (scalar)))
-	pdf_array_push_drop (ctx, dest, pdf_new_null (ctx, doc));
-      else
-	{
-	  real = pdfout_strtof_old (pdfout_scalar_value (scalar));
-	  pdf_array_push_drop (ctx, dest, pdf_new_real (ctx, doc, real));
-	}
-    }
-}
+  if (outline)
+    check_outline (ctx, doc, outline);
 
-static void
-calculate_counts (yaml_document_t *doc)
-{
-  int length, i;
-  yaml_node_t *root = yaml_document_get_node (doc, 1);
+  pdf_obj *root = pdf_dict_gets (ctx, pdf_trailer (ctx, doc), "Root");
   if (root == NULL)
+    pdfout_throw (ctx, "no document catalog, cannot update outline");
+
+  /* Create new outline dict and write it into the Root dict.  */
+  pdf_obj *dict = pdf_new_dict (ctx, doc, 4);
+  pdf_obj *outline_ref = pdf_add_object_drop (ctx, doc, dict);
+  pdf_dict_puts_drop (ctx, root, "Outlines", outline_ref);
+
+  /* Populate the outline dict.  */
+  pdf_obj *type_name = pdf_new_name (ctx, doc, "Outlines");
+  pdf_dict_puts_drop (ctx, dict, "Type", type_name);
+
+  if (outline == NULL)
+    /* Remove outline.  */
     return;
-  assert (root->type == YAML_SEQUENCE_NODE);
-  length = pdfout_sequence_length (doc, 1);
-  for (i = 0; i < length; ++i)
-    calculate_node_count (doc, pdfout_sequence_get (doc, 1, i));
+
+  calculate_counts (ctx, outline);
+
+  pdf_obj *first, *last;
+  create_outline_kids_array (ctx, doc, outline, outline_ref, &first, &last);
+
+  pdf_dict_puts_drop (ctx, dict, "First", first);
+  pdf_dict_puts_drop (ctx, dict, "Last", last);
 }
 
-static int
-calculate_node_count (yaml_document_t *doc, int node_id)
-{
-  int count, kids, num_kids, i, kid_count, open;
-  yaml_node_t *open_node; /* *node; */
-  char printf_buffer[20];
-  open = 0;
-  count = 0;
-  /* node = yaml_document_get_node (doc, node_id); */
-  /* assert (node && node->type == YAML_MAPPING_NODE); */
-  kids = pdfout_mapping_gets (doc, node_id, "kids");
-  if (kids)
-    {
-      assert (yaml_document_get_node (doc, kids)->type == YAML_SEQUENCE_NODE);
-      num_kids = pdfout_sequence_length (doc, kids);
-      assert (num_kids > 0);
-      for (i = 0; i < num_kids; ++i)
-	{
-	  kid_count =
-	    calculate_node_count (doc, pdfout_sequence_get (doc, kids, i));
-	  if (kid_count <= 0)
-	    ++count;
-	  else
-	    count += kid_count + 1;
-	}
+/* Get outline.  */
 
-      open_node = pdfout_mapping_gets_node (doc, node_id, "open");
-      if (open_node)
-	{
-	  assert (open_node->type == YAML_SCALAR_NODE);
-	  if (pdfout_is_true (pdfout_scalar_value (open_node)))
-	    open = 1;
-	}
-      if (open == 0)
-	count *= -1;
-      pdfout_snprintf_old (printf_buffer, sizeof printf_buffer, "%d", count);
-      pdfout_mapping_push (doc, node_id, "Count", printf_buffer);
+static void
+check_dest (fz_context *ctx, pdf_document *doc, pdf_obj *dest)
+{
+  dest = pdfout_resolve_dest(ctx, doc, dest, FZ_LINK_GOTO);
+  if (dest == NULL)
+    pdfout_throw (ctx, "undefined link kind");
+  if (pdf_is_array (ctx, dest) == false)
+    pdfout_throw (ctx, "destination is not an array object");
+  int len = pdf_array_len (ctx, dest);
+
+  pdf_obj *page_ref = pdf_array_get (ctx, dest, 0);
+  int page = pdf_lookup_page_number (ctx, doc, page_ref);
+  int page_count = pdf_count_pages (ctx, doc);
+  if (page >= page_count)
+    pdfout_throw (ctx, "page %d is exceeds page count %d", page, page_count);
+  
+  pdf_obj *name = pdf_array_get (ctx, dest, 1);
+  char *name_str = pdf_to_name (ctx, name);
+  if (name_str == NULL)
+    pdfout_throw (ctx, "not a name object");
+
+  int expected_len = 1 + dest_sequence_length (ctx, name_str);
+  if (len != expected_len)
+    pdfout_throw (ctx, "illegal %s dest array with length %d", name_str, len);
+  for (int i = 2; i < len; ++i)
+    {
+      pdf_obj *obj = pdf_array_get (ctx, dest, i);
+      if (pdf_is_null (ctx, obj) == false
+	  && pdf_is_number (ctx, obj) == false)
+	pdfout_throw (ctx, "illegal dest array");
     }
-  return count;
+
 }
 
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("check outline: " fmt, ## args);
-
-
-static int
-check_yaml_outline (pdf_document *doc, yaml_document_t *yaml_doc)
+static void
+check_pdf_outline (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
 {
-  yaml_node_t *node = yaml_document_get_root_node (yaml_doc);
-  int length;
-  if (node == NULL)
+  do
     {
-      MSG ("empty YAML document");
-      return 0;
+      if (pdf_mark_obj (ctx, outline))
+	pdfout_throw (ctx, "circular reference");
+      
+      pdf_obj *title = pdf_dict_gets (ctx, outline, "Title");
+      if (pdf_is_string (ctx, title) == false)
+	pdfout_throw (ctx, "outline item without 'Title' key");
+      
+      pdf_obj *count = pdf_dict_gets (ctx, outline, "Count");
+      if (count && pdf_is_int (ctx, count) == false)
+	pdfout_throw (ctx, "value for key 'Count' not an integer");
+      
+      pdf_obj *dest = pdf_dict_gets (ctx, outline, "Dest");
+      if (dest)
+	check_dest (ctx, doc, dest);
+
+      pdf_obj *first = pdf_dict_gets (ctx, outline, "First");
+      if (first)
+	check_pdf_outline (ctx, doc, first);
+      
     }
-  if (node->type != YAML_SEQUENCE_NODE)
-    {
-      MSG ("not a sequence node");
-      return -1;
-    }
-  length = pdfout_sequence_length (yaml_doc, 1);
-  if (length == 0)
-    {
-      MSG ("empty root sequence");
-      return 0;
-    }
-  return check_yaml_outline_sequence_node (doc, yaml_doc, 1);
+  while ((outline = pdf_dict_gets (ctx, outline, "Next")));
 }
 
-static int
-check_yaml_outline_sequence_node (pdf_document *doc,
-				  yaml_document_t *yaml_doc, int sequence)
+static void
+data_hash_push_string_key (fz_context *ctx, pdfout_data *hash, const char *key,
+			   pdfout_data *value)
 {
-  int mapping, length, i;
-  yaml_node_t *node;
-  node = yaml_document_get_node (yaml_doc, sequence);
-  if (node->type != YAML_SEQUENCE_NODE)
-    {
-      MSG ("wrong node type in YAML document");
-      return -1;
-    }
-  length = pdfout_sequence_length (yaml_doc, sequence);
-  if (length < 1)
-    {
-      MSG ("empty sequence");
-      return -1;
-    }
-  for (i = 0; i < length; ++i)
-    {
-      mapping = pdfout_sequence_get (yaml_doc, sequence, i);
-      assert (mapping);
-      if (check_yaml_outline_mapping_node (doc, yaml_doc, mapping))
-	return -1;
-    }
-  return 0;
+  pdfout_data *key_data = pdfout_data_scalar_new (ctx, key, strlen (key));
+  pdfout_data_hash_push (ctx, hash, key_data, value);
 }
 
-static int
-check_yaml_outline_mapping_node (pdf_document *doc,
-				 yaml_document_t *yaml_doc, int mapping_id)
+static pdfout_data *
+data_scalar_from_int (fz_context *ctx, int number)
 {
-  yaml_node_t *node, *mapping;
-  char *title, *endptr;
-  int page, kids;
-  mapping = yaml_document_get_node (yaml_doc, mapping_id);
-  assert (mapping);
-  if (mapping->type != YAML_MAPPING_NODE)
-    {
-      MSG ("wrong node type in YAML document");
-      return -1;
-    }
-  node = pdfout_mapping_gets_node (yaml_doc, mapping_id, "title");
-  if (node == NULL)
-    {
-      MSG ("outline item without title");
-      return -1;
-    }
-  title = pdfout_scalar_value (node);
-  node = pdfout_mapping_gets_node (yaml_doc, mapping_id, "page");
-  if (node == NULL || node->type != YAML_SCALAR_NODE
-      || pdfout_scalar_value (node) == NULL)
-    {
-      MSG ("no page number for title '%s'", title);
-      return -1;
-    }
-  page = pdfout_strtoint_old (pdfout_scalar_value (node), &endptr);
-  if (pdfout_scalar_value (node) == endptr)
-    {
-      MSG ("invalid page number: '%s'", pdfout_scalar_value (node));
-      return -1;
-    }
-  if (page < 1)
-    {
-      MSG ("page number %d for title '%s' not a positive integer",
-		 page, title);
-      return -1;
-    }
-  if (page > doc->page_count)
-    {
-      MSG ("page number %d for title '%s' is greater than pagecount %d",
-		  page, title, doc->page_count);
-      return -1;
-    }
-  node = pdfout_mapping_gets_node (yaml_doc, mapping_id, "view");
-  if (node == NULL)
-    node = create_default_dest_sequence (yaml_doc, mapping_id);
-  if (check_yaml_dest_sequence (yaml_doc, node))
-    {
-      MSG ("value of key 'view' broken for title '%s'", title);
-      return -1;
-    }
-
-  node = pdfout_mapping_gets_node (yaml_doc, mapping_id, "open");
-  if (node)
-    {
-      if (node->type != YAML_SCALAR_NODE)
-	{
-	  MSG ("value of key 'open' for title '%s' not a scalar", title);
-	  return -1;
-	}
-      if (pdfout_is_bool (pdfout_scalar_value (node)) == 0)
-	{
-	  MSG ("value of key 'open' for title '%s' not a YAML bool",
-		     pdfout_scalar_value (node));
-	  return -1;
-	}
-    }
-  kids = pdfout_mapping_gets (yaml_doc, mapping_id, "kids");
-  if (kids)
-    if (check_yaml_outline_sequence_node (doc, yaml_doc, kids))
-      return -1;
-
-  return 0;
+  char buf[200];
+  int len = pdfout_snprintf (ctx, buf, "%d", number);
+  return pdfout_data_scalar_new (ctx, buf, len);
 }
 
-static yaml_node_t *
-create_default_dest_sequence (yaml_document_t *doc, int mapping)
+static pdfout_data *
+get_view_array (fz_context *ctx, pdf_document *doc, pdf_obj *dest, int *page)
 {
-  int sequence;
-  int i, length;
-  yaml_node_t *array, *scalar;
-  sequence =
-    pdfout_yaml_document_add_sequence (doc, 0, YAML_FLOW_SEQUENCE_STYLE);
-  if (pdfout_default_dest_array == NULL)
+  dest = pdfout_resolve_dest(ctx, doc, dest, FZ_LINK_GOTO);
+
+  pdf_obj *page_ref = pdf_array_get (ctx, dest, 0);
+  *page = pdf_lookup_page_number (ctx, doc, page_ref);
+
+  pdfout_data *view_array = pdfout_data_array_new (ctx);
+
+  pdf_obj *kind = pdf_array_get (ctx, dest, 1);
+  pdfout_data *kind_data = pdfout_data_scalar_from_pdf (ctx, kind);
+  pdfout_data_array_push (ctx, view_array, kind_data);
+
+  int len = pdf_array_len (ctx, dest);
+  
+  for (int i = 2; i < len; ++i)
     {
-      pdfout_sequence_push (doc, sequence, "XYZ");
-      pdfout_sequence_push (doc, sequence, "null");
-      pdfout_sequence_push (doc, sequence, "null");
-      pdfout_sequence_push (doc, sequence, "null");
-      pdfout_mapping_push_id (doc, mapping, "view", sequence);
-      return yaml_document_get_node (doc, sequence);
+      pdf_obj *item = pdf_array_get (ctx, dest, i);
+      pdfout_data *item_data = pdfout_data_scalar_from_pdf (ctx, item);
+      pdfout_data_array_push (ctx, view_array, item_data);
     }
-  array = yaml_document_get_root_node (pdfout_default_dest_array);
-  if (array == NULL || array->type != YAML_SEQUENCE_NODE)
+
+  return view_array;
+}
+
+static pdfout_data *
+get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *outline);
+
+static pdfout_data *
+get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
+{
+  pdf_obj *title_obj = pdf_dict_gets (ctx, outline, "Title");
+  pdfout_data *title = pdfout_data_scalar_from_pdf (ctx, title_obj);
+
+  pdf_obj *dest = pdf_dict_gets (ctx, outline, "Dest");
+  pdfout_data *view_array;
+
+  int page;
+  
+  if (dest)
+    view_array = get_view_array (ctx, doc, dest, &page);
+  else
     {
-      pdfout_msg ("default view not a sequence");
+      int title_len;
+      char *title_str = pdfout_data_scalar_get (ctx, title, &title_len);
+      pdfout_warn (ctx, "outline item with title '%s' has no destination",
+		   title_str);
+      pdfout_data_drop (ctx, title);
       return NULL;
     }
-  length = pdfout_sequence_length (pdfout_default_dest_array, 1);
-  for (i = 0; i < length; ++i)
+  
+  
+  pdfout_data *hash = pdfout_data_hash_new (ctx);
+  
+  
+  data_hash_push_string_key (ctx, hash, "title", title);
+
+  data_hash_push_string_key (ctx, hash, "view", view_array);
+  
+  pdfout_data *page_value = data_scalar_from_int (ctx, page);
+
+  data_hash_push_string_key (ctx, hash, "page", page_value);
+  
+  pdf_obj *count_obj = pdf_dict_gets (ctx, outline, "Count");
+  if (count_obj)
     {
-      scalar = pdfout_sequence_get_node (pdfout_default_dest_array, 1, i);
-      assert (scalar);
-      if (scalar->type != YAML_SCALAR_NODE)
-	{
-	  pdfout_msg ("node in default view not a scalar");
-	  return NULL;
-	}
-      pdfout_sequence_push (doc, sequence, pdfout_scalar_value (scalar));
+      int count_int = pdf_to_int (ctx, count_obj);
+      const char *value = count_int > 0 ? "true" : "false";
+      pdfout_data_hash_push_key_value (ctx, hash, "open", value,
+				       strlen (value));
     }
-  pdfout_mapping_push_id (doc, mapping, "view", sequence);
-  return yaml_document_get_node (doc, sequence);
+
+  /* Kids.  */
+  pdf_obj *first = pdf_dict_gets (ctx, outline, "First");
+  if (first)
+    {
+      pdfout_data *kids_array = get_outline_array (ctx, doc, first);
+      if (kids_array)
+	data_hash_push_string_key (ctx, hash, "kids", kids_array);
+    }
+
+  return hash;
 }
 
-#undef MSG
-#define MSG(fmt, args...) \
-  pdfout_msg ("check outline: 'view' key: " fmt, ## args)
-
-static int
-check_yaml_dest_sequence (yaml_document_t *doc, yaml_node_t *node)
+static pdfout_data *
+get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
 {
-  int length, *item_id;
-  yaml_node_t *label_item, *item;
-  char *label, *value;
+  pdfout_data *result_array = pdfout_data_array_new (ctx);
+  do
+    {
+      pdfout_data *hash = get_outline_hash (ctx, doc, outline);
+      if (hash)
+	pdfout_data_array_push (ctx, result_array, hash);
+    }
+  while ((outline = pdf_dict_gets (ctx, outline, "Next")));
 
-  if (node == NULL || node->type != YAML_SEQUENCE_NODE)
-    {
-      MSG ("destination is not a sequence");
-      return -1;
-    }
-  length = node->data.sequence.items.top - node->data.sequence.items.start;
-  if (length < 1 || length > 5)
-    {
-      MSG ("illegal View sequence with length %d", length);
-      return -1;
-    }
-  label_item = yaml_document_get_node (doc, *node->data.sequence.items.start);
-
-  if (label_item->type != YAML_SCALAR_NODE
-      || pdfout_scalar_value (label_item) == NULL)
-    {
-      MSG ("label not a scalar");
-      return -1;
-    }
-  label = pdfout_scalar_value (label_item);
-  if (strcmp (label, "XYZ") == 0)
-    {
-      if (length != 4)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-      if (check_yaml_dest_sequence_numbers (doc, node))
-	return -1;
-    }
-  else if (strcmp (label, "Fit") == 0)
-    {
-      if (length != 1)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-    }
-  else if (strcmp (label, "FitH") == 0)
-    {
-      if (length != 2)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-      if (check_yaml_dest_sequence_numbers (doc, node))
-	return -1;
-    }
-  else if (strcmp (label, "FitV") == 0)
-    {
-      if (length != 2)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-      if (check_yaml_dest_sequence_numbers (doc, node))
-	return -1;
-    }
-  else if (strcmp (label, "FitR") == 0)
-    {
-      /* no null allowed here */
-      if (length != 5)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-      for (item_id = node->data.sequence.items.start + 1;
-	   item_id < node->data.sequence.items.top; ++item_id)
-	{
-	  item = yaml_document_get_node (doc, *item_id);
-	  if (item == NULL || item->type != YAML_SCALAR_NODE
-	      || pdfout_scalar_value (item) == NULL)
-	    {
-	      MSG ("illegal destination");
-	      return -1;
-	    }
-	  value = pdfout_scalar_value (item);
-	  if (isnan (pdfout_strtof_nan (value)))
-	    {
-	      MSG ("illegal destination");
-	      return -1;
-	    }
-	}
-    }
-  else if (strcmp (label, "FitB") == 0)
-    {
-      if (length != 1)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-    }
-  else if (strcmp (label, "FitBH") == 0)
-    {
-      if (length != 2)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-      if (check_yaml_dest_sequence_numbers (doc, node))
-	return -1;
-    }
-  else if (strcmp (label, "FitBV") == 0)
-    {
-      if (length != 2)
-	{
-	  MSG ("illegal %s sequence with length %d", label, length);
-	  return -1;
-	}
-      if (check_yaml_dest_sequence_numbers (doc, node))
-	return -1;
-    }
+  if (pdfout_data_array_len (ctx, result_array))
+    return result_array;
   else
     {
-      MSG ("unknown destination: '%s'", label);
-      return -1;
+      /* Empty list, return NULL.  */
+      pdfout_data_drop (ctx, result_array);
+      return NULL;
     }
-  return 0;
 }
 
-static int
-check_yaml_dest_sequence_numbers (yaml_document_t *doc, yaml_node_t *node)
+pdfout_data *
+pdfout_outline_get (fz_context *ctx, pdf_document *doc)
 {
-  int *item_id;
-  yaml_node_t *item;
-  char *value;
-  for (item_id = node->data.sequence.items.start + 1;
-       item_id < node->data.sequence.items.top; ++item_id)
+  pdf_obj *root = pdf_dict_get (ctx, pdf_trailer (ctx, doc), PDF_NAME_Root);
+  pdf_obj *outline_obj = pdf_dict_get (ctx, root, PDF_NAME_Outlines);
+  pdf_obj *first = pdf_dict_get (ctx, outline_obj, PDF_NAME_First);
+
+  if (first)
     {
-      item = yaml_document_get_node (doc, *item_id);
-      if (item == NULL || item->type != YAML_SCALAR_NODE
-	  || pdfout_scalar_value (item) == NULL)
-	{
-	  MSG ("illegal destination");
-	  return -1;
-	}
-      value = pdfout_scalar_value (item);
-      if (pdfout_is_null (value))
-	continue;
-      if (isnan (pdfout_strtof_nan (value)))
-	{
-	  MSG ("not a float: \"%s\"", value);
-	  return -1;
-	}
-    }
-  return 0;
-}
-
-/* get outline */
-
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("get outline: " fmt, ## args)
-int
-pdfout_outline_get (yaml_document_t **yaml_doc_ptr, fz_context *ctx,
-		    pdf_document *doc)
-{
-  fz_outline *outline;
-  int root;
-  yaml_document_t *yaml_doc;
-  bool have_error = false;
-
-  outline = pdf_load_outline (ctx, doc);
-  if (outline == NULL)
-    {
-      MSG ("document has no outline");
-      have_error = true;
-    }
-
-  if (have_error == false)
-    {
-      
-      *yaml_doc_ptr = yaml_doc = XZALLOC (yaml_document_t);
-      pdfout_yaml_document_initialize (yaml_doc, NULL, NULL, NULL, 1, 1);
-  
-      root = fz_outline_to_yaml (ctx, outline, yaml_doc, 0);
-      
-      if (pdfout_sequence_length (yaml_doc, root) == 0)
-	{
-	  if (pdfout_batch_mode == 0)
-	    MSG ("document has no outline");
-	  have_error = 1;
-	}
-    }
-
-  fz_drop_outline (ctx, outline);
-  
-  if (have_error)
-    {
-      *yaml_doc_ptr = NULL;
-      return 1;
-    }
-  
-  return 0;
-      
-}
-
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("convert outline to YAML: " fmt, ## args)
-
-/* returns root node id  */
-static int
-fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
-		    yaml_document_t *doc, int sequence)
-{
-  /* FIXME: add option to fail on unsupported link type */
-  int value, mapping_id;
-  char printf_buffer[256];
-  yaml_scalar_style_t style;
-  if (sequence == 0)		/* new level */
-    sequence = pdfout_yaml_document_add_sequence (doc, NULL, 0);
-
-  mapping_id = pdfout_yaml_document_add_mapping (doc, NULL, 0);
-  style = strchr (outline->title, '\n') ? YAML_DOUBLE_QUOTED_SCALAR_STYLE
-    : YAML_ANY_SCALAR_STYLE;
-  value =
-    pdfout_yaml_document_add_scalar (doc, NULL, outline->title, -1, style);
-  pdfout_mapping_push_id (doc, mapping_id, "title", value);
-
-  if (outline->dest.kind == FZ_LINK_GOTO)
-    {
-      pdfout_snprintf_old (printf_buffer, sizeof printf_buffer, "%d",
-		       outline->dest.ld.gotor.page + 1);
-      pdfout_mapping_push (doc, mapping_id, "page", printf_buffer);
-
-      fz_point lt, rb;
-      int flags;
-      lt = outline->dest.ld.gotor.lt;
-      rb = outline->dest.ld.gotor.rb;
-      flags = outline->dest.ld.gotor.flags;
-      value = parse_gotor (doc, flags, lt, rb);
-      if (value > 0)
-	pdfout_mapping_push_id (doc, mapping_id, "view", value);
-      else
-	MSG ("cannot parse link dest for title '%s'", outline->title);
+      check_pdf_outline (ctx, doc, first);
+      return get_outline_array (ctx, doc, first);
     }
   else
-    MSG ("skipping outline item with title '%s' as it is not a goto link"
-	 " and this is not yet supported", outline->title);
-  
-  if (outline->is_open)
-    pdfout_mapping_push (doc, mapping_id, "open", "true");
-
-  if (outline->down)
-    {				/* outline has children */
-      value = fz_outline_to_yaml (ctx, outline->down, doc, 0);
-      pdfout_mapping_push_id (doc, mapping_id, "kids", value);
-    }
-  pdfout_yaml_document_append_sequence_item (doc, sequence, mapping_id);
-
-  if (outline->next)
-    fz_outline_to_yaml (ctx, outline->next, doc, sequence);
-  return sequence;
-}
-
-/* returns id of the generated sequence node  */
-static int
-parse_gotor (yaml_document_t *doc, int flags, fz_point lt, fz_point rb)
-{
-  /* FIXME: add option to fail on unknown gotor? */
-  char buffer[256];
-  int array =
-    pdfout_yaml_document_add_sequence (doc, NULL, YAML_FLOW_SEQUENCE_STYLE);
-  if (flags & fz_link_flag_r_is_zoom)
-    {				/* XYZ */
-      pdfout_sequence_push (doc, array, "XYZ");
-      if (flags & fz_link_flag_l_valid)
-	{
-	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
-	  pdfout_sequence_push (doc, array, buffer);
-	}
-      else
-	pdfout_sequence_push (doc, array, "null");
-      if (flags & fz_link_flag_t_valid)
-	{
-	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
-	  pdfout_sequence_push (doc, array, buffer);
-	}
-      else
-	pdfout_sequence_push (doc, array, "null");
-
-      if (flags & fz_link_flag_r_valid)
-	{
-	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.x);
-	  pdfout_sequence_push (doc, array, buffer);
-	}
-      else
-	pdfout_sequence_push (doc, array, "null");
-    }
-  else if (flags == 060)
-    pdfout_sequence_push (doc, array, "Fit");
-
-  else if (flags == 020)
-    {
-      pdfout_sequence_push (doc, array, "FitH");
-      pdfout_sequence_push (doc, array, "null");
-    }
-  else if (flags == 022)
-    {
-      pdfout_sequence_push (doc, array, "FitH");
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
-      pdfout_sequence_push (doc, array, buffer);
-    }
-  else if (flags == 040)
-    {
-      pdfout_sequence_push (doc, array, "FitV");
-      pdfout_sequence_push (doc, array, "null");
-    }
-  else if (flags == 041)
-    {
-      pdfout_sequence_push (doc, array, "FitV");
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
-      pdfout_sequence_push (doc, array, buffer);
-    }
-  else if (flags == 077)
-    {
-      pdfout_sequence_push (doc, array, "FitR");
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
-      pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.y);
-      pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.x);
-      pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
-      pdfout_sequence_push (doc, array, buffer);
-    }
-  else
-    {
-      MSG ("unknown flag '0%o' in parse_gotor", flags);
-      return 0;
-    }
-  return array;
+    return pdfout_data_array_new (ctx);
 }
 

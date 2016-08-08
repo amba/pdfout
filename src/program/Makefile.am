@@ -14,9 +14,10 @@ pdfout.c \
 commands.def \
 shared.c \
 shared.h \
+debug-io-handle.c \
+debug-io-handle.h \
 getoutline.c \
 setoutline.c \
-convert-outline.c \
 getinfo.c \
 setinfo.c \
 pagecount.c \
@@ -27,9 +28,7 @@ repair.c \
 create.c \
 debug.c \
 test.h \
-test.c \
-libyaml-wrappers.h \
-libyaml-wrappers.c
+test.c
 
 
 LDADD = \

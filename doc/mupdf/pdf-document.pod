@@ -1,0 +1,40 @@
+=pod
+
+=head1 PDF documents
+
+=head2 Create
+
+ pdf_document *pdf_create_document(fz_context *ctx);
+
+Create a fresh PDF document.
+
+=head2 Open
+
+ pdf_document *pdf_open_document(fz_context *ctx, const char *filename);
+ pdf_document *pdf_open_document_with_stream(fz_context *ctx, fz_stream *file);
+
+Read a PDF document from a file or stream.
+
+=head2 Save
+
+ void pdf_write_document(fz_context *ctx, pdf_document *doc, fz_output *out, pdf_write_options *opts);
+ void pdf_save_document(fz_context *ctx, pdf_document *doc, const char *filename, pdf_write_options *opts);
+
+Write a (possibly changed) document to a file or output stream.
+
+C<pdf_write_options> is a struct with the following fields:
+
+	int do_incremental; /* Write just the changed objects. */
+	int do_pretty; /* Pretty-print dictionaries and arrays. */
+	int do_ascii; /* ASCII hex encode binary streams. */
+	int do_compress; /* Compress streams. */
+	int do_compress_images; /* Compress (or leave compressed) image streams. */
+	int do_compress_fonts; /* Compress (or leave compressed) font streams. */
+	int do_decompress; /* Decompress streams (except when compressing images/fonts). */
+	int do_garbage; /* Garbage collect objects before saving; 1=gc, 2=re-number, 3=de-duplicate. */
+	int do_linear; /* Write linearised. */
+	int do_clean; /* Sanitize content streams. */
+	int continue_on_error; /* If set, errors are (optionally) counted and writing continues. */
+	int *errors; /* Pointer to a place to store a count of errors */
+
+

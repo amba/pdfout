@@ -97,53 +97,6 @@ struct argp pdfout_pdf_output_argp = {
   pdf_output_options, pdf_output_parse_opt
 };
 
-/* YAML emitter options */
-
-static struct argp_option yaml_emitter_options[] = {
-  {0, 0, 0, 0, "YAML emitter options:"},
-  {"yaml-indent", 'i', "[1-10]", 0,
-   "indentation increment (default: 4)"},
-  {"yaml-line-width", 'w', "WIDTH", 0,
-   "preferred line width (default: unlimited)"},
-  {"yaml-escape-unicode", 'e', 0, 0,
-   "use universal character names \\xHH, \\uHHHH and \\UHHHHHHHH"
-   " for non-ASCII Unicode codepoints"},
-  {0}
-};
-
-
-extern int yaml_emitter_indent;
-extern int yaml_emitter_line_width;
-extern bool yaml_emitter_escape_unicode;
-
-static error_t
-yaml_emitter_parse_opt (int key, char *arg, struct argp_state *state)
-{
-  int i;
-  switch (key) {
-  case 'i':
-    i = pdfout_strtoint_null_old (arg);
-    if (i <= 1 || i >= 10)
-      argp_error (state, "value of '--yaml-indent' must be in range 2-10");
-    yaml_emitter_indent = i;
-    break;
-    
-  case 'w':
-    yaml_emitter_line_width = pdfout_strtoint_null_old (arg);
-    break;
-    
-  case 'e':
-    yaml_emitter_escape_unicode = true;
-    break;
-    
-  default:
-    return ARGP_ERR_UNKNOWN;
-  }
-  return 0;
-}
-
-struct argp pdfout_yaml_emitter_argp =
-  {yaml_emitter_options, yaml_emitter_parse_opt};
 
 FILE *
 xfopen (struct argp_state *state, const char *path, const char *mode)

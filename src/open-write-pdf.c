@@ -97,3 +97,24 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc,
       free (write_filename);
     }
 }
+
+pdf_document *
+pdfout_create_blank_pdf (fz_context *ctx, int page_count, fz_rect *rect)
+{
+  fz_rect default_rect = {0, 0, 595.2756f, 841.8898f};
+  if (rect == NULL)
+    rect = &default_rect;
+  
+  pdf_document *doc = pdf_create_document (ctx);
+  
+  pdf_obj *resources = pdf_new_dict (ctx, doc, 0);
+  fz_buffer *contents = fz_new_buffer (ctx, 0);
+
+  for (int i = 0; i < page_count; ++i)
+    {
+      pdf_obj *page = pdf_add_page (ctx, doc, rect, 0, resources, contents);
+      pdf_insert_page (ctx, doc, i, page);
+    }
+
+  return doc;
+}

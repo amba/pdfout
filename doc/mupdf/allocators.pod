@@ -1,0 +1,46 @@
+=pod
+
+=head1 Memory allocators
+
+All of the following functions throw on error to allocate.
+
+=over
+
+=item
+
+ void *fz_malloc(fz_context *ctx, size_t size);
+ void *fz_calloc(fz_context *ctx, size_t count, size_t size);
+
+These are like C<malloc> and C<calloc>, but throw on error to allocate.
+
+=item
+
+ fz_malloc_struct(CTX, STRUCT);
+
+macro frontend defined as
+
+ fz_calloc(CTX,1,sizeof(STRUCT));
+
+=item
+
+ void *fz_malloc_array(fz_context *ctx, size_t count, size_t size);
+
+Like C<fz_calloc>, but do not zero the allocated memory.
+
+=item
+
+ void *fz_resize_array(fz_context *ctx, void *p, size_t count, size_t size);
+
+Resize the existing block C<p>. Return a pointer to the resized block. If
+C<count> or C<size> is C<0>, free C<p> and return C<NULL>.
+
+=item
+
+ char *fz_strdup(fz_context *ctx, const char *s);
+
+Duplicate a C string.
+
+=back
+
+
+

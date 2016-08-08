@@ -27,16 +27,19 @@ Throw if C<string> does not contain a null-terminated C<float> number.
 =item
 
  int pdfout_snprintf_imp (fz_context *ctx, char *buf, int size, const char *fmt, ...);
-
-Safe frontend to C<sprintf>. Throw if the result is longer than C<size>.
+  int pdfout_vsnprintf_imp (fz_context *ctx, char *buf, int size, const char *fmt, va_list ap);
+  
+Safe frontends to C<sprintf>. Throw if the result is longer than C<size>.
 
 =item
 
  int pdfout_snprintf (fz_context *ctx, char *buf, const char *fmt, ...);
+ int pdfout_vsnprintf (fz_context *ctx, char *buf, const char *fmt, va_list ap);
 
-Macro. Defined as
+Macros. Defined as
 
   pdfout_snprintf_imp (ctx, buff, sizeof buff, fmt, ## args)
+  pdfout_vsnprintf_imp (ctx, buff, sizeof buff, fmt, ap)
 
 
 =back
@@ -63,5 +66,11 @@ va_list version of C<pdfout_throw>.
 
 Like C<pdfout_throw>, but show the  message produced by C<strerror> if errno is
 set.
+
+=item
+
+ void pdfout_warn (fz_context *ctx, const char *fmt, ...);
+
+Equivalent to C<fz_warn>.
 
 =back

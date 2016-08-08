@@ -69,9 +69,9 @@ void pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
 
 
 
-/* /\* key must be null-terminated.  *\/ */
-/* pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, */
-/* 				    char *key); */
+/* key must be null-terminated.  */
+pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
+				    const char *key);
 
 void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
 				     char **key, char **value, int *value_len,

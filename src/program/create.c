@@ -115,39 +115,18 @@ static struct argp_child children[] = {
 
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
-static void add_pages (fz_context *ctx, pdf_document *doc, int page_count);
-
 void
 pdfout_command_create (int argc, char **argv)
 {
-  fz_context *ctx;
-  pdf_document *doc;
-  
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
-  ctx = pdfout_new_context ();
-  doc = pdf_create_document (ctx);
-
-  add_pages (ctx, doc, page_count);
-
+  fz_context *ctx = pdfout_new_context ();
+  fz_rect rect = {0, 0, width, height};
+  pdf_document *doc = pdfout_create_blank_pdf (ctx, page_count, &rect);
+  
   pdfout_write_document (ctx, doc, NULL, output_filename);
 
   exit (0);
-}
-
-static void
-add_pages (fz_context *ctx, pdf_document *doc, int page_count)
-{
-  fz_rect rect = {0, 0, width, height};
-
-  pdf_obj *resources = pdf_new_dict (ctx, doc, 0);
-  fz_buffer *contents = fz_new_buffer (ctx, 0);
-
-  for (int i = 0; i < page_count; ++i)
-    {
-      pdf_obj *page = pdf_add_page (ctx, doc, &rect, 0, resources, contents);
-      pdf_insert_page (ctx, doc, i, page);
-    }
 }
 
 static float mm_to_pt (float mm)

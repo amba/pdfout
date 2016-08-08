@@ -24,14 +24,32 @@ parsing, rendering , creation and manipulation.
 
 =item L<Character set conversion|internal/charset-conversion>
 
+=item L<Creation of blank PDFs|internal/create-pdf>
+
 =item L<Miscellaneous helper functions|internal/misc>
 
 =back
 
 =head2 MuPDF API
 
+=head3 Fitz
+
 =over
 
-=item L<Objects|mupdf/objects>
+=item L<Buffers and streams|mupdf/buffer-stream-output>
+
+=item L<Memory allocators|mupdf/allocators>
+
+=back
+
+=head3 PDF
+
+=over
+
+=item L<PDF document|mupdf/pdf-document>
+
+=item L<PDF objects|mupdf/objects>
+
+=item L<The xref table: adding, removing and replacing indirect objects|mupdf/xref>
 
 =back

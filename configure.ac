@@ -55,8 +55,6 @@ AC_ARG_ENABLE([Werror],
 dnl Checks for libraries.
 dnl use pkg-config if possible
 
-PKG_CHECK_MODULES([LIBYAML], [yaml-0.1 >= 0.1.4])
-
 dnl build mupdf submodule
 dnl is it checked out?
 AS_IF([test -r ${srcdir}/mupdf/README], [],
@@ -88,7 +86,7 @@ AC_SUBST([MUPDF_XCFLAGS])
 
 gl_INIT
 
-AC_SUBST([MUPDF_REQUIRED_LIBS], ["-lm $LIBYAML_LIBS $LIBS"])
+AC_SUBST([MUPDF_REQUIRED_LIBS], ["-lm $LIBS"])
 LIBS=
 
 AC_CONFIG_FILES([Makefile gl/Makefile gl-tests/Makefile src/Makefile

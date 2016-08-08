@@ -24,7 +24,6 @@ sub set_css {
 
 sub resolve_pod_page_link {
     my ($self, $to, $section) = @_;
-    warn "resolve_pod_page_link: to = $to, section = $section";
     return undef unless defined $to || defined $section;
 
     my $link;
@@ -38,7 +37,6 @@ sub resolve_pod_page_link {
 	$link = $section;
     }
     
-    warn "resolve_pod_page_link: link = $link";
     my $num_pounds = $link =~ tr/#//;
     if ($num_pounds == 0) {
 	return "$link.html";
@@ -52,7 +50,6 @@ sub resolve_pod_page_link {
 	if ($file) {
 	    $result = $file . '.html' . $result;
 	}
-	warn "in resolve_pod_page_link: result = $result";
 	return $result;
     }
     else {

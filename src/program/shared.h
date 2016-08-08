@@ -1,7 +1,7 @@
 #ifndef PDFOUT_ARGP_SHARED_H
 #define PDFOUT_ARGP_SHARED_H
 #include "../common.h"
-#include "libyaml-wrappers.h"
+#include "debug-io-handle.h"
 #include <exitfail.h>
 
 /* command function prototypes  */

@@ -214,7 +214,16 @@ pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len)
   return s->value;
 }
 
-
+bool
+pdfout_data_scalar_eq (fz_context *ctx, pdfout_data *scalar, const char *s)
+{
+  int len;
+  const char *value = pdfout_data_scalar_get (ctx, scalar, &len);
+  if (len == strlen (s) && strcmp (s, value) == 0)
+    return true;
+  else
+    return false;
+}
 
 int
 pdfout_data_array_len (fz_context *ctx, pdfout_data *array)
@@ -415,21 +424,21 @@ pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
   pdfout_data_hash_push (ctx, hash, k, v);
 }
 
-/* pdfout_data * */
-/* pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key) */
-/* { */
-/*   data_hash *h = to_hash (ctx, hash); */
+pdfout_data *
+pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, const char *key)
+{
+  data_hash *h = to_hash (ctx, hash);
   
-/*   size_t len = strlen (key); */
+  size_t len = strlen (key);
 
-/*   for (int i = 0; i < len; ++i) */
-/*     { */
-/*       data_scalar *k = to_scalar (ctx, h->list[i].key); */
-/*       if (len == k->len && memcmp (key, k->value, len) == 0) */
-/* 	return (pdfout_data *) k; */
-/*     } */
-/*   return NULL; */
-/* } */
+  for (int i = 0; i < len; ++i)
+    {
+      data_scalar *k = to_scalar (ctx, h->list[i].key);
+      if (len == k->len && memcmp (key, k->value, len) == 0)
+	return (pdfout_data *) k;
+    }
+  return NULL;
+}
 
 /* Comparison  */
 

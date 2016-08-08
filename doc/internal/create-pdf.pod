@@ -1,0 +1,7 @@
+=pod
+
+=head1 Creation of blank PDFs
+
+ pdf_document *pdfout_create_blank_pdf (fz_context *ctx, int page_count, fz_rect *rect);
+
+Create a fresh, blank PDF. If C<rect> is C<NULL>, use portrait A4 paper size.

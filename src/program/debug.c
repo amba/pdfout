@@ -65,27 +65,22 @@ Expression '" #expr "' did not throw as expected\n", __FILE__, __LINE__); \
 	}								\
     } while (0)
 
-/* create filename in a temporary directory */
-static char *
-temp_filename (void)
-{
-  int file_len = 256;
-  char *file = XNMALLOC (file_len, char);
-    
-  if (path_search (file, file_len, NULL, NULL, true))
-    error (1, 0, "temp_filename: path_search");
-  if (gen_tempname (file, 0, 0, GT_NOCREATE))
-    error (1, 0, "temp_filename: gen_tempname");
 
-  return file;
+static void
+write_pdf (fz_context *ctx, pdf_document *doc, debug_io_handle *handle,
+	   pdf_write_options *opts)
+{
+  fz_output *output = debug_io_handle_output (ctx, handle);
+  pdf_write_document (ctx, doc, output, opts);
 }
 
 static pdf_document *
-check_open (fz_context * ctx, char *file)
+open_pdf (fz_context *ctx, debug_io_handle *handle)
 {
-  pdf_document *doc = pdf_open_document (ctx, file);
+  fz_stream *stream = debug_io_handle_stream (ctx, handle);
+  pdf_document *doc = pdf_open_document_with_stream (ctx, stream);
   if (doc->repair_attempted || doc->freeze_updates)
-    error (1, 0, "pdf_open_document: broken_pdf: %s", file);
+    error (1, 0, "pdf_open_document: broken_pdf");
   return doc;
 }
 
@@ -93,44 +88,37 @@ static void
 check_incremental_update (void)
 {
   pdf_write_options opts = { 0 };
-  fz_context *ctx;
-  /* to run Memcheck-clean, keep a pointer to each doc  */
-  pdf_document *doc[3];
   pdf_obj *info;
-  char *file;
   const char *subject = "check incremental update";
   int num;
 
-  ctx = pdfout_new_context ();
+  fz_context *ctx = pdfout_new_context ();
 
-  doc[0] = pdf_create_document (ctx);
+  pdf_document *doc = pdf_create_document (ctx);
 
-  file = temp_filename ();
+  debug_io_handle *handle = debug_io_handle_new (ctx);
 
-  pdfout_msg ("file: %s", file);
-  
-  pdf_save_document (ctx, doc[0], file, &opts);
+  write_pdf (ctx, doc, handle, &opts);
+  pdf_drop_document (ctx, doc);
+  doc = open_pdf (ctx, handle);
 
-  doc[1] = check_open (ctx, file);
-
-  num = pdf_create_object (ctx, doc[1]);
-  info = pdf_new_dict (ctx, doc[1], 1);
-  pdf_update_object (ctx, doc[1], num, info);
+  num = pdf_create_object (ctx, doc);
+  info = pdf_new_dict (ctx, doc, 1);
+  pdf_update_object (ctx, doc, num, info);
   pdf_drop_obj (ctx, info);
 
   pdf_dict_puts_drop (ctx, info, "Subject",
-		      pdf_new_string (ctx, doc[1], subject, strlen (subject)));
-  pdf_dict_puts_drop (ctx, pdf_trailer (ctx, doc[1]), "Info",
-		      pdf_new_indirect (ctx, doc[1], num, 0));
+		      pdf_new_string (ctx, doc, subject, strlen (subject)));
+  pdf_dict_puts_drop (ctx, pdf_trailer (ctx, doc), "Info",
+		      pdf_new_indirect (ctx, doc, num, 0));
 
   opts.do_incremental = 1;
-  pdf_save_document (ctx, doc[1], file, &opts);
-
-  doc[2] = check_open (ctx, file);
-
-  if (unlink (file))
-    error (1, errno, "error unlinking '%s'", file);
-
+  
+  write_pdf (ctx, doc, handle, &opts);
+  pdf_drop_document (ctx, doc);
+  doc = open_pdf (ctx, handle);
+  
+  
   exit (0);
 }
 
@@ -138,6 +126,7 @@ check_incremental_update (void)
 /* same with xref streams    */
 /* see Mupdf Bug 695892      */
 /* ------------------------  */
+
 static void
 check_incremental_update_xref (void)
 {
@@ -146,21 +135,19 @@ check_incremental_update_xref (void)
   /* to run Memcheck-clean, keep a pointer to each doc  */
   pdf_document *doc[3];
   pdf_obj *info;
-  char *file;
   const char *subject = "check incremental update with xref";
   int num;
 
   ctx = pdfout_new_context ();
   
-  file = temp_filename ();
-  pdfout_msg ("file: %s", file);
   doc[0] = pdf_create_document (ctx);
 
   opts.do_incremental = 0;
-  pdf_save_document (ctx, doc[0], file, &opts);
 
-  doc[1] = check_open (ctx, file);
-
+  debug_io_handle *handle = debug_io_handle_new (ctx);
+  write_pdf (ctx, doc[0], handle, &opts);
+  doc[1] = open_pdf (ctx, handle);
+  
   /* ensure that incremental update will have xref stream */
   doc[1]->has_xref_streams = 1;
 
@@ -176,12 +163,8 @@ check_incremental_update_xref (void)
 
 
   opts.do_incremental = 1;
-  pdf_save_document (ctx, doc[1], file, &opts);
-
-  doc[2] = check_open (ctx, file);
-
-  if (unlink (file))
-    error (1, errno, "error unlinking '%s'", file);
+  write_pdf (ctx, doc[1], handle, &opts);
+  doc[2] = open_pdf (ctx, handle);
   
   exit (0);
 }
@@ -498,7 +481,8 @@ static void json_emitter_test (fz_context *ctx, pdfout_data *data,
       || memcmp (expected, out_buf->data, out_buf->len))
     {
       fprintf (stderr, "json_emitter_test: expected:\n%s"
-	       "got:\n%.*s\n", expected, out_buf->len, (char *) out_buf->data);
+	       "got:\n%.*s\n", expected, (int) out_buf->len,
+	       (char *) out_buf->data);
       abort ();
     }
       
@@ -567,7 +551,7 @@ static void check_json_emitter (fz_context *ctx)
 }
 static void check_json (void)
 {
-  fz_context *ctx = fz_new_context (0, 0, 0);
+  fz_context *ctx = pdfout_new_context ();
   
   check_json_parser_values (ctx);
 
@@ -577,9 +561,9 @@ static void check_json (void)
   exit (0);
 }
 
-  static void check_data (void)
+static void check_data (void)
 {
-  fz_context *ctx = fz_new_context (0, 0, 0);
+  fz_context *ctx = pdfout_new_context ();
 
   pdfout_data *hash = pdfout_data_hash_new (ctx);
 
@@ -612,7 +596,9 @@ static void check_json (void)
   pdfout_data_drop (ctx, hash);
   exit (0);
 }
-  
+
+
+
 static char usage[] = "";
 static char doc[] = "Run checks, called by make check\v";
 
@@ -623,6 +609,7 @@ enum {
   REGEX,
   JSON,
   DATA,
+  OUTLINE,
 };
 
 static struct argp_option options[] = {
@@ -632,7 +619,7 @@ static struct argp_option options[] = {
   {"regex", REGEX},
   {"json", JSON},
   {"data", DATA},
-  {0}
+    {0}
 };
 
 static error_t

@@ -1,0 +1,47 @@
+=pod
+
+=head1 Buffers and streams
+
+
+=head2 Buffers
+
+A C<fz_buffer> holds a dynamically allocated block of memory.
+
+A new C<fz_buffer> is created with
+
+ fz_buffer *fz_new_buffer(fz_context *ctx, size_t capacity);
+
+=head2 Output streams
+
+The C<fz_output> stream is a abstract output handle. It can output to files and
+C<fz_buffers>.
+
+The following functions create a C<fz_output>.
+
+ fz_output *fz_new_output_with_file_ptr(fz_context *ctx, FILE *output, int close);
+ fz_output *fz_new_output_with_path(fz_context *ctx, const char *filename, int
+ append);
+
+
+ fz_output *fz_new_output_with_buffer(fz_context *ctx, fz_buffer *buffer);
+
+Increase the refcount of C<buffer>.
+
+ void fz_drop_output(fz_context *ctx, fz_output *out);
+
+Deallocate an output and drop/close the underlying object.
+
+=head2 Input streams
+
+ fz_stream *fz_open_buffer(fz_context *ctx, fz_buffer *buf);
+
+Increase the refcount of C<buf>.
+
+ fz_stream *fz_open_file_ptr(fz_context *ctx, FILE *file);
+
+Will close C<file> if the stream is dropped.
+
+ void fz_drop_stream(fz_context *ctx, fz_stream *stm);
+
+Deallocate a stream and drop/close the underlying object.
+

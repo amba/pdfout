@@ -6,13 +6,18 @@
 
 =over
 
-=item C<null>
+=item L<< C<null> |#null objects >>
 
 represents the null PDF object.
 
-=item C<bool>
+=item L<< C<bool> |#bool objects >>
 
 either true or false.
+
+
+=item L<number|#number objects>
+
+=over
 
 =item C<int>
 
@@ -26,11 +31,13 @@ holds a C<fz_off_t>.
 
 holds a C C<float>.
 
-=item C<name>
+=back
+
+=item L<< C<name> |#name objects >>
 
 holds a null-terminated string.
 
-=item C<string>
+=item L<< C<string> |#string objects >>
 
 holds a buffer and it's length.
 
@@ -38,7 +45,7 @@ holds a buffer and it's length.
 
 holds a list of other objects.
 
-=item C<dict>
+=item L<< C<dict> |#dict objects >>
 
 holds a list of key value pairs of other objects.
 
@@ -97,7 +104,7 @@ The value is read with
 
  int pdf_to_bool(fz_context *ctx, pdf_obj *obj);
 
-=head2 number (int, int_offset, real) objects
+=head2 number objects
 
 These are constructed with
 
@@ -128,7 +135,7 @@ string, if C<obj> is not a name object.
 To compare name objects, you use
 
  static inline int pdf_name_eq(fz_context *ctx, pdf_obj *a, pdf_obj *b);
- 
+
 =head2 string objects
 
 These are created with
@@ -146,6 +153,82 @@ A string object's contents are obtained with the functions
 The returned string is valid for the lifetime of C<obj>. Return the empty
 string and C<0>, respectively, if C<obj> is not a string object.
 
+
+=head2 dict objects
+
+These are created with
+
+ pdf_obj *pdf_new_dict (fz_context *ctx, pdf_document *doc, int initialcap);
+
+
+=head3 Query dicts
+
+The number of key value pairs is queried with
+
+ int pdf_dict_len(fz_context *ctx, pdf_obj *dict);
+
+To get the i-th key-value pair, use
+
+ pdf_obj *pdf_dict_get_key(fz_context *ctx, pdf_obj *dict, int idx);
+ pdf_obj *pdf_dict_get_val(fz_context *ctx, pdf_obj *dict, int idx);
+
+There are several functions to get the value of a provided key:
+
+=over
+
+=item
+
+ pdf_obj *pdf_dict_get(fz_context *ctx, pdf_obj *dict, pdf_obj *key);
+
+The object C<key> must be a name object.
+
+=item
+
+ pdf_obj *pdf_dict_gets(fz_context *ctx, pdf_obj *dict, const char *key);
+
+If there is a key, which is a name object with name C<key>, return it's value.
+
+=item
+
+ pdf_obj *pdf_dict_getp(fz_context *ctx, pdf_obj *dict, const char *path);
+
+C<path> is a C</>-separated list of names. Call pdf_dict_gets repeatedly
+on each name in the list. For example, the result of
+
+ return pdf_dict_getp (ctx, trailer, "Root/Pages/Count");
+
+is equivalent to
+
+ pdf_obj *root = pdf_dict_gets (ctx, trailer, "Root");
+ pdf_obj *pages = pdf_dict_gets (ctx, root, "Pages");
+ return pdf_dict_gets (ctx, pages, "Count");
+
+=item
+
+ pdf_obj *pdf_dict_getl(fz_context *ctx, pdf_obj *dict, ...);
+
+Similar to C<pdf_dict_getp> but the list of name objects is given as a va_list.
+
+=item
+
+ pdf_obj *pdf_dict_geta(fz_context *ctx, pdf_obj *dict, pdf_obj *key, pdf_obj *abbrev);
+
+Try a C<pdf_dict_get(ctx, dict, key)>. If this produces a value, return
+it. Otherwise, return C<pdf_dict_get(ctx, dict, abbrex)>. This is useful, if a
+key has an abbreviation. Example:
+
+ filters = pdf_dict_geta(ctx, stmobj, PDF_NAME_Filter, PDF_NAME_F);
+
+=item
+
+ pdf_obj *pdf_dict_getsa(fz_context *ctx, pdf_obj *dict, const char *key, const char *abbrev);
+
+Like C<pdf_dict_geta>, but with string names.
+
+
+
+
+=back
 
 
 

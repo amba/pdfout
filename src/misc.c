@@ -130,7 +130,10 @@ pdfout_strtof_nan (const char *string)
 void
 pdfout_vthrow (fz_context *ctx, const char *fmt, va_list ap)
 {
-  fz_vthrow (ctx, FZ_ERROR_GENERIC, fmt, ap);
+  /* fz_throw does not use a C99 printf internally, so format here.  */
+  char buffer[4096];
+  pdfout_vsnprintf (ctx, buffer, fmt, ap);
+  fz_throw (ctx, FZ_ERROR_GENERIC, "%s", buffer);
 }
 
 void
@@ -141,6 +144,17 @@ pdfout_throw (fz_context *ctx, const char *fmt, ...)
   pdfout_vthrow (ctx, fmt, ap);
 }
 
+void
+pdfout_warn (fz_context *ctx, const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  /* fz_warn does not use a C99 printf internally, so format here.  */
+  char buffer[4096];
+  pdfout_vsnprintf (ctx, buffer, fmt, ap);
+  fz_warn (ctx, "%s", buffer);
+}
+  
 void
 pdfout_throw_errno (fz_context *ctx, const char *fmt, ...)
 {
@@ -163,6 +177,13 @@ pdfout_snprintf_imp (fz_context *ctx, char *buf, int size,
 {
   va_list ap;
   va_start (ap, fmt);
+  return pdfout_vsnprintf_imp (ctx, buf, size, fmt, ap);
+}
+
+int
+pdfout_vsnprintf_imp (fz_context *ctx, char *buf, int size,
+		      const char *fmt, va_list ap)
+{
   errno = 0;
   int ret = vsnprintf (buf, size, fmt, ap);
   if (ret < 0)
@@ -171,6 +192,7 @@ pdfout_snprintf_imp (fz_context *ctx, char *buf, int size,
     pdfout_throw (ctx, "string truncated in pdfout_snprintf");
   return ret;
 }
+
 
 int
 pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)

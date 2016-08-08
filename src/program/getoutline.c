@@ -22,7 +22,7 @@ static char usage[] = "PDF_FILE";
 static char doc[] = "Dump outline to standard output.\n";
 
 static struct argp_option options[] = {
-  {PDFOUT_OUTLINE_FORMAT_OPTION},
+  /* {PDFOUT_OUTLINE_FORMAT_OPTION}, */
   {"default-filename", 'd', 0, 0,
    "write output to file PDF_FILE.outline.FORMAT"},
   {0}
@@ -30,7 +30,7 @@ static struct argp_option options[] = {
 
 static char *pdf_filename;
 static FILE *output;
-enum pdfout_outline_format format;
+/* enum pdfout_outline_format format; */
 
 
 static error_t
@@ -39,7 +39,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
   static bool use_default_filename;
   switch (key)
     {
-    case 'f': format = pdfout_outline_get_format (state, arg); break;
+    /* case 'f': format = pdfout_outline_get_format (state, arg); break; */
     case 'd': use_default_filename = true; break;
       
     case ARGP_KEY_ARG:
@@ -55,9 +55,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       
     case ARGP_KEY_END:
       if (use_default_filename)
-	output = open_default_write_file (state, pdf_filename,
-					  pdfout_outline_suffix (format));
-      else
+	output = open_default_write_file (state, pdf_filename, ".outline");
+      /* 					  pdfout_outline_suffix (format)); */
+      /* else */
 	output = stdout;
       break;
       
@@ -68,7 +68,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 static const struct argp_child children[] = {
-  {&pdfout_yaml_emitter_argp, 0, "", -2},
   {&pdfout_general_argp, 0, NULL, 0},
   {0}
 };
@@ -77,26 +76,17 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_getoutline (int argc, char **argv)
 {
-  yaml_document_t *yaml_doc;
-  pdf_document *doc;
-  fz_context *ctx;
-  
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
-  ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
-  
-  if (pdfout_outline_get (&yaml_doc, ctx, doc))
-    {
-      pdfout_no_output_msg ();
-      exit (1);
-    }
+  fz_context *ctx = pdfout_new_context ();
+  pdf_document *doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
-  if (pdfout_outline_dump (output, yaml_doc, format))
-    {
-      pdfout_no_output_msg ();
-      exit (1);
-    }
+  pdfout_data *outline = pdfout_outline_get (ctx, doc);
+
+  fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
+  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
+  
+  pdfout_emitter_emit (ctx, emitter, outline);
   
   exit (0);
 }
