@@ -2,6 +2,185 @@
 #include "common.h"
 #include "outline-wysiwyg.h"
 
+static bool
+streq (const char *a, const char *b)
+{
+  return strcmp (a, b) == 0;
+}
+
+static const char *
+data_hash_get_string_key (fz_context *ctx, pdfout_data *hash,
+			  const char *key)
+{
+  int len;
+  const char *value = pdfout_data_hash_get_key_value (ctx, hash, key, &len);
+  if (strlen (value) != len)
+    pdfout_throw (ctx, "embedded null byte for key '%s'", key);
+  return value;
+}
+
+static const char *
+data_array_get_string (fz_context *ctx, pdfout_data *array, int i)
+{
+  pdfout_data *scalar = pdfout_data_array_get (ctx, array, i);
+  int len;
+  const char *result = pdfout_data_scalar_get (ctx, array, &len);
+  if (len != strlen (result))
+    pdfout_throw (ctx, "string with embedded null byte");
+  return result;
+}
+
+static int
+dest_sequence_length (fz_context *ctx, const char *label)
+{
+  if (streq (label, "XYZ"))
+    return 4;
+  else if (streq (label, "Fit"))
+    return 1;
+  else if (streq (label, "FitH") || streq (label, "FitV"))
+    return 2;
+  else if (streq (label, "FitR"))
+    return 5;
+  else
+    pdfout_throw (ctx, "unknown destination: '%s', label");
+}
+
+static void
+check_sequence_numbers (fz_context *ctx, pdfout_data *dest)
+{
+  int len = pdfout_data_array_len (ctx, dest);
+  for (int i = 1; i < len; ++i)
+    {
+      char *num = data_array_get_string (ctx, dest, i);
+      if (streq (num, "null"))
+	continue;
+      else if (isnan (pdfout_strtof_nan (num)))
+	pdfout_throw (ctx, "not a float: '%s'", num);
+    }
+}
+			
+static void
+check_dest_sequence (fz_context *ctx, pdfout_data *dest)
+{
+  int len = pdfout_data_array_len (ctx, dest);
+  if (len < 1 || length > 5)
+    pdfout_throw (ctx, "illegal View sequence with length %d", len);
+
+  const char *label = data_array_get_string (ctx, dest, 0);
+  
+  if (len != dest_sequence_length (ctx, label))
+    pdfout_data_throw (ctx, "illegal %s sequence with length %d", label, len);
+
+  check_sequence_numbers (ctx, dest);
+}
+
+static void
+check_outline_hash (fz_context *ctx, pdf_document *doc, pdfout_data *hash)
+{
+  int len = pdfout_data_hash_len (ctx, hash);
+  bool has_title = false, has_page = false;
+  
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *key = pdfout_data_hash_get_key (ctx, hash, i);
+      pdfout_data *value = pdfout_data_hash_get_value (ctx, hash, i);
+      if (pdfout_data_scalar_eq (key, "title"))
+	{
+	  pdfout_data_scalar_get (ctx, value);
+	  has_page = true;
+	}
+      else if (pdfout_data_scalar_eq (key, "page"))
+	{
+	  char *s = pdfout_data_scalar_get (ctx, value);
+	  int page = pdfout_strtoint_null (ctx, s);
+	  int count = pdf_count_pages (ctx, doc);
+	  if (page < 1)
+	    pdfout_throw (ctx, "page number '%d' is not positive", page);
+	  if (page > count)
+	    pdfout_throw (ctx,
+			  "page number '%d' is bigger than page count %d",
+			  page, count);
+
+	  has_page = true;
+	}
+      else if (pdfout_data_scalar_eq (key, "view"))
+	check_dest_sequence (ctx, value);
+      else if (pdfout_data_scalar_eq (key, "kids"))
+	check_outline_array (ctx, doc, value);
+      /* FIXME: open true or false */
+    }
+
+  if (has_title == false)
+    pdfout_throw (ctx, "missing title in outline hash");
+  if (has_page == false)
+    pdfout_throw (ctx, "missing page in outline hash");
+  
+}
+
+static void
+check_outline_array (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+  if (len < 1)
+    pdfout_throw (ctx, "empty outline array");
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *hash = pdfout_data_array_get (ctx, outline, i);
+      check_outline_hash (ctx, doc, hash);
+    }
+}
+
+static void
+check_outline (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+
+  if (len == 0)
+    return;
+  
+  check_outline_array (ctx, doc, outline);
+}
+
+static int
+calculate_kids_count (fz_context *ctx, pdfout_data *hash)
+{
+  pdfout_data *kids = pdfout_data_hash_gets (ctx, hash, "kids");
+  if (kids == NULL)
+    return 0;
+  int kids_len = pdfout_data_array_len (ctx, kids);
+  int count = kids_len;
+  for (int i = 0; i < kids_len; ++i)
+    {
+      pdfout_data *kid_hash = pdfout_data_array_get (ctx, kids, i);
+      int kid_count = calculate_kids_count (doc, kid_hash);
+      if (kid_count > 0)
+	count += kid_count;
+    }
+
+  const char *open = data_hash_get_string_key (ctx, hash, "open");
+  
+  
+      
+}
+
+static void
+calculate_counts (fz_context *ctx, pdfout_data *outline)
+{
+  int len = pdfout_data_array_len (ctx, outline);
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *hash = pdfout_data_array_get (ctx, outline, i);
+      calculate_kids_counts (ctx, hash);
+    }
+}
+
+void
+pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
+{
+  if (outline)
+    check_outline (ctx, doc, outline);
+}
+
 static int fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
 			       yaml_document_t *doc, int sequence);
 static void convert_yaml_sequence_to_outline (fz_context *ctx,
@@ -446,7 +625,6 @@ check_yaml_outline_mapping_node (pdf_document *doc,
   return 0;
 }
 
-static yaml_node_t *
 create_default_dest_sequence (yaml_document_t *doc, int mapping)
 {
   int sequence;
