@@ -7,6 +7,7 @@ AM_CFLAGS = $(WARN_CFLAGS)
 
 noinst_LIBRARIES = libcommon.a libshared-with-tests.a
 libcommon_a_SOURCES = \
+resolve-dest.c \
 misc.c \
 common.h \
 outline-wysiwyg.c \

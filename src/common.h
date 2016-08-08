@@ -47,6 +47,9 @@ enum {
   PDFOUT_TXT_YAML_CHARACTERS,
 };
 
+pdf_obj *pdfout_resolve_dest(fz_context *ctx, pdf_document *doc, pdf_obj *dest,
+			     fz_link_kind kind);
+
 
 #define pdfout_x2nrealloc(ctx, p, pn, t) \
   ((t *) pdfout_x2nrealloc_imp (ctx, p, pn, sizeof (t)))
