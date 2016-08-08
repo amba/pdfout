@@ -1,0 +1,67 @@
+=pod
+
+=head1 Miscellaneous helper functions
+
+=head2 Number parsing and emitting
+
+=over
+
+=item
+
+ int pdfout_strtoint_null (fz_context *ctx, const char *string);
+
+Throw if C<string> does not contain a null-terminated C<int> number.
+
+=item
+
+ int pdfout_strtoint (fz_context *ctx, const char *nptr, char **endptr);
+
+Like C<strtol>, but throw exception on C<int> overflow.
+
+=item
+
+ float pdfout_strtof (fz_context *ctx, const char *string);
+
+Throw if C<string> does not contain a null-terminated C<float> number.
+
+=item
+
+ int pdfout_snprintf_imp (fz_context *ctx, char *buf, int size, const char *fmt, ...);
+
+Safe frontend to C<sprintf>. Throw if the result is longer than C<size>.
+
+=item
+
+ int pdfout_snprintf (fz_context *ctx, char *buf, const char *fmt, ...);
+
+Macro. Defined as
+
+  pdfout_snprintf_imp (ctx, buff, sizeof buff, fmt, ## args)
+
+
+=back
+
+=head2 Exception handling and warnings
+
+=over
+
+=item
+
+ void pdfout_throw (fz_context *ctx, const char *fmt, ...);
+
+Call mupdf's C<fz_throw> with error type C<FZ_ERROR_GENERIC>.
+
+=item
+
+ void pdfout_vthrow (fz_context *ctx, const char *fmt, va_list ap);
+
+va_list version of C<pdfout_throw>.
+
+=item
+
+ void pdfout_throw_errno (fz_context *ctx, const char *fmt, ...);
+
+Like C<pdfout_throw>, but show the  message produced by C<strerror> if errno is
+set.
+
+=back

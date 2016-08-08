@@ -21,7 +21,26 @@ void pdfout_data_drop (fz_context *ctx, pdfout_data *data);
 
 char *pdfout_data_scalar_get (fz_context *ctx, pdfout_data *scalar, int *len);
 
-/* char *pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar); */
+bool
+pdfout_data_scalar_eq (fz_context *ctx, pdfout_data *scalar, const char *s);
+
+
+pdf_obj *pdfout_data_scalar_to_pdf_name (fz_context *ctx, pdf_document *doc,
+					 pdfout_data *scalar);
+
+pdf_obj *pdfout_data_scalar_to_pdf_str (fz_context *ctx, pdf_document *doc,
+					pdfout_data *scalar);
+
+pdf_obj *pdfout_data_scalar_to_pdf_int (fz_context *ctx, pdf_document *doc,
+					pdfout_data *scalar);
+pdf_obj *pdfout_data_scalar_to_pdf_real (fz_context *ctx, pdf_document *doc,
+					 pdfout_data *scalar);
+
+pdfout_data *pdfout_data_scalar_from_pdf (fz_context *ctx, pdf_obj *obj);
+
+			    
+/* char *
+pdfout_data_scalar_get_string (fz_context *ctx, pdfout_data *scalar);*/
 
 
 
@@ -48,9 +67,11 @@ void pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
 				      const char *key, const char *value,
 				      int value_len);
 
-/* key must be null-terminated.  */
-pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash,
-				    char *key);
+
+
+/* /\* key must be null-terminated.  *\/ */
+/* pdfout_data *pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, */
+/* 				    char *key); */
 
 void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
 				     char **key, char **value, int *value_len,

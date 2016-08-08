@@ -24,6 +24,8 @@ parsing, rendering , creation and manipulation.
 
 =item L<Character set conversion|internal/charset-conversion>
 
+=item L<Miscellaneous helper functions|internal/misc>
+
 =back
 
 =head2 MuPDF API

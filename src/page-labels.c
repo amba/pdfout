@@ -2,12 +2,7 @@
 
 /* Update PDF's page labels.  */
 
-static void
-assert_c_string(fz_context *ctx, const char *s, int len)
-{
-  if (strlen(s) != len)
-    pdfout_throw (ctx, "unexpected string with embedded null bytes");
-}
+
 
 static bool
 streq (const char *a, const char *b)
@@ -19,6 +14,13 @@ static bool
 strneq (const char *a, const char *b)
 {
   return strcmp (a, b) != 0;
+}
+
+static void
+assert_c_string(fz_context *ctx, const char *s, int len)
+{
+  if (strlen(s) != len)
+    pdfout_throw (ctx, "unexpected string with embedded null bytes");
 }
 
 /* Return page number.  */

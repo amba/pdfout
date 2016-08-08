@@ -65,6 +65,10 @@ Return the value of a scalar with
 
 where the length of the string is stored in C<*len>.
 
+Comparison with a string is done with
+
+ bool pdfout_data_scalar_eq (fz_context *ctx, pdfout_data *scalar, const char *s);
+
 =cut
 
 # Often, it is known, that the key of a hash will be a null-terminated string.

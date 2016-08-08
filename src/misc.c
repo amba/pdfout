@@ -41,12 +41,7 @@ pdfout_strtoint (fz_context *ctx, const char *nptr, char **endptr)
 {
   long rv = strtol (nptr, endptr, 10);
   if (rv > INT_MAX || rv < INT_MIN)
-    {
-      pdfout_msg ("pdfout_strtoint: int overflow with argument '%s'", nptr);
-      if (endptr)
-	*endptr = (char *) nptr;
-      return rv > 0 ? INT_MAX : INT_MIN;
-    }
+    pdfout_throw (ctx, "int overflow with argument '%s'", nptr);
   return rv;
 }
 

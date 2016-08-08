@@ -80,26 +80,6 @@ pdfout_data_is_hash (fz_context *ctx, pdfout_data *data)
   return (data->type == HASH);
 }
 
-/* void */
-/* pdfout_data_assert_scalar (fz_context *ctx, pdfout_data *data) */
-/* { */
-/*   assert_type (ctx, data, SCALAR); */
-/* } */
-
-/* void */
-/* pdfout_data_assert_array (fz_context *ctx, pdfout_data *data) */
-/* { */
-/*   assert_type (ctx, data, ARRAY); */
-/* } */
-
-/* void */
-/* pdfout_data_assert_hash (fz_context *ctx, pdfout_data *data) */
-/* { */
-/*     assert_type (ctx, data, HASH); */
-/* } */
-
-
-
 static data_hash *to_hash (fz_context *ctx, pdfout_data *data)
 {
   assert_type (ctx, data, HASH);
@@ -325,6 +305,91 @@ scalar_get_string (fz_context *ctx, pdfout_data *scalar)
   return string;
 }
 
+/* Scalar convenience functions.  */
+
+pdf_obj *
+pdfout_data_scalar_to_pdf_name (fz_context *ctx, pdf_document *doc,
+				pdfout_data *scalar)
+{
+  const char *s = scalar_get_string (ctx, scalar);
+  return pdf_new_name (ctx, doc, s);
+}
+  
+pdf_obj *
+pdfout_data_scalar_to_pdf_str (fz_context *ctx, pdf_document *doc,
+			       pdfout_data *scalar)
+{
+  int len;
+  char *s = pdfout_data_scalar_get (ctx, scalar, &len);
+  return pdfout_utf8_to_str_obj (ctx, doc, s, len);
+}
+
+pdf_obj *
+pdfout_data_scalar_to_pdf_int (fz_context *ctx, pdf_document *doc,
+			       pdfout_data *scalar)
+{
+  char *s = scalar_get_string (ctx, scalar);
+  int n = pdfout_strtoint_null (ctx, s);
+  return pdf_new_int (ctx, doc, n);
+}
+
+pdf_obj *
+pdfout_data_scalar_to_pdf_real (fz_context *ctx, pdf_document *doc,
+				pdfout_data *scalar)
+{
+  char *s = scalar_get_string (ctx, scalar);
+  float f = pdfout_strtof (ctx, s);
+  return pdf_new_real (ctx, doc, f);
+}
+
+pdfout_data *
+pdfout_data_scalar_from_pdf (fz_context *ctx, pdf_obj *obj)
+{
+  const char *s;
+  if (pdf_is_null (ctx, obj))
+    return pdfout_data_scalar_new (ctx, "null", strlen ("null"));
+  else if (pdf_is_bool (ctx, obj))
+    {
+      if (pdf_to_bool (ctx, obj))
+	s = "true";
+      else
+	s = "false";
+      return pdfout_data_scalar_new (ctx, s, strlen (s));
+    }
+  else if (pdf_is_name (ctx, obj))
+    {
+      s = pdf_to_name (ctx, obj);
+      return pdfout_data_scalar_new (ctx, s, strlen (s));
+    }
+  else if (pdf_is_string (ctx, obj))
+    {
+      int len;
+      char *str = pdfout_str_obj_to_utf8 (ctx, obj, &len);
+      pdfout_data *result =  pdfout_data_scalar_new (ctx, str, len);
+      free (str);
+      return result;
+    }
+  else if (pdf_is_int (ctx, obj))
+    {
+      int n = pdf_to_int (ctx, obj);
+      char buf[200];
+      int len = pdfout_snprintf (ctx, buf, "%d", n);
+      return pdfout_data_scalar_new (ctx, buf, len);
+    }
+  else if (pdf_is_real (ctx, obj))
+    {
+      float f = pdf_to_real (ctx, obj);
+      char buf[200];
+      int len = pdfout_snprintf (ctx, buf, "%g", f);
+      return pdfout_data_scalar_new (ctx, buf, len);
+    }
+  else
+    abort();
+  
+}
+/* Hash convenience functions */
+
+
 void
 pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
 				char **key, char **value, int *value_len,
@@ -350,21 +415,21 @@ pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
   pdfout_data_hash_push (ctx, hash, k, v);
 }
 
-pdfout_data *
-pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key)
-{
-  data_hash *h = to_hash (ctx, hash);
+/* pdfout_data * */
+/* pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, char *key) */
+/* { */
+/*   data_hash *h = to_hash (ctx, hash); */
   
-  size_t len = strlen (key);
+/*   size_t len = strlen (key); */
 
-  for (int i = 0; i < len; ++i)
-    {
-      data_scalar *k = to_scalar (ctx, h->list[i].key);
-      if (len == k->len && memcmp (key, k->value, len) == 0)
-	return (pdfout_data *) k;
-    }
-  return NULL;
-}
+/*   for (int i = 0; i < len; ++i) */
+/*     { */
+/*       data_scalar *k = to_scalar (ctx, h->list[i].key); */
+/*       if (len == k->len && memcmp (key, k->value, len) == 0) */
+/* 	return (pdfout_data *) k; */
+/*     } */
+/*   return NULL; */
+/* } */
 
 /* Comparison  */
 
