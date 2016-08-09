@@ -39,12 +39,9 @@ sub gen_dirs {
 sub process_file {
     my $file = shift;
     
-    warn "parsing $file\n";
-
     my $parser = Pod::Simple::XHTML::PDFOUT->new ();
     
     my $out_file = abs2rel ($file, $doc_dir);
-    warn "abs2rel ($file, $doc_dir) = $out_file";
 
     my $subdir_level = $out_file =~ tr|/||;
 
@@ -53,8 +50,6 @@ sub process_file {
     
     $out_file =~ s/\.pod$/.html/;
     $out_file = catfile ($output_dir, $out_file);
-    
-    warn "writing to $out_file\n";
     
     open (my $out_fh, ">", $out_file);
     

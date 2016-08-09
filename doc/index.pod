@@ -30,8 +30,20 @@ parsing, rendering , creation and manipulation.
 
 =head2 MuPDF API
 
+=head3 Fitz
+
 =over
 
-=item L<Objects|mupdf/objects>
+=item L<Memory allocators|mupdf/allocators>
+
+=back
+
+=head3 PDF
+
+=over
+
+=item L<PDF objects|mupdf/objects>
+
+=item L<The xref table: adding, removing and replacing indirect objects|mupdf/xref>
 
 =back
