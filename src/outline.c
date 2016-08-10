@@ -246,6 +246,16 @@ create_outline_dict (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
   pdfout_data *view = pdfout_data_hash_gets (ctx, hash, "view");
   pdf_obj *dest_array = convert_dest_array (ctx, doc, view, page);
   pdf_dict_puts_drop (ctx, dict, "Dest", dest);
+
+  /* Kids.  */
+  pdfout_data *kids = pdofut_data_hash_gets (ctx, hash, "kids");
+  if (kids)
+    {
+      pdf_obj *first, *last;
+      create_outline_kids_array (ctx, doc, kids, dict, first, last);
+      pdf_dict_puts_drop (ctx, dict, "First", first);
+      pdf_dict_puts_drop (ctx, dict, "Last", last);
+    }
   
   /* Parent.  */
   pdf_obj *parent_copy = copy_indirect_ref (ctx, doc, parent);
@@ -336,6 +346,35 @@ pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
 }
 
 /* get outline */
+
+static void
+check_pdf_outline (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
+{
+  if (pdf_mark_obj (ctx, outline))
+    pdfout_throw (ctx, "circular reference");
+  
+}
+
+static pdfout_data *
+get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *dict)
+{
+  pdfout_data *result_array;
+  
+  
+}
+
+pdfout_data *
+pdfout_outline_get (fz_context *ctx, pdf_document *doc)
+{
+  pdf_obj *root = pdf_dict_get (ctx, pdf_trailer (ctx, doc), PDF_NAME_Root);
+  pdf_obj *outline_obj = pdf_dict_get (ctx, root, PDF_NAME_Outlines);
+  pdf_obj *first = pdf_dict_get (ctx, obj, PDF_NAME_First);
+
+  if (first)
+    return outline_get (ctx, doc, first);
+  else
+    return pdfout_data_array_new (ctx);
+}
 
 #undef MSG
 #define MSG(fmt, args...) pdfout_msg ("get outline: " fmt, ## args)
