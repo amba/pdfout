@@ -350,9 +350,26 @@ pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
 static void
 check_pdf_outline (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
 {
-  if (pdf_mark_obj (ctx, outline))
-    pdfout_throw (ctx, "circular reference");
-  
+  do
+    {
+      if (pdf_mark_obj (ctx, outline))
+	pdfout_throw (ctx, "circular reference");
+      
+      pdf_obj *title = pdf_dict_gets (ctx, outline, "Title");
+      if (pdf_is_string (ctx, title) == false)
+	pdfout_throw (ctx, "outline item without 'Title' key");
+      
+      pdf_obj *count = pdf_dict_gets (ctx, outline, "Count");
+      if (count && pdf_is_int (ctx, count) == false)
+	pdfout_throw (ctx, "value for key 'Count' not an integer");
+      
+      pdf_obj *dest = pdf_dict_gets (ctx, outline, "Dest");
+      if (dest)
+	check_dest (ctx, doc, dest);
+      else
+	fz_warn
+    }
+  while ((outline = pdf_dict_gets (ctx, outline, "Next")));
 }
 
 static pdfout_data *
@@ -374,188 +391,5 @@ pdfout_outline_get (fz_context *ctx, pdf_document *doc)
     return outline_get (ctx, doc, first);
   else
     return pdfout_data_array_new (ctx);
-}
-
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("get outline: " fmt, ## args)
-int
-pdfout_outline_get (yaml_document_t **yaml_doc_ptr, fz_context *ctx,
-		    pdf_document *doc)
-{
-  fz_outline *outline;
-  int root;
-  yaml_document_t *yaml_doc;
-  bool have_error = false;
-
-  outline = pdf_load_outline (ctx, doc);
-  if (outline == NULL)
-    {
-      MSG ("document has no outline");
-      have_error = true;
-    }
-
-  if (have_error == false)
-    {
-      
-      *yaml_doc_ptr = yaml_doc = XZALLOC (yaml_document_t);
-      pdfout_yaml_document_initialize (yaml_doc, NULL, NULL, NULL, 1, 1);
-  
-      root = fz_outline_to_yaml (ctx, outline, yaml_doc, 0);
-      
-      if (pdfout_sequence_length (yaml_doc, root) == 0)
-	{
-	  if (pdfout_batch_mode == 0)
-	    MSG ("document has no outline");
-	  have_error = 1;
-	}
-    }
-
-  fz_drop_outline (ctx, outline);
-  
-  if (have_error)
-    {
-      *yaml_doc_ptr = NULL;
-      return 1;
-    }
-  
-  return 0;
-      
-}
-
-#undef MSG
-#define MSG(fmt, args...) pdfout_msg ("convert outline to YAML: " fmt, ## args)
-
-/* returns root node id  */
-static int
-fz_outline_to_yaml (fz_context *ctx, fz_outline *outline,
-		    yaml_document_t *doc, int sequence)
-{
-  /* FIXME: add option to fail on unsupported link type */
-  int value, mapping_id;
-  char printf_buffer[256];
-  yaml_scalar_style_t style;
-  if (sequence == 0)		/* new level */
-    sequence = pdfout_yaml_document_add_sequence (doc, NULL, 0);
-
-  mapping_id = pdfout_yaml_document_add_mapping (doc, NULL, 0);
-  style = strchr (outline->title, '\n') ? YAML_DOUBLE_QUOTED_SCALAR_STYLE
-    : YAML_ANY_SCALAR_STYLE;
-  value =
-    pdfout_yaml_document_add_scalar (doc, NULL, outline->title, -1, style);
-  pdfout_mapping_push_id (doc, mapping_id, "title", value);
-
-  if (outline->dest.kind == FZ_LINK_GOTO)
-    {
-      pdfout_snprintf_old (printf_buffer, sizeof printf_buffer, "%d",
-		       outline->dest.ld.gotor.page + 1);
-      pdfout_mapping_push (doc, mapping_id, "page", printf_buffer);
-
-      fz_point lt, rb;
-      int flags;
-      lt = outline->dest.ld.gotor.lt;
-      rb = outline->dest.ld.gotor.rb;
-      flags = outline->dest.ld.gotor.flags;
-      value = parse_gotor (doc, flags, lt, rb);
-      if (value > 0)
-	pdfout_mapping_push_id (doc, mapping_id, "view", value);
-      else
-	MSG ("cannot parse link dest for title '%s'", outline->title);
-    }
-  else
-    MSG ("skipping outline item with title '%s' as it is not a goto link"
-	 " and this is not yet supported", outline->title);
-  
-  if (outline->is_open)
-    pdfout_mapping_push (doc, mapping_id, "open", "true");
-
-  if (outline->down)
-    {				/* outline has children */
-      value = fz_outline_to_yaml (ctx, outline->down, doc, 0);
-      pdfout_mapping_push_id (doc, mapping_id, "kids", value);
-    }
-  pdfout_yaml_document_append_sequence_item (doc, sequence, mapping_id);
-
-  if (outline->next)
-    fz_outline_to_yaml (ctx, outline->next, doc, sequence);
-  return sequence;
-}
-
-/* returns id of the generated sequence node  */
-static int
-parse_gotor (yaml_document_t *doc, int flags, fz_point lt, fz_point rb)
-{
-  /* FIXME: add option to fail on unknown gotor? */
-  char buffer[256];
-  int array =
-    pdfout_yaml_document_add_sequence (doc, NULL, YAML_FLOW_SEQUENCE_STYLE);
-  if (flags & fz_link_flag_r_is_zoom)
-    {				/* XYZ */
-      pdfout_sequence_push (doc, array, "XYZ");
-      if (flags & fz_link_flag_l_valid)
-	{
-	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
-	  pdfout_sequence_push (doc, array, buffer);
-	}
-      else
-	pdfout_sequence_push (doc, array, "null");
-      if (flags & fz_link_flag_t_valid)
-	{
-	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
-	  pdfout_sequence_push (doc, array, buffer);
-	}
-      else
-	pdfout_sequence_push (doc, array, "null");
-
-      if (flags & fz_link_flag_r_valid)
-	{
-	  pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.x);
-	  pdfout_sequence_push (doc, array, buffer);
-	}
-      else
-	pdfout_sequence_push (doc, array, "null");
-    }
-  else if (flags == 060)
-    pdfout_sequence_push (doc, array, "Fit");
-
-  else if (flags == 020)
-    {
-      pdfout_sequence_push (doc, array, "FitH");
-      pdfout_sequence_push (doc, array, "null");
-    }
-  else if (flags == 022)
-    {
-      pdfout_sequence_push (doc, array, "FitH");
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
-      pdfout_sequence_push (doc, array, buffer);
-    }
-  else if (flags == 040)
-    {
-      pdfout_sequence_push (doc, array, "FitV");
-      pdfout_sequence_push (doc, array, "null");
-    }
-  else if (flags == 041)
-    {
-      pdfout_sequence_push (doc, array, "FitV");
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
-      pdfout_sequence_push (doc, array, buffer);
-    }
-  else if (flags == 077)
-    {
-      pdfout_sequence_push (doc, array, "FitR");
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.x);
-      pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.y);
-      pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", rb.x);
-      pdfout_sequence_push (doc, array, buffer);
-      pdfout_snprintf_old (buffer, sizeof buffer, "%g", lt.y);
-      pdfout_sequence_push (doc, array, buffer);
-    }
-  else
-    {
-      MSG ("unknown flag '0%o' in parse_gotor", flags);
-      return 0;
-    }
-  return array;
 }
 
