@@ -36,6 +36,7 @@
 #include "charset-conversion.h"
 #include "page-labels.h"
 #include "info-dict.h"
+#include "outline.h"
 
 /* global variables */
 
@@ -56,41 +57,9 @@ pdf_obj *pdfout_resolve_dest(fz_context *ctx, pdf_document *doc, pdf_obj *dest,
 
 void *pdfout_x2nrealloc_imp (fz_context *ctx, void *p, int *pn, unsigned s);
   
-void pdfout_print_yaml_page (fz_context *ctx, pdf_document *pdf_doc,
-			     int page_number, yaml_emitter_t *emitter,
-			     int mode);
-
 void pdfout_text_get_page (FILE *stream, fz_context *ctx,
 			   pdf_document *doc, int page_number);
 
-/* on error, returns non-zero and *DOC is undefined */
-int pdfout_outline_load (yaml_document_t **doc, FILE *input,
-			 enum pdfout_outline_format format);
-
-/* on error, returns non-zero  */
-int pdfout_outline_dump (FILE *output, yaml_document_t *doc,
-			 enum pdfout_outline_format format);
-
-/* remove outline, if YAML_DOC is NULL or empty.
-   return values:
-   0: success
-   1: invalid yaml_doc
-   2: no document catalog */
-int pdfout_outline_set (fz_context *ctx, pdf_document *doc,
-			yaml_document_t *yaml_doc);
-
-/* return values:
-   0: *YAML_DOC will point to the allocated outline, which has to be freed by
-   the user.
-   1: no outline, *YAML_DOC is set to NULL  */
-int pdfout_outline_get (yaml_document_t **yaml_doc, fz_context *ctx,
-			pdf_document *pdf_doc);
-
-/* returns values:
-   0: *YAML_DOC will point to allocated page labels
-   1: no page labelsm *YAML_DOC is set to NULL  */
-int pdfout_get_page_labels (yaml_document_t **yaml_doc, fz_context *ctx,
-			    pdf_document *doc);
 
 /* makes incremental update if OUTPUT_FILENAME is NULL
    calls exit (1) on error  */

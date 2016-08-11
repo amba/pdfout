@@ -16,7 +16,6 @@ shared.c \
 shared.h \
 getoutline.c \
 setoutline.c \
-convert-outline.c \
 getinfo.c \
 setinfo.c \
 pagecount.c \

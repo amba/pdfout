@@ -23,9 +23,7 @@ check-bin: $(check_PROGRAMS)
 TESTS = $(check_PROGRAMS)
 
 check_PROGRAMS= \
-outline-yaml \
-outline-wysiwyg \
-convert-outline \
+outline-json \
 page-labels \
 info-dict \
 page-count \

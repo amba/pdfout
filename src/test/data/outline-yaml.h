@@ -1,6 +1,7 @@
-#define OUTLINE_YAML_10_PAGES "\
--   title: title1\n\
-    page: 1\n\
+#define OUTLINE_JSON_10_PAGES "\
+[
+    \"title\": \"title1\"\n\
+    \"page\": 1\n\
     view: [XYZ, null, null, null]\n\
 -   title: title 2\n\
     page: 2\n\

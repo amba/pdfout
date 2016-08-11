@@ -23,30 +23,27 @@ static char doc[] = "Read the new outline from standard input.\n";
 
 static struct argp_option options[] = {
   {"output", 'o', "FILE", 0, PDFOUT_NO_INCREMENTAL},
-  {PDFOUT_OUTLINE_FORMAT_OPTION},
+  /* {PDFOUT_OUTLINE_FORMAT_OPTION}, */
   {"default-filename", 'd', 0, 0, "read input from PDF_FILE.outline.FORMAT"},
-  {"default-view", 'v', "DEST", 0, "set default outline destination"},
   {"remove", 'r', 0, 0, "remove outline"},
   {0}
 };
 
 static char *pdf_filename;
-static char *pdf_output_filename;
+static char *output_filename;
 static FILE *input;
-static char *default_view;
 static bool remove_outline;
-static enum pdfout_outline_format format;
+/* static enum pdfout_outline_format format; */
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state)
 {
   static bool use_default_filename;
   switch (key)
     {
-    case 'v': default_view = arg; break;
-    case 'o': pdf_output_filename = arg; break;
+    case 'o': output_filename = arg; break;
     case 'd': use_default_filename = true; break;
     case 'r': remove_outline = true; break;
-    case 'f': format = pdfout_outline_get_format (state, arg); break;
+    /* case 'f': format = pdfout_outline_get_format (state, arg); break; */
       
     case ARGP_KEY_ARG:
       if (state->arg_num == 0)
@@ -61,8 +58,8 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 
     case ARGP_KEY_END:
       if (use_default_filename)
-	input = open_default_read_file (state, pdf_filename,
-					pdfout_outline_suffix (format));
+	input = open_default_read_file (state, pdf_filename, ".outline");
+					/* pdfout_outline_suffix (format)); */
       else
 	input = stdin;
       break;
@@ -81,48 +78,28 @@ static struct argp_child children[] = {
 
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
-static void parse_default_view (char *default_view);
-
 void
 pdfout_command_setoutline (int argc, char **argv)
 {
-  pdf_document *doc;
-  fz_context *ctx;
-  yaml_document_t *yaml_doc = NULL;
-  
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
-  ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  fz_context *ctx = pdfout_new_context ();
+  pdf_document *doc = pdfout_pdf_open_document (ctx, pdf_filename);
 
+  pdfout_data *outline;
   if (remove_outline == false)
     {
-      if (pdfout_outline_load (&yaml_doc, input, format))
-	exit (EX_DATAERR);
-  
-      if (default_view)
-	parse_default_view (default_view);
+      fz_stream *stm = fz_open_file_ptr (ctx, input);
+      pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
+      outline = pdfout_parser_parse (ctx, parser);
     }
+  else
+    outline = NULL;
   
-  if (pdfout_outline_set (ctx, doc, yaml_doc))
-    exit (EX_DATAERR);
-      
-  pdfout_write_document (ctx, doc, pdf_filename, pdf_output_filename);
-  exit (0);
-}
 
-static void
-parse_default_view (char *default_view)
-{
-  yaml_parser_t *parser = XZALLOC (yaml_parser_t);
+  pdfout_outline_set (ctx, doc, outline);
   
-  pdfout_yaml_parser_initialize (parser);
-  yaml_parser_set_input_string (parser, (yaml_char_t *) default_view,
-				strlen (default_view));
-  pdfout_default_dest_array = XZALLOC (yaml_document_t);
-  pdfout_yaml_parser_load (parser, pdfout_default_dest_array);
-      
-  /* cleanup  */
-  yaml_parser_delete (parser);
-  free (parser);
+  pdfout_write_document (ctx, doc, pdf_filename, output_filename);
+
+  exit (0);
 }

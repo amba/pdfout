@@ -58,11 +58,11 @@ DEF_COMMAND ("create",
 	     "Create empty PDF files."
 	     )
 
-DEF_COMMAND ("convert-outline",
-	     REGULAR,
-	     pdfout_command_convert_outline,
-	     "Convert outline format."
-	     )
+/* DEF_COMMAND ("convert-outline", */
+/* 	     REGULAR, */
+/* 	     pdfout_command_convert_outline, */
+/* 	     "Convert outline format." */
+/* 	     ) */
 
 DEF_COMMAND ("repair",
 	     REGULAR,

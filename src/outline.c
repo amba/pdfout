@@ -10,8 +10,9 @@ static const char *
 data_hash_get_string_key (fz_context *ctx, pdfout_data *hash,
 			  const char *key)
 {
+  pdfout_data *scalar = pdfout_data_hash_gets (ctx, hash, key);
   int len;
-  const char *value = pdfout_data_hash_get_key_value (ctx, hash, key, &len);
+  char *value = pdfout_data_scalar_get (ctx, scalar, &len);
   if (strlen (value) != len)
     pdfout_throw (ctx, "embedded null byte for key '%s'", key);
   return value;
@@ -22,10 +23,20 @@ data_array_get_string (fz_context *ctx, pdfout_data *array, int i)
 {
   pdfout_data *scalar = pdfout_data_array_get (ctx, array, i);
   int len;
-  const char *result = pdfout_data_scalar_get (ctx, array, &len);
+  const char *result = pdfout_data_scalar_get (ctx, scalar, &len);
   if (len != strlen (result))
     pdfout_throw (ctx, "string with embedded null byte");
   return result;
+}
+
+static const char *
+data_scalar_get_string (fz_context *ctx, pdfout_data *scalar)
+{
+  int len;
+  const char *value = pdfout_data_scalar_get (ctx, scalar, &len);
+  if (strlen (value) != len)
+    pdfout_throw (ctx, "embedded null byte");
+  return value;
 }
 
 static int
@@ -40,7 +51,7 @@ dest_sequence_length (fz_context *ctx, const char *label)
   else if (streq (label, "FitR"))
     return 5;
   else
-    pdfout_throw (ctx, "unknown destination: '%s', label");
+    pdfout_throw (ctx, "unknown destination: '%s'", label);
 }
 
 static void
@@ -49,7 +60,7 @@ check_sequence_numbers (fz_context *ctx, pdfout_data *dest)
   int len = pdfout_data_array_len (ctx, dest);
   for (int i = 1; i < len; ++i)
     {
-      char *num = data_array_get_string (ctx, dest, i);
+      const char *num = data_array_get_string (ctx, dest, i);
       if (streq (num, "null"))
 	continue;
       else if (isnan (pdfout_strtof_nan (num)))
@@ -61,16 +72,19 @@ static void
 check_dest_sequence (fz_context *ctx, pdfout_data *dest)
 {
   int len = pdfout_data_array_len (ctx, dest);
-  if (len < 1 || length > 5)
+  if (len < 1 || len > 5)
     pdfout_throw (ctx, "illegal View sequence with length %d", len);
 
   const char *label = data_array_get_string (ctx, dest, 0);
   
   if (len != dest_sequence_length (ctx, label))
-    pdfout_data_throw (ctx, "illegal %s sequence with length %d", label, len);
+    pdfout_throw (ctx, "illegal %s sequence with length %d", label, len);
 
   check_sequence_numbers (ctx, dest);
 }
+
+static void
+check_outline_array (fz_context *ctx, pdf_document *doc, pdfout_data *outline);
 
 static void
 check_outline_hash (fz_context *ctx, pdf_document *doc, pdfout_data *hash)
@@ -82,14 +96,15 @@ check_outline_hash (fz_context *ctx, pdf_document *doc, pdfout_data *hash)
     {
       pdfout_data *key = pdfout_data_hash_get_key (ctx, hash, i);
       pdfout_data *value = pdfout_data_hash_get_value (ctx, hash, i);
-      if (pdfout_data_scalar_eq (key, "title"))
+      if (pdfout_data_scalar_eq (ctx, key, "title"))
 	{
-	  pdfout_data_scalar_get (ctx, value);
+	  if (pdfout_data_is_scalar (ctx, value) == false)
+	    pdfout_throw (ctx, "value of key 'title' not a scalar");
 	  has_page = true;
 	}
-      else if (pdfout_data_scalar_eq (key, "page"))
+      else if (pdfout_data_scalar_eq (ctx, key, "page"))
 	{
-	  char *s = pdfout_data_scalar_get (ctx, value);
+	  const char *s = data_scalar_get_string (ctx, value);
 	  int page = pdfout_strtoint_null (ctx, s);
 	  int count = pdf_count_pages (ctx, doc);
 	  if (page < 1)
@@ -101,15 +116,15 @@ check_outline_hash (fz_context *ctx, pdf_document *doc, pdfout_data *hash)
 
 	  has_page = true;
 	}
-      else if (pdfout_data_scalar_eq (key, "view"))
+      else if (pdfout_data_scalar_eq (ctx, key, "view"))
 	check_dest_sequence (ctx, value);
-      else if (pdfout_data_scalar_eq (key, "open"))
+      else if (pdfout_data_scalar_eq (ctx, key, "open"))
 	{
-	  if (pdfout_data_scalar_eq (value, "true") == false
-	      && pdfout_data_scalar_eq (value, "false") == false)
+	  if (pdfout_data_scalar_eq (ctx, value, "true") == false
+	      && pdfout_data_scalar_eq (ctx, value, "false") == false)
 	    pdfout_throw (ctx, "value of key 'open' not a bool");
 	}
-      else if (pdfout_data_scalar_eq (key, "kids"))
+      else if (pdfout_data_scalar_eq (ctx, key, "kids"))
 	check_outline_array (ctx, doc, value);
     }
 
@@ -155,7 +170,7 @@ calculate_kids_count (fz_context *ctx, pdfout_data *hash)
   for (int i = 0; i < kids_len; ++i)
     {
       pdfout_data *kid_hash = pdfout_data_array_get (ctx, kids, i);
-      int kid_count = calculate_kids_count (doc, kid_hash);
+      int kid_count = calculate_kids_count (ctx, kid_hash);
       if (kid_count > 0)
 	count += kid_count;
     }
@@ -179,7 +194,7 @@ calculate_counts (fz_context *ctx, pdfout_data *outline)
   for (int i = 0; i < len; ++i)
     {
       pdfout_data *hash = pdfout_data_array_get (ctx, outline, i);
-      calculate_kids_counts (ctx, hash);
+      calculate_kids_count (ctx, hash);
     }
 }
 
@@ -215,7 +230,7 @@ convert_dest_array (fz_context *ctx, pdf_document *doc, pdfout_data *view,
     {
       pdf_obj *null_or_real;
       pdfout_data *scalar = pdfout_data_array_get (ctx, view, i);
-      if (pdfout_data_scalar_eq (scalar, "null"))
+      if (pdfout_data_scalar_eq (ctx, scalar, "null"))
 	null_or_real = pdf_new_null(ctx, doc);
       else
 	{
@@ -226,6 +241,11 @@ convert_dest_array (fz_context *ctx, pdf_document *doc, pdfout_data *view,
 
   return dest_array;
 }
+
+static void
+create_outline_kids_array (fz_context *ctx, pdf_document *doc,
+			   pdfout_data *outline, pdf_obj *parent,
+			   pdf_obj **first, pdf_obj **last);
 
 static void
 create_outline_dict (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
@@ -243,21 +263,21 @@ create_outline_dict (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
 
   pdfout_data *view = pdfout_data_hash_gets (ctx, hash, "view");
   pdf_obj *dest_array = convert_dest_array (ctx, doc, view, page);
-  pdf_dict_puts_drop (ctx, dict, "Dest", dest);
+  pdf_dict_puts_drop (ctx, dict, "Dest", dest_array);
 
   /* Kids.  */
-  pdfout_data *kids = pdofut_data_hash_gets (ctx, hash, "kids");
+  pdfout_data *kids = pdfout_data_hash_gets (ctx, hash, "kids");
   if (kids)
     {
       pdf_obj *first, *last;
-      create_outline_kids_array (ctx, doc, kids, dict, first, last);
+      create_outline_kids_array (ctx, doc, kids, dict, &first, &last);
       pdf_dict_puts_drop (ctx, dict, "First", first);
       pdf_dict_puts_drop (ctx, dict, "Last", last);
     }
   
   /* Parent.  */
   pdf_obj *parent_copy = copy_indirect_ref (ctx, doc, parent);
-  pdf_dict_puts_drop (ctx, doc, dict, "Parent", parent_copy);
+  pdf_dict_puts_drop (ctx, dict, "Parent", parent_copy);
 
   /* Prev and Next. */
   if (prev)
@@ -305,7 +325,7 @@ create_outline_kids_array (fz_context *ctx, pdf_document *doc,
 			    pdf_to_gen (ctx, ref_table[len - 1]));
 
   /* Cleanup. */
-  for (i = 0; i < length; ++i)
+  for (int i = 0; i < len; ++i)
     free (ref_table[i]);
   free (ref_table);
   free (dict_table);
@@ -339,21 +359,11 @@ pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
   pdf_obj *first, *last;
   create_outline_kids_array (ctx, doc, outline, outline_ref, &first, &last);
 
-  pdf_dict_puts_drop (ctx, outline, "First", first);
-  pdf_dict_puts_drop (ctx, outline, "Last", last);
+  pdf_dict_puts_drop (ctx, dict, "First", first);
+  pdf_dict_puts_drop (ctx, dict, "Last", last);
 }
 
 /* Get outline.  */
-
-static bool
-pdf_name_eq (fz_context *ctx, pdf_obj *name, const char *str)
-{
-  if (pdf_is_name (ctx, name) == false)
-    pdfout_throw (ctx, "not a name object");
-  
-  char *name_str = pdf_to_name (ctx, name);
-  return strcmp (name_str, str) == 0;
-}
 
 static void
 check_dest (fz_context *ctx, pdf_document *doc, pdf_obj *dest)
@@ -378,7 +388,7 @@ check_dest (fz_context *ctx, pdf_document *doc, pdf_obj *dest)
 
   int expected_len = 1 + dest_sequence_length (ctx, name_str);
   if (len != expected_len)
-    pdfout_throw (ctx, "illegal %s dest array with length %d", len);
+    pdfout_throw (ctx, "illegal %s dest array with length %d", name_str, len);
   for (int i = 2; i < len; ++i)
     {
       pdf_obj *obj = pdf_array_get (ctx, dest, i);
@@ -434,6 +444,35 @@ data_scalar_from_int (fz_context *ctx, int number)
 }
 
 static pdfout_data *
+get_view_array (fz_context *ctx, pdf_document *doc, pdf_obj *dest, int *page)
+{
+  dest = pdfout_resolve_dest(ctx, doc, dest, FZ_LINK_GOTO);
+
+  pdf_obj *page_ref = pdf_array_get (ctx, dest, 0);
+  *page = pdf_lookup_page_number (ctx, doc, page_ref);
+
+  pdfout_data *view_array = pdfout_data_array_new (ctx);
+
+  pdf_obj *kind = pdf_array_get (ctx, dest, 1);
+  pdfout_data *kind_data = pdfout_data_scalar_from_pdf (ctx, kind);
+  pdfout_data_array_push (ctx, view_array, kind_data);
+
+  int len = pdf_array_len (ctx, dest);
+  
+  for (int i = 2; i < len; ++i)
+    {
+      pdf_obj *item = pdf_array_get (ctx, dest, i);
+      pdfout_data *item_data = pdfout_data_scalar_from_pdf (ctx, item);
+      pdfout_data_array_push (ctx, view_array, item_data);
+    }
+
+  return view_array;
+}
+
+static pdfout_data *
+get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *outline);
+
+static pdfout_data *
 get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
 {
   pdf_obj *title_obj = pdf_dict_gets (ctx, outline, "Title");
@@ -445,14 +484,14 @@ get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
   int page;
   
   if (dest)
-    view_array = get_dest_array (ctx, doc, dest, &page);
+    view_array = get_view_array (ctx, doc, dest, &page);
   else
     {
       int title_len;
       char *title_str = pdfout_data_scalar_get (ctx, title, &title_len);
       pdfout_warn (ctx, "outline item with title '%s' has no destination",
 		   title_str);
-      pdfout_data_drop (title);
+      pdfout_data_drop (ctx, title);
       return NULL;
     }
   
@@ -462,7 +501,7 @@ get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
   
   data_hash_push_string_key (ctx, hash, "title", title);
 
-  data_hash_push_string_key (ctx, hash, "view", dest_array);
+  data_hash_push_string_key (ctx, hash, "view", view_array);
   
   pdfout_data *page_value = data_scalar_from_int (ctx, page);
 
@@ -478,7 +517,7 @@ get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
     }
 
   /* Kids.  */
-  pdf_obj *first = pdf_dict_gets (ctx, doc, outline, "First");
+  pdf_obj *first = pdf_dict_gets (ctx, outline, "First");
   if (first)
     {
       pdfout_data *kids_array = get_outline_array (ctx, doc, first);
@@ -506,7 +545,7 @@ get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
   else
     {
       /* Empty list, return NULL.  */
-      pdf_data_drop (ctx, result_array);
+      pdfout_data_drop (ctx, result_array);
       return NULL;
     }
 }
@@ -516,7 +555,7 @@ pdfout_outline_get (fz_context *ctx, pdf_document *doc)
 {
   pdf_obj *root = pdf_dict_get (ctx, pdf_trailer (ctx, doc), PDF_NAME_Root);
   pdf_obj *outline_obj = pdf_dict_get (ctx, root, PDF_NAME_Outlines);
-  pdf_obj *first = pdf_dict_get (ctx, obj, PDF_NAME_First);
+  pdf_obj *first = pdf_dict_get (ctx, outline_obj, PDF_NAME_First);
 
   if (first)
     {
