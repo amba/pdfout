@@ -126,6 +126,9 @@ float pdfout_strtof_old (const char *string);
 void PDFOUT_NORETURN PDFOUT_PRINTFLIKE (2)
 pdfout_throw_errno (fz_context *ctx, const char *fmt, ...);
 
+PDFOUT_PRINTFLIKE (2)
+void pdfout_warn (fz_context *ctx, const char *fmt, ...);
+
 void PDFOUT_NORETURN
 pdfout_vthrow (fz_context *ctx, const char *fmt, va_list ap);
 

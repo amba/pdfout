@@ -142,6 +142,14 @@ pdfout_throw (fz_context *ctx, const char *fmt, ...)
 }
 
 void
+pdfout_warn (fz_context *ctx, const char *fmt, ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  fz_vwarn (ctx, fmt, ap);
+}
+  
+void
 pdfout_throw_errno (fz_context *ctx, const char *fmt, ...)
 {
   va_list ap;

@@ -64,4 +64,10 @@ va_list version of C<pdfout_throw>.
 Like C<pdfout_throw>, but show the  message produced by C<strerror> if errno is
 set.
 
+=item
+
+ void pdfout_warn (fz_context *ctx, const char *fmt, ...);
+
+Equivalent to C<fz_warn>.
+
 =back

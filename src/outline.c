@@ -1,6 +1,4 @@
-
 #include "common.h"
-#include "outline-wysiwyg.h"
 
 static bool
 streq (const char *a, const char *b)
@@ -345,7 +343,51 @@ pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
   pdf_dict_puts_drop (ctx, outline, "Last", last);
 }
 
-/* get outline */
+/* Get outline.  */
+
+static bool
+pdf_name_eq (fz_context *ctx, pdf_obj *name, const char *str)
+{
+  if (pdf_is_name (ctx, name) == false)
+    pdfout_throw (ctx, "not a name object");
+  
+  char *name_str = pdf_to_name (ctx, name);
+  return strcmp (name_str, str) == 0;
+}
+
+static void
+check_dest (fz_context *ctx, pdf_document *doc, pdf_obj *dest)
+{
+  dest = pdfout_resolve_dest(ctx, doc, dest, FZ_LINK_GOTO);
+  if (dest == NULL)
+    pdfout_throw (ctx, "undefined link kind");
+  if (pdf_is_array (ctx, dest) == false)
+    pdfout_throw (ctx, "destination is not an array object");
+  int len = pdf_array_len (ctx, dest);
+
+  pdf_obj *page_ref = pdf_array_get (ctx, dest, 0);
+  int page = pdf_lookup_page_number (ctx, doc, page_ref);
+  int page_count = pdf_count_pages (ctx, doc);
+  if (page >= page_count)
+    pdfout_throw (ctx, "page %d is exceeds page count %d", page, page_count);
+  
+  pdf_obj *name = pdf_array_get (ctx, dest, 1);
+  char *name_str = pdf_to_name (ctx, name);
+  if (name_str == NULL)
+    pdfout_throw (ctx, "not a name object");
+
+  int expected_len = 1 + dest_sequence_length (ctx, name_str);
+  if (len != expected_len)
+    pdfout_throw (ctx, "illegal %s dest array with length %d", len);
+  for (int i = 2; i < len; ++i)
+    {
+      pdf_obj *obj = pdf_array_get (ctx, dest, i);
+      if (pdf_is_null (ctx, obj) == false
+	  && pdf_is_number (ctx, obj) == false)
+	pdfout_throw (ctx, "illegal dest array");
+    }
+
+}
 
 static void
 check_pdf_outline (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
@@ -366,18 +408,107 @@ check_pdf_outline (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
       pdf_obj *dest = pdf_dict_gets (ctx, outline, "Dest");
       if (dest)
 	check_dest (ctx, doc, dest);
-      else
-	fz_warn
+
+      pdf_obj *first = pdf_dict_gets (ctx, outline, "First");
+      if (first)
+	check_pdf_outline (ctx, doc, first);
+      
     }
   while ((outline = pdf_dict_gets (ctx, outline, "Next")));
 }
 
-static pdfout_data *
-get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *dict)
+static void
+data_hash_push_string_key (fz_context *ctx, pdfout_data *hash, const char *key,
+			   pdfout_data *value)
 {
-  pdfout_data *result_array;
+  pdfout_data *key_data = pdfout_data_scalar_new (ctx, key, strlen (key));
+  pdfout_data_hash_push (ctx, hash, key_data, value);
+}
+
+static pdfout_data *
+data_scalar_from_int (fz_context *ctx, int number)
+{
+  char buf[200];
+  int len = pdfout_snprintf (ctx, buf, "%d", number);
+  return pdfout_data_scalar_new (ctx, buf, len);
+}
+
+static pdfout_data *
+get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
+{
+  pdf_obj *title_obj = pdf_dict_gets (ctx, outline, "Title");
+  pdfout_data *title = pdfout_data_scalar_from_pdf (ctx, title_obj);
+
+  pdf_obj *dest = pdf_dict_gets (ctx, outline, "Dest");
+  pdfout_data *view_array;
+
+  int page;
+  
+  if (dest)
+    view_array = get_dest_array (ctx, doc, dest, &page);
+  else
+    {
+      int title_len;
+      char *title_str = pdfout_data_scalar_get (ctx, title, &title_len);
+      pdfout_warn (ctx, "outline item with title '%s' has no destination",
+		   title_str);
+      pdfout_data_drop (title);
+      return NULL;
+    }
   
   
+  pdfout_data *hash = pdfout_data_hash_new (ctx);
+  
+  
+  data_hash_push_string_key (ctx, hash, "title", title);
+
+  data_hash_push_string_key (ctx, hash, "view", dest_array);
+  
+  pdfout_data *page_value = data_scalar_from_int (ctx, page);
+
+  data_hash_push_string_key (ctx, hash, "page", page_value);
+  
+  pdf_obj *count_obj = pdf_dict_gets (ctx, outline, "Count");
+  if (count_obj)
+    {
+      int count_int = pdf_to_int (ctx, count_obj);
+      const char *value = count_int > 0 ? "true" : "false";
+      pdfout_data_hash_push_key_value (ctx, hash, "open", value,
+				       strlen (value));
+    }
+
+  /* Kids.  */
+  pdf_obj *first = pdf_dict_gets (ctx, doc, outline, "First");
+  if (first)
+    {
+      pdfout_data *kids_array = get_outline_array (ctx, doc, first);
+      if (kids_array)
+	data_hash_push_string_key (ctx, hash, "kids", kids_array);
+    }
+
+  return hash;
+}
+
+static pdfout_data *
+get_outline_array (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
+{
+  pdfout_data *result_array = pdfout_data_array_new (ctx);
+  do
+    {
+      pdfout_data *hash = get_outline_hash (ctx, doc, outline);
+      if (hash)
+	pdfout_data_array_push (ctx, result_array, hash);
+    }
+  while ((outline = pdf_dict_gets (ctx, outline, "Next")));
+
+  if (pdfout_data_array_len (ctx, result_array))
+    return result_array;
+  else
+    {
+      /* Empty list, return NULL.  */
+      pdf_data_drop (ctx, result_array);
+      return NULL;
+    }
 }
 
 pdfout_data *
@@ -388,7 +519,10 @@ pdfout_outline_get (fz_context *ctx, pdf_document *doc)
   pdf_obj *first = pdf_dict_get (ctx, obj, PDF_NAME_First);
 
   if (first)
-    return outline_get (ctx, doc, first);
+    {
+      check_pdf_outline (ctx, doc, first);
+      return get_outline_array (ctx, doc, first);
+    }
   else
     return pdfout_data_array_new (ctx);
 }
