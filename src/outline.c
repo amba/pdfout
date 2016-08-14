@@ -100,7 +100,7 @@ check_outline_hash (fz_context *ctx, pdf_document *doc, pdfout_data *hash)
 	{
 	  if (pdfout_data_is_scalar (ctx, value) == false)
 	    pdfout_throw (ctx, "value of key 'title' not a scalar");
-	  has_page = true;
+	  has_title = true;
 	}
       else if (pdfout_data_scalar_eq (ctx, key, "page"))
 	{

@@ -17,6 +17,10 @@ pdfout_ok
 /;
 
 my $class = __PACKAGE__;
+my $builder = $class->builder;
+binmode $builder->output,         ":encoding(utf8)";
+binmode $builder->failure_output, ":encoding(utf8)";
+binmode $builder->todo_output,    ":encoding(utf8)";
 
 sub close_fh {
     my $fh = shift;
@@ -69,7 +73,10 @@ sub command_subtest {
     }
     
     my $pid = open3($in_fh, $out_fh, $err_fh, @{$args{command}});
-
+    binmode($in_fh, ':utf8');
+    binmode($out_fh, ':utf8');
+    binmode($err_fh, ':utf8');
+    
     my $input = $args{input};
     $tb->diag("sending input '$input'");
     if ($input) {
