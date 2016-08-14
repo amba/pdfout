@@ -1,6 +1,5 @@
 #define OUTLINE_JSON_10_PAGES "\
-[
-    \"title\": \"title1\"\n\
+-    \"title\": \"title1\"\n\
     \"page\": 1\n\
     view: [XYZ, null, null, null]\n\
 -   title: title 2\n\
@@ -15,7 +14,7 @@
         page: 3\n\
         view: [FitH, 10]\n\
         kids:\n\
-        -   title: abc♦♥♠def\n\
+        -   title: abc♦♥♠Def\n\
             page: 3\n\
             view: [FitV, null]\n\
         -   title: ♦♥♠\n\

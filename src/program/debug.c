@@ -18,10 +18,7 @@
 
 #include "common.h"
 #include "shared.h"
-#include "tmpdir.h"
-#include "tempname.h"
 #include "charset-conversion.h"
-#include "pdfout-regex.h"
 #include "data.h"
 
 #define test_assert(expr)					\
@@ -67,17 +64,17 @@ Expression '" #expr "' did not throw as expected\n", __FILE__, __LINE__); \
 
 
 static void
-write_pdf (fz_context *ctx, pdf_document *doc, debug_io_handle *handle,
+write_pdf (fz_context *ctx, pdf_document *doc, pdfout_tmp_stream *handle,
 	   pdf_write_options *opts)
 {
-  fz_output *output = debug_io_handle_output (ctx, handle);
+  fz_output *output = pdfout_tmp_stream_output (ctx, handle);
   pdf_write_document (ctx, doc, output, opts);
 }
 
 static pdf_document *
-open_pdf (fz_context *ctx, debug_io_handle *handle)
+open_pdf (fz_context *ctx, pdfout_tmp_stream *handle)
 {
-  fz_stream *stream = debug_io_handle_stream (ctx, handle);
+  fz_stream *stream = pdfout_tmp_stream_stream (ctx, handle);
   pdf_document *doc = pdf_open_document_with_stream (ctx, stream);
   if (doc->repair_attempted || doc->freeze_updates)
     error (1, 0, "pdf_open_document: broken_pdf");
@@ -96,7 +93,7 @@ check_incremental_update (void)
 
   pdf_document *doc = pdf_create_document (ctx);
 
-  debug_io_handle *handle = debug_io_handle_new (ctx);
+  pdfout_tmp_stream *handle = pdfout_tmp_stream_new (ctx);
 
   write_pdf (ctx, doc, handle, &opts);
   pdf_drop_document (ctx, doc);
@@ -144,7 +141,7 @@ check_incremental_update_xref (void)
 
   opts.do_incremental = 0;
 
-  debug_io_handle *handle = debug_io_handle_new (ctx);
+  pdfout_tmp_stream *handle = pdfout_tmp_stream_new (ctx);
   write_pdf (ctx, doc[0], handle, &opts);
   doc[1] = open_pdf (ctx, handle);
   
@@ -257,31 +254,6 @@ check_string_conversions (void)
 
   exit (0);
 }
-
-static void check_regex (void)
-{
-  {
-    struct pdfout_re_pattern_buffer *
-      buff = XZALLOC (struct pdfout_re_pattern_buffer);
-    const char *pattern = "ab";
-    const char *string = "aaaab";
-    int len = strlen (string);
-    const char * error_string =
-      pdfout_re_compile_pattern (pattern, strlen (pattern),
-				 RE_SYNTAX_EGREP, 0, buff);
-    if (error_string)
-      error (1, errno, "pdfout_re_compile_pattern: %s", error_string);
-
-    test_assert (pdfout_re_search (buff, string, len, 0, len) == 3);
-    test_assert (buff->start - string == 3);
-    test_assert (buff->end - string == 5);
-    
-    pdfout_re_free (buff);
-  }
-  exit (0);
-}
-
-
 
 static void check_json_parser_value (fz_context *ctx, const char *json,
 				     const char *value, bool fail)
@@ -532,16 +504,16 @@ static void check_json_emitter (fz_context *ctx)
 
     const char *expected = "\
 [\n\
-    1,\n\
-    null,\n\
-    true,\n\
-    [],\n\
-    {},\n\
-    false,\n\
-    {\n\
-        \"abc\": 1,\n\
-        \"def\": true\n\
-    }\n\
+  1,\n\
+  null,\n\
+  true,\n\
+  [],\n\
+  {},\n\
+  false,\n\
+  {\n\
+    \"abc\": 1,\n\
+    \"def\": true\n\
+  }\n\
 ]\n";
 
     json_emitter_test (ctx, a, expected);
@@ -616,7 +588,6 @@ static struct argp_option options[] = {
   {"incremental-update", INCREMENTAL_UPDATE},
   {"incremental-update-xref", INCREMENTAL_UPDATE_XREF},
   {"string-conversions", STRING_CONVERSIONS},
-  {"regex", REGEX},
   {"json", JSON},
   {"data", DATA},
     {0}
@@ -630,7 +601,6 @@ parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
     case INCREMENTAL_UPDATE: check_incremental_update (); break;
     case INCREMENTAL_UPDATE_XREF: check_incremental_update_xref (); break;
     case STRING_CONVERSIONS: check_string_conversions (); break;
-    case REGEX: check_regex (); break;
     case JSON: check_json (); break;
     case DATA: check_data (); break;
     default:

@@ -124,7 +124,7 @@ pdfout_argp_parse (const struct argp * argp, int argc, char ** argv,
   if (err)
     {
       pdfout_errno_msg (err, "error: argp_parse");
-      exit (EX_USAGE);
+      exit (1);
     }
 }
 
@@ -310,7 +310,7 @@ pdfout_parse_page_range (const char *ranges, int page_count)
   result = XNMALLOC (2 * result_len, int);
   
   if (get_range (result, ranges_copy, page_count))
-    exit (EX_USAGE);
+    exit (1);
 
   free (ranges_copy);
   return result;

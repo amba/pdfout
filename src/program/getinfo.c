@@ -80,7 +80,7 @@ pdfout_command_getinfo (int argc, char **argv)
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  doc = pdf_open_document (ctx, pdf_filename);
 
   hash = pdfout_info_dict_get (ctx, doc);
 

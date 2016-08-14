@@ -89,7 +89,7 @@ pdfout_command_gettxt (int argc, char **argv)
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  doc = pdf_open_document (ctx, pdf_filename);
   page_count = pdf_count_pages (ctx, doc);
 
   if (page_range == NULL) {

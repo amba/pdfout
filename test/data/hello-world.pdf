@@ -1,0 +1,79 @@
+%PDF-1.4
+%%μῦ
+
+1 0 obj
+<</Type/Catalog/Pages 2 0 R/PageLabels<</Nums[0<</S/D>>1<</S/r>>2<</S/A>>]>>>>
+endobj
+
+2 0 obj
+<</Type/Pages/Count 3/Kids[3 0 R 4 0 R 5 0 R]>>
+endobj
+
+3 0 obj
+<</Type/Page/MediaBox[0 0 595.276 841.89]/Rotate 0/Parent 2 0 R/Resources 6 0 R/Contents 7 0 R>>
+endobj
+
+4 0 obj
+<</Type/Page/MediaBox[0 0 595.276 841.89]/Rotate 0/Parent 2 0 R/Resources 6 0 R/Contents 8 0 R>>
+endobj
+
+5 0 obj
+<</Type/Page/MediaBox[0 0 595.276 841.89]/Rotate 0/Parent 2 0 R/Resources 6 0 R/Contents 9 0 R>>
+endobj
+
+6 0 obj
+<</Font<</F0<</Type/Font/BaseFont/Times-Italic/Subtype/Type1>>>>>>
+endobj
+
+7 0 obj
+<</Length 77>>
+stream
+1. 0. 0. 1. 50. 700. cm
+BT
+  /F0 36. Tf
+  (Hello, World from page 1!) Tj
+ET 
+endstream
+endobj
+
+8 0 obj
+<</Length 77>>
+stream
+1. 0. 0. 1. 50. 700. cm
+BT
+  /F0 36. Tf
+  (Hello, World from page 2!) Tj
+ET 
+endstream
+endobj
+
+9 0 obj
+<</Length 77>>
+stream
+1. 0. 0. 1. 50. 700. cm
+BT
+  /F0 36. Tf
+  (Hello, World from page 3!) Tj
+ET 
+endstream
+endobj
+
+xref
+0 10
+0000000000 00001 f 
+0000000018 00000 n 
+0000000113 00000 n 
+0000000177 00000 n 
+0000000290 00000 n 
+0000000403 00000 n 
+0000000516 00000 n 
+0000000599 00000 n 
+0000000724 00000 n 
+0000000849 00000 n 
+
+trailer
+<</Size 10/Root 1 0 R>>
+
+startxref
+974
+%%EOF

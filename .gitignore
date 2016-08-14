@@ -20,3 +20,5 @@ Makefile.in
 /build-aux/compile
 /gl/
 /gl-tests
+*nytprof*
+test/pdfout

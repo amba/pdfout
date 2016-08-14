@@ -836,7 +836,7 @@ pdfout_emitter_json_new (fz_context *ctx, fz_output *stm)
   
   result->out = stm;
 
-  result->indent = 4;
+  result->indent = 2;
   result->indent_level = 0;
   
   return &result->super;

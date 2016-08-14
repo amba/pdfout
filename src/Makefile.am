@@ -1,4 +1,4 @@
-SUBDIRS =  . program test 
+SUBDIRS =  . program
 
 AM_CPPFLAGS = -I$(top_srcdir)/gl -I$(top_builddir)/gl -I$(top_builddir)
 AM_CPPFLAGS += -I$(top_srcdir)/mupdf/include
@@ -20,12 +20,12 @@ charset-conversion.h \
 encodings.h \
 open-write-pdf.c \
 text-extraction.c \
-pdfout-regex.h \
-regex.c \
 alloc.c \
 data.c \
 data.h \
-json.c
+json.c \
+tmp-stream.h \
+tmp-stream.c
 
 charset-conversion.c: encodings.h
 encodings.h: encodings.gperf
