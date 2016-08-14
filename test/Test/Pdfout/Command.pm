@@ -7,11 +7,13 @@ use strict;
 use Carp;
 use IPC::Open3;
 use Text::Diff;
+use File::Spec::Functions qw/catfile/;
 
 use parent 'Test::Builder::Module';
 
 our @EXPORT = qw/
 command_ok
+pdfout_ok
 /;
 
 my $class = __PACKAGE__;
@@ -69,23 +71,32 @@ sub command_subtest {
     my $pid = open3($in_fh, $out_fh, $err_fh, @{$args{command}});
 
     my $input = $args{input};
-    
+    $tb->diag("sending input '$input'");
     if ($input) {
 	print {$in_fh} $input;
     }
-    
+
+    # Close write end of the pipe, so that the command sees end-of-file.
     close_fh($in_fh);
 
     my $retval = 1;
+
+    # Do not close out_fh and err_fh before waitpid, or the command can get
+    # SIGPIPE.
+
+    waitpid($pid, 0);
     
+    my $child_exit_status = $? >> 8;
+
     $retval &&= output_ok($args{expected_out}, $out_fh);
+
+    my $err_msg = do {local $/; <$err_fh>};
+    $tb->diag("err_msg: $err_msg");
     
     close_fh($out_fh);
     close_fh($err_fh);
     
-    waitpid($pid, 0);
 
-    my $child_exit_status = $? >> 8;
     
     my $expected_status = $args{status};
     if (not defined $expected_status) {
@@ -106,6 +117,13 @@ sub command_ok {
     my %args = @_;
     my $name = "@{$args{command}}";
     return $tb->subtest($name, \&command_subtest, %args);
+}
+
+sub pdfout_ok {
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    my %args = @_;
+    unshift @{$args{command}}, './pdfout';
+    return command_ok(%args);
 }
 
 1;

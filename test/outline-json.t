@@ -1,9 +1,11 @@
-#!perl
+#!/usr/bin/env perl
 use warnings;
 use strict;
 use 5.010;
 
 use Test::Pdfout::Command tests => 3;
+use Test::More;
+use Testlib;
 
 my @broken_input = (
     # no title
@@ -15,8 +17,9 @@ my @broken_input = (
 
 for my $broken (@broken_input) {
     my $file = new_pdf();
-    command_ok (
-	command => [qw/pdfout setout/, $file],
+    diag("file: $file");
+    pdfout_ok (
+	command => ['setout', $file],
 	input => $broken,
 	status => 1
 	);
