@@ -427,15 +427,17 @@ pdfout_data_hash_push_key_value (fz_context *ctx, pdfout_data *hash,
 pdfout_data *
 pdfout_data_hash_gets (fz_context *ctx, pdfout_data *hash, const char *key)
 {
-  data_hash *h = to_hash (ctx, hash);
-  
-  size_t len = strlen (key);
+  int hash_len = pdfout_data_hash_len (ctx, hash);
+    
+  size_t key_len = strlen (key);
 
-  for (int i = 0; i < len; ++i)
+  for (int i = 0; i < hash_len; ++i)
     {
-      data_scalar *k = to_scalar (ctx, h->list[i].key);
-      if (len == k->len && memcmp (key, k->value, len) == 0)
-	return (pdfout_data *) k;
+      pdfout_data *key_data = pdfout_data_hash_get_key (ctx, hash, i);
+      int len;
+      char *value = pdfout_data_scalar_get (ctx, key_data, &len);
+      if (len == key_len && memcmp (key, value, len) == 0)
+	return pdfout_data_hash_get_value (ctx, hash, i);
     }
   return NULL;
 }

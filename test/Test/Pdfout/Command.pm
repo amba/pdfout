@@ -12,7 +12,6 @@ use File::Spec::Functions qw/catfile/;
 use parent 'Test::Builder::Module';
 
 our @EXPORT = qw/
-command_ok
 pdfout_ok
 /;
 
@@ -59,6 +58,36 @@ sub output_ok {
     }
 }
 
+sub signal_name {
+    my $signal = shift;
+    return
+	$signal == 6 ? "SIGABRT" :
+	$signal == 9 ? "SIGKILL" :
+	$signal == 11 ? "SIGSEGV" :
+	$signal == 13 ? "SIGPIPE" : $signal;
+}
+
+sub status_ok {
+    my ($wait_status, $expected_status) = @_;
+
+    my $tb = $class->builder;
+    
+    if (not defined $expected_status) {
+	$expected_status = 0;
+    }
+    
+    my $child_exit_status = $wait_status >> 8;
+
+    my $signal = $wait_status & 127;
+    if (not $tb->ok($signal == 0, "child not killed by signal")) {
+	my $signal_name = signal_name($signal);
+	$tb->diag("child died by signal $signal_name");
+	return 0;
+    }
+    
+    return $tb->is_num($child_exit_status, $expected_status, "exit status");
+}
+    
 sub command_subtest {
     my $tb = $class->builder;
     my %args = @_;
@@ -78,7 +107,9 @@ sub command_subtest {
     binmode($err_fh, ':utf8');
     
     my $input = $args{input};
-    $tb->diag("sending input '$input'");
+    if ($input) {
+	$tb->diag("sending input...");
+    }
     if ($input) {
 	print {$in_fh} $input;
     }
@@ -91,28 +122,21 @@ sub command_subtest {
     # Do not close out_fh and err_fh before waitpid, or the command can get
     # SIGPIPE.
 
-    waitpid($pid, 0);
+    $tb->ok(waitpid($pid, 0) != -1, "waitpid found child process");
     
-    my $child_exit_status = $? >> 8;
-
+    status_ok ($?, $args{status});
+	
     $retval &&= output_ok($args{expected_out}, $out_fh);
 
     my $err_msg = do {local $/; <$err_fh>};
-    $tb->diag("err_msg: $err_msg");
+    if ($err_msg) {
+	$tb->diag("err_msg: $err_msg");
+    }
     
     close_fh($out_fh);
     close_fh($err_fh);
-    
 
-    
-    my $expected_status = $args{status};
-    if (not defined $expected_status) {
-	$expected_status = 0;
-    }
-    
-    return $retval && $tb->is_num($child_exit_status, $expected_status,
-				  "exit status");
-    
+    return $retval;
 }
 
 sub command_ok {

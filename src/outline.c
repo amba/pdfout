@@ -11,6 +11,11 @@ data_hash_get_string_key (fz_context *ctx, pdfout_data *hash,
 			  const char *key)
 {
   pdfout_data *scalar = pdfout_data_hash_gets (ctx, hash, key);
+
+  if (scalar == NULL)
+    return NULL;
+  
+
   int len;
   char *value = pdfout_data_scalar_get (ctx, scalar, &len);
   if (strlen (value) != len)
@@ -44,9 +49,10 @@ dest_sequence_length (fz_context *ctx, const char *label)
 {
   if (streq (label, "XYZ"))
     return 4;
-  else if (streq (label, "Fit"))
+  else if (streq (label, "Fit") || streq (label, "FitB"))
     return 1;
-  else if (streq (label, "FitH") || streq (label, "FitV"))
+  else if (streq (label, "FitH") || streq (label, "FitV")
+	   || streq (label, "FitBH"))
     return 2;
   else if (streq (label, "FitR"))
     return 5;
@@ -176,11 +182,16 @@ calculate_kids_count (fz_context *ctx, pdfout_data *hash)
     }
 
   const char *open = data_hash_get_string_key (ctx, hash, "open");
-  if (streq (open, "false"))
+  bool is_open = false;
+  if (open && streq (open, "true"))
+    is_open = true;
+
+  if (is_open == false)
     count *= -1;
+
   char buf[200];
   pdfout_snprintf (ctx, buf, "%d", count);
-  pdfout_data *key = pdfout_data_scalar_new (ctx, "open", strlen (open));
+  pdfout_data *key = pdfout_data_scalar_new (ctx, "count", strlen ("count"));
   pdfout_data *value = pdfout_data_scalar_new (ctx, buf, strlen (buf));
   pdfout_data_hash_push (ctx, hash, key, value);
 
@@ -225,8 +236,14 @@ convert_dest_array (fz_context *ctx, pdf_document *doc, pdfout_data *view,
   pdf_array_push (ctx, dest_array, page_ref);
   if (view == NULL)
     return default_view_array (ctx, doc, dest_array);
+
+  pdfout_data *label = pdfout_data_array_get (ctx, view, 0);
+  pdf_obj *label_obj = pdfout_data_scalar_to_pdf_name (ctx, doc, label);
+  pdf_array_push (ctx, dest_array, label_obj);
+  
   int len = pdfout_data_array_len (ctx, view);
-  for (int i = 0; i < len; ++i)
+  
+  for (int i = 1; i < len; ++i)
     {
       pdf_obj *null_or_real;
       pdfout_data *scalar = pdfout_data_array_get (ctx, view, i);
@@ -273,6 +290,12 @@ create_outline_dict (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
       create_outline_kids_array (ctx, doc, kids, dict, &first, &last);
       pdf_dict_puts_drop (ctx, dict, "First", first);
       pdf_dict_puts_drop (ctx, dict, "Last", last);
+
+      /* Count.  */
+      pdfout_data *count = pdfout_data_hash_gets (ctx, hash, "count");
+      assert (count);
+      pdf_obj *count_obj = pdfout_data_scalar_to_pdf_int (ctx, doc, count);
+      pdf_dict_puts_drop (ctx, dict, "Count", count_obj);
     }
   
   /* Parent.  */
@@ -287,8 +310,8 @@ create_outline_dict (fz_context *ctx, pdf_document *doc, pdf_obj *dict,
     }
   if (next)
     {
-      pdf_obj *prev_copy = copy_indirect_ref (ctx, doc, prev);
-      pdf_dict_puts_drop (ctx, dict, "Prev", prev_copy);
+      pdf_obj *prev_copy = copy_indirect_ref (ctx, doc, next);
+      pdf_dict_puts_drop (ctx, dict, "Next", prev_copy);
     }
   
     
@@ -500,12 +523,12 @@ get_outline_hash (fz_context *ctx, pdf_document *doc, pdf_obj *outline)
   
   
   data_hash_push_string_key (ctx, hash, "title", title);
-
-  data_hash_push_string_key (ctx, hash, "view", view_array);
   
-  pdfout_data *page_value = data_scalar_from_int (ctx, page);
+  pdfout_data *page_value = data_scalar_from_int (ctx, page + 1);
 
   data_hash_push_string_key (ctx, hash, "page", page_value);
+  
+  data_hash_push_string_key (ctx, hash, "view", view_array);
   
   pdf_obj *count_obj = pdf_dict_gets (ctx, outline, "Count");
   if (count_obj)
