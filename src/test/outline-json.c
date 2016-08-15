@@ -48,23 +48,6 @@ main (void)
     view: [XYZ, null, null, null]\n", "getoutline", pdf);
   }
 
-  /* set default view */
-  {
-    char *pdf = test_new_pdf ();
-    test_pdfout (OUTLINE, 0, "setoutline", pdf,
-		 "--default-view=[FitR, 1, 2, 3, 4]");
-    test_pdfout (0, "\
--   title: 1\n\
-    page: 1\n\
-    view: [FitR, 1, 2, 3, 4]\n", "getoutline", pdf);
-  }
-
-  /* exit status for invalid default view */
-  {
-    char *pdf = test_new_pdf ();
-    test_pdfout_status (EX_DATAERR, OUTLINE, 0, "setoutline", pdf,
-			"--default-view", "[Fit, null]");
-  }
   return 0;
 }
 
