@@ -4,22 +4,12 @@ use strict;
 use utf8;
 use 5.010;
 
-use Test::Pdfout::Command tests => 5;
+use Test::Pdfout::Command tests => 11;
 use Test::More;
+use Test::Files;
 use Testlib;
 
-set_get_test(
-    command => ['info'],
-    
-    broken_input => [
-	# should be 'Title'
-	'{"Titel": "myfile"}',
-	# should be 'True'
-	'{"Trapped": "true"}',
-	# open not a bool
-	'{"ModDate": "D:20151"}'
-	],
-    input => <<'EOD'
+my $input = <<'EOD';
 {
   "Title": "pdfout info dict test",
   "Author": "pdfout",
@@ -32,4 +22,64 @@ set_get_test(
   "Trapped": "Unknown"
 }
 EOD
-); 
+    
+set_get_test (
+    command => ['info'],
+    
+    broken_input => [
+	# should be 'Title'
+	'{"Titel": "myfile"}',
+	# should be 'True'
+	'{"Trapped": "true"}',
+	# open not a bool
+	'{"ModDate": "D:20151"}'
+    ],
+    input => $input,
+    ); 
+
+# non-incremental update
+{
+    my $pdf = new_pdf ();
+    my $output = new_tempfile ();
+
+    pdfout_ok (
+	command => ['setinfo', $pdf, '-o', $output],
+	input => $input,
+	);
+    pdfout_ok (
+	command => ['getinfo', $output],
+	expected_out => $input,
+	);
+    compare_ok($pdf, test_data("empty10.pdf"), "original file is untouched");
+}
+
+# append option
+{
+    my $pdf = new_pdf ();
+    pdfout_ok (
+	command => ['setinfo', $pdf],
+	input => $input,
+	);
+    
+    pdfout_ok (
+	command => ['setinfo', '--append', $pdf],
+	input => '{"CreationDate": "D:20150804"}',
+	);
+
+    pdfout_ok (
+	command => ['getinfo', $pdf],
+	expected_out => <<'EOD',
+{
+  "Title": "pdfout info dict test",
+  "Author": "pdfout",
+  "Subject": "testing",
+  "Keywords": "la la la",
+  "Creator": "none",
+  "Producer": "la la",
+  "CreationDate": "D:20150804",
+  "ModDate": "D:20150702",
+  "Trapped": "Unknown"
+}
+EOD
+	);
+}

@@ -16,6 +16,7 @@ our @EXPORT = qw/
 new_pdf
 new_tempfile
 set_get_test
+test_data
 /;
 
 my $tempdir = tempdir(# CLEANUP => 1
@@ -73,6 +74,10 @@ sub set_get_test {
     }
 }
 
+sub test_data {
+    my $file = shift;
+    return catfile('data', $file);
+}
 
 	
 sub new_pdf {

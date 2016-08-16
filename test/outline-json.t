@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.010;
 
-use Test::Pdfout::Command tests => 5;
+use Test::Pdfout::Command tests => 7;
 use Test::More;
 use Testlib;
 
@@ -115,3 +115,29 @@ set_get_test(
 ]
 EOD
 ); 
+
+# default destination is [XYZ null null null]
+{
+    my $pdf = new_pdf ();
+    pdfout_ok (
+	command => ['setoutline', $pdf],
+	input => '[{"title": 1,  "page": 1}]'
+	);
+    pdfout_ok (
+	command => ['getoutline', $pdf],
+	expected_out => <<'EOD'
+[
+  {
+    "title": 1,
+    "page": 1,
+    "view": [
+      "XYZ",
+      null,
+      null,
+      null
+    ]
+  }
+]
+EOD
+   );
+} 
