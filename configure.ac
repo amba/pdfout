@@ -90,6 +90,6 @@ AC_SUBST([MUPDF_REQUIRED_LIBS], ["-lm $LIBS"])
 LIBS=
 
 AC_CONFIG_FILES([Makefile gl/Makefile gl-tests/Makefile src/Makefile
-	         src/test/Makefile src/program/Makefile])
+	          src/program/Makefile])
 
 AC_OUTPUT

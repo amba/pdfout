@@ -152,7 +152,6 @@ sub command_subtest (%args) {
 }
 
 sub command_ok (%args) {
-    my %args = @_;
     my $name = "$args{command}->@*";
     my $tb = $class->builder;
     return $tb->subtest($name, \&command_subtest, %args);

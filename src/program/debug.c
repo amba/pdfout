@@ -532,16 +532,16 @@ static void check_json_emitter (fz_context *ctx)
 
     const char *expected = "\
 [\n\
-    1,\n\
-    null,\n\
-    true,\n\
-    [],\n\
-    {},\n\
-    false,\n\
-    {\n\
-        \"abc\": 1,\n\
-        \"def\": true\n\
-    }\n\
+  1,\n\
+  null,\n\
+  true,\n\
+  [],\n\
+  {},\n\
+  false,\n\
+  {\n\
+    \"abc\": 1,\n\
+    \"def\": true\n\
+  }\n\
 ]\n";
 
     json_emitter_test (ctx, a, expected);
