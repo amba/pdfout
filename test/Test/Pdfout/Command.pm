@@ -16,6 +16,7 @@ use parent 'Test::Builder::Module';
 
 our @EXPORT = qw/
 pdfout_ok
+file_like
 /;
 
 my $class = __PACKAGE__;
@@ -28,6 +29,25 @@ sub close_fh ($fh) {
     close $fh
 	or croak "cannot close filehandle";
 }
+
+sub file_like ($file, $regex, $name) {
+    my $tb = $class->builder;
+    if (not -f $file) {
+	$tb->ok (0, $name);
+	return $tb->diag("$file absent");
+    }
+    
+    open my $fh, '<', $file
+	or croak "open";
+
+    my $contents = do {local $/; <$fh>};
+
+    close_fh ($fh);
+    
+    return $tb->like ($contents, $regex, $name);
+}
+	
+
 
 sub string_ok ($expected, $got, $name) {
     my $tb = $class->builder;

@@ -102,7 +102,7 @@ parse_opt (int key, char *arg _GL_UNUSED, struct argp_state *state)
       
     case ARGP_KEY_END:
       fprintf (state->out_stream, try_help, state->name);
-      exit (EX_USAGE);
+      exit (1);
       
     default:
       return ARGP_ERR_UNKNOWN;
@@ -126,7 +126,7 @@ main (int argc, char **argv)
   if (argc < 2)
     {
       pdfout_argp_parse (&argp, argc, argv, ARGP_NO_HELP, NULL, NULL);
-      exit (EX_USAGE);
+      exit (1);
     }
   else if (argv[1][0] == '-')
     {
@@ -138,7 +138,7 @@ main (int argc, char **argv)
   argmatch_result = argcasematch (argv[1], command_name_list);
   
   if (argmatch_result < 0)
-    error (EX_USAGE, 0, "invalid command '%s'.\n"
+    error (1, 0, "invalid command '%s'.\n"
 	   "Try '%s -l' for the list of allowed commands.", argv[1],
 	   argv[0]);
 
