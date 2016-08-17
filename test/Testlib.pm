@@ -1,8 +1,10 @@
 package Testlib;
 
-use 5.010;
+use 5.024;
 use warnings;
 use strict;
+
+use experimental 'signatures';
 
 use File::Temp qw/tempfile tempdir/;
 use File::Spec::Functions;
@@ -22,23 +24,21 @@ test_data
 my $tempdir = tempdir(# CLEANUP => 1
     );
 
-sub gencommand {
-    my ($command_ref, $prefix) = @_;
-    my @command = @{$command_ref};
+sub gencommand ($command_ref, $prefix) {
+    my @command = $command_ref->@*;
     $command[0] = $prefix . $command[0];
     return @command;
 }
     
-sub set_command {
-    return gencommand($_[0], 'set');
+sub set_command ($command) {
+    return gencommand($command, 'set');
 }
 
-sub get_command {
-    return gencommand($_[0], 'get');
+sub get_command ($command) {
+    return gencommand($command, 'get');
 }
 
-sub set_get_test {
-    my %args = @_;
+sub set_get_test (%args) {
     my $input = $args{input};
     my $expected_out = $args{expected_out};
     if (not defined $expected_out) {
@@ -63,7 +63,7 @@ sub set_get_test {
     # Broken input
     my $broken_input = $args{broken_input};
     if ($broken_input) {
-	for my $input (@{$broken_input}) {
+	for my $input ($broken_input->@*) {
 	    my $pdf = new_pdf();
 	    pdfout_ok (
 		command => [set_command($command), $pdf],
@@ -74,13 +74,12 @@ sub set_get_test {
     }
 }
 
-sub test_data {
-    my $file = shift;
+sub test_data ($file) {
     return catfile('data', $file);
 }
 
 	
-sub new_pdf {
+sub new_pdf () {
     my $file = catfile('data', 'empty10.pdf');
     my (undef, $tempfile) = tempfile(DIR => $tempdir);
 
@@ -89,7 +88,7 @@ sub new_pdf {
     return $tempfile;
 }
 
-sub new_tempfile {
+sub new_tempfile () {
     my (undef, $tempfile) = tempfile(DIR => $tempdir);
     return $tempfile;
 }

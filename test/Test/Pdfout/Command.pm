@@ -1,15 +1,18 @@
 package Test::Pdfout::Command;
 
-use 5.010;
+use 5.024;
 use warnings;
 use strict;
 
+use experimental 'signatures';
+use Data::Dumper;
 use Carp;
 use IPC::Open3;
 use Text::Diff;
 use File::Spec::Functions qw/catfile/;
 
 use parent 'Test::Builder::Module';
+
 
 our @EXPORT = qw/
 pdfout_ok
@@ -21,14 +24,12 @@ binmode $builder->output,         ":encoding(utf8)";
 binmode $builder->failure_output, ":encoding(utf8)";
 binmode $builder->todo_output,    ":encoding(utf8)";
 
-sub close_fh {
-    my $fh = shift;
+sub close_fh ($fh) {
     close $fh
 	or croak "cannot close filehandle";
 }
 
-sub string_ok {
-    my ($expected, $got, $name) = @_;
+sub string_ok ($expected, $got, $name) {
     my $tb = $class->builder;
 
     if (not $tb->ok($got eq $expected, $name)) {
@@ -43,8 +44,7 @@ sub string_ok {
     return 1;
 }
 
-sub output_ok {
-    my ($expected_out, $out_fh) = @_;
+sub output_ok ($expected_out, $out_fh) {
     if (not $expected_out) {
 	return 1;
     }
@@ -58,8 +58,7 @@ sub output_ok {
     }
 }
 
-sub signal_name {
-    my $signal = shift;
+sub signal_name ($signal) {
     return
 	$signal == 6 ? "SIGABRT" :
 	$signal == 9 ? "SIGKILL" :
@@ -67,9 +66,7 @@ sub signal_name {
 	$signal == 13 ? "SIGPIPE" : $signal;
 }
 
-sub status_ok {
-    my ($wait_status, $expected_status) = @_;
-
+sub status_ok ($wait_status, $expected_status) {
     my $tb = $class->builder;
     
     if (not defined $expected_status) {
@@ -88,20 +85,15 @@ sub status_ok {
     return $tb->is_num($child_exit_status, $expected_status, "exit status");
 }
     
-sub command_subtest {
+sub command_subtest (%args) {
     my $tb = $class->builder;
-    my %args = @_;
 
     local $Test::Builder::Level = $Test::Builder::Level + 4;
     
     my ($in_fh, $out_fh, $err_fh);
     use Symbol 'gensym'; $err_fh = gensym;
 
-    if (ref $args{command} ne 'ARRAY') {
-	croak "argument 'command' must be an arrayref";
-    }
-    
-    my $pid = open3($in_fh, $out_fh, $err_fh, @{$args{command}});
+    my $pid = open3($in_fh, $out_fh, $err_fh, $args{command}->@*);
     binmode($in_fh, ':utf8');
     binmode($out_fh, ':utf8');
     binmode($err_fh, ':utf8');
@@ -139,21 +131,24 @@ sub command_subtest {
     return $retval;
 }
 
-sub command_ok {
-    my $tb = $class->builder;
-    
-    if (ref $_[0] or @_ % 2 != 0) {
-	croak "command_ok needs a flat hash argument";
-    }
+sub command_ok (%args) {
     my %args = @_;
-    my $name = "@{$args{command}}";
+    my $name = "$args{command}->@*";
+    my $tb = $class->builder;
     return $tb->subtest($name, \&command_subtest, %args);
 }
 
-sub pdfout_ok {
+sub pdfout_ok (%args) {
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    my %args = @_;
-    unshift @{$args{command}}, './pdfout';
+    
+    if (not $args{command}) {
+	croak "missing mandatory argument 'command'";
+    }
+    elsif (ref $args{command} ne 'ARRAY') {
+	warn "args: ", Dumper(\%args);
+	croak "argument 'command' must be an arrayref";
+    }
+    unshift $args{command}->@*, './pdfout';
     return command_ok(%args);
 }
 
