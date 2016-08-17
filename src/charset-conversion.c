@@ -847,7 +847,7 @@ pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
       int read;
 	
       read = mbtowc (&conv, &pwc, (const unsigned char *) src,
-		     MIN (10, srclen));
+		     10 < srclen ? 10 : srclen);
       if (read < 0)
 	pdfout_throw (ctx, "pdfout_charset_conv: invalid %s multibyte",
 		      fromcode);

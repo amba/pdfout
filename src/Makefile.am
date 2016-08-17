@@ -20,8 +20,6 @@ charset-conversion.h \
 encodings.h \
 open-write-pdf.c \
 text-extraction.c \
-pdfout-regex.h \
-regex.c \
 alloc.c \
 data.c \
 data.h \

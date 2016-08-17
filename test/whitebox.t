@@ -3,13 +3,12 @@ use warnings;
 use strict;
 use 5.024;
 
-use Test::Pdfout::Command tests => 5;
+use Test::Pdfout::Command tests => 4;
 
 my @tests = qw/
 --incremental-update
 --incremental-update-xref
 --string-conversions
---regex
 --json
 /;
 

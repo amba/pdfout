@@ -18,10 +18,8 @@
 
 #include "common.h"
 #include "shared.h"
-#include "tmpdir.h"
 #include "tempname.h"
 #include "charset-conversion.h"
-#include "pdfout-regex.h"
 #include "data.h"
 
 #define test_assert(expr)					\
@@ -257,31 +255,6 @@ check_string_conversions (void)
 
   exit (0);
 }
-
-static void check_regex (void)
-{
-  {
-    struct pdfout_re_pattern_buffer *
-      buff = XZALLOC (struct pdfout_re_pattern_buffer);
-    const char *pattern = "ab";
-    const char *string = "aaaab";
-    int len = strlen (string);
-    const char * error_string =
-      pdfout_re_compile_pattern (pattern, strlen (pattern),
-				 RE_SYNTAX_EGREP, 0, buff);
-    if (error_string)
-      error (1, errno, "pdfout_re_compile_pattern: %s", error_string);
-
-    test_assert (pdfout_re_search (buff, string, len, 0, len) == 3);
-    test_assert (buff->start - string == 3);
-    test_assert (buff->end - string == 5);
-    
-    pdfout_re_free (buff);
-  }
-  exit (0);
-}
-
-
 
 static void check_json_parser_value (fz_context *ctx, const char *json,
 				     const char *value, bool fail)
@@ -616,7 +589,6 @@ static struct argp_option options[] = {
   {"incremental-update", INCREMENTAL_UPDATE},
   {"incremental-update-xref", INCREMENTAL_UPDATE_XREF},
   {"string-conversions", STRING_CONVERSIONS},
-  {"regex", REGEX},
   {"json", JSON},
   {"data", DATA},
     {0}
@@ -630,7 +602,6 @@ parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
     case INCREMENTAL_UPDATE: check_incremental_update (); break;
     case INCREMENTAL_UPDATE_XREF: check_incremental_update_xref (); break;
     case STRING_CONVERSIONS: check_string_conversions (); break;
-    case REGEX: check_regex (); break;
     case JSON: check_json (); break;
     case DATA: check_data (); break;
     default:

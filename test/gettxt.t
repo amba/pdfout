@@ -3,10 +3,9 @@ use warnings;
 use strict;
 use 5.024;
 
-use Test::Pdfout::Command tests => 5;
+use Test::Pdfout::Command tests => 3;
 use Testlib;
 use File::Copy qw/cp/;
-use Test::More;
 
 my $pdf = new_tempfile ();
 cp (test_data("hello-world.pdf"), $pdf)
