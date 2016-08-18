@@ -1,10 +1,11 @@
 package Testlib;
 
-use 5.024;
+use 5.020;
 use warnings;
 use strict;
 
 use experimental 'signatures';
+use experimental 'postderef';
 
 use File::Temp qw/tempfile tempdir/;
 use File::Spec::Functions;

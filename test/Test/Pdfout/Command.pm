@@ -1,10 +1,12 @@
 package Test::Pdfout::Command;
 
-use 5.024;
+use 5.020;
 use warnings;
 use strict;
 
 use experimental 'signatures';
+use experimental 'postderef';
+
 use Data::Dumper;
 use Carp;
 use IPC::Open3;
@@ -13,11 +15,19 @@ use File::Spec::Functions qw/catfile/;
 
 use parent 'Test::Builder::Module';
 
+use Getopt::Long qw/:config pass_through/;
 
 our @EXPORT = qw/
 pdfout_ok
 file_like
 /;
+
+my $use_valgrind;
+
+GetOptions(
+    'valgrind' => \$use_valgrind,
+    )
+    or die "GetOptions";
 
 my $class = __PACKAGE__;
 my $builder = $class->builder;
@@ -159,15 +169,21 @@ sub command_ok (%args) {
 
 sub pdfout_ok (%args) {
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    
-    if (not $args{command}) {
+
+    my $command = $args{command};
+    if (not $command) {
 	croak "missing mandatory argument 'command'";
     }
-    elsif (ref $args{command} ne 'ARRAY') {
-	warn "args: ", Dumper(\%args);
+    elsif (ref $command ne 'ARRAY') {
 	croak "argument 'command' must be an arrayref";
     }
-    unshift $args{command}->@*, './pdfout';
+    unshift $command->@*, './pdfout';
+    
+    if ($use_valgrind) {
+	unshift $command->@*, qw/valgrind -q --error-exitcode=126
+                                --leak-check=full/;
+    }
+
     return command_ok(%args);
 }
 
