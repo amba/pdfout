@@ -1,12 +1,27 @@
 #include "common.h"
 
 void
+pdfout_copy_stream (fz_context *ctx, fz_stream *from, fz_output *too)
+{
+  int buffer_len = 32768;
+  unsigned char *buffer = fz_malloc (ctx, buffer_len);
+
+  int read;
+  do
+    {
+      read = fz_read (ctx, from, buffer, buffer_len);
+      fz_write (ctx, too, buffer, read);
+    }
+  while (read == buffer_len);
+
+  free (buffer);
+}
+
+void
 pdfout_write_document (fz_context *ctx, pdf_document *doc,
 		       const char *pdf_filename, const char *output_filename)
 {
   pdf_write_options opts = { 0 };
-  char *write_filename; 
-  bool use_tmp = false;
   
   if (output_filename == NULL)
     {
@@ -18,15 +33,15 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc,
   /* Write new pdf to a temporary file, then copy it to the destination.
      Do this to avoid clobbering the original file.  */
 
-  FILE *tmp = tmpfile ();
-
-  /* Closing the output will not close the FILE *.  */
-  fz_output *out = fz_new_output_with_file_ptr (ctx, tmp, false);
-
-  pdf_write_document (ctx, doc, out, &opts);
-  fz_drop_output (ctx, out);
-
   
+  pdfout_tmp_stream *tmp = pdfout_tmp_stream_new (ctx);
+  fz_output *tmp_out = pdfout_tmp_stream_output (ctx, tmp);
+  pdf_write_document (ctx, doc, tmp_out, &opts);
+
+  fz_stream *input = pdfout_tmp_stream_stream (ctx, tmp);
+  fz_output *output = fz_new_output_with_path (ctx, output_filename, false);
+
+  pdfout_copy_stream (ctx, input, output);
 }
 
 pdf_document *

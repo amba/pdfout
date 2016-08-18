@@ -29,12 +29,15 @@
 #include <xvasprintf.h>
 #include <argmatch.h>
 
+#include "tmp-stream.h"
 #include "shared-with-tests.h"
 #include "data.h"
 #include "charset-conversion.h"
 #include "page-labels.h"
 #include "info-dict.h"
 #include "outline.h"
+
+void pdfout_copy_stream (fz_context *ctx, fz_stream *from, fz_output *too);
 
 pdf_document *
 pdfout_create_blank_pdf (fz_context *ctx, int page_count, fz_rect *rect);

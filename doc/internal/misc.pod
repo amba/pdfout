@@ -74,3 +74,6 @@ set.
 Equivalent to C<fz_warn>.
 
 =back
+
+=head2 IO functions
+

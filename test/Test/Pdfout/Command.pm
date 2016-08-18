@@ -13,6 +13,8 @@ use IPC::Open3;
 use Text::Diff;
 use File::Spec::Functions qw/catfile/;
 
+use Test::Builder 1.001014;
+
 use parent 'Test::Builder::Module';
 
 use Getopt::Long qw/:config pass_through/;

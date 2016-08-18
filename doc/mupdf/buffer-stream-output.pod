@@ -31,6 +31,18 @@ Increase the refcount of C<buffer>.
 
 Deallocate an output and drop/close the underlying object.
 
+=head3 Operations on output streams
+
+=over
+
+=item
+
+ void fz_write(fz_context *ctx, fz_output *out, const void *data, size_t size);
+
+Throw on write error.
+
+=back
+
 =head2 Input streams
 
  fz_stream *fz_open_buffer(fz_context *ctx, fz_buffer *buf);
@@ -45,3 +57,16 @@ Will close C<file> if the stream is dropped.
 
 Deallocate a stream and drop/close the underlying object.
 
+=head3 Operations on input streams
+
+=over
+
+=item
+
+ size_t fz_read(fz_context *ctx, fz_stream *stm, unsigned char *data, size_t len);
+
+Read up to C<len> bytes from the stream C<stm>. Will throw on read
+error. Return the number of read bytes. If the return value is smaller than
+C<len>, end-of-file was reached.
+
+=back

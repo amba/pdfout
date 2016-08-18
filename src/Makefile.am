@@ -23,7 +23,9 @@ text-extraction.c \
 alloc.c \
 data.c \
 data.h \
-json.c
+json.c \
+tmp-stream.h \
+tmp-stream.c
 
 charset-conversion.c: encodings.h
 encodings.h: encodings.gperf
