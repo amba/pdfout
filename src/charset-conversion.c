@@ -778,6 +778,7 @@ pdfdoc_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc,
 typedef int (*mbtowc_func) (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 			    int n);
 typedef int (*wctomb_func) (conv_t conv, unsigned char *r, ucs4_t wc, int n);
+
 /* List of supported encodings.  */
 struct encoding
 {
@@ -786,7 +787,31 @@ struct encoding
   wctomb_func wctomb;
 };
 
-#include "encodings.h"
+static struct encoding encodings[] = {
+  {"ASCII", ascii_mbtowc, ascii_wctomb},
+  {"UTF-8", utf8_mbtowc, utf8_wctomb},
+  {"C", utf8_mbtowc, utf8_wctomb},
+  {"UTF-16", utf16_mbtowc, utf16_wctomb},
+  {"UTF-16BE", utf16be_mbtowc, utf16be_wctomb},
+  {"UTF-16LE", utf16le_mbtowc, utf16le_wctomb},
+  {"UTF-32", utf32_mbtowc, utf32_wctomb},
+  {"UTF-32BE", utf32be_mbtowc, utf32be_wctomb},
+  {"UTF-32LE", utf32le_mbtowc, utf32le_wctomb},
+  {"PDFDOCENCODING", pdfdoc_mbtowc, pdfdoc_wctomb},
+  {"PDFDOC", pdfdoc_mbtowc, pdfdoc_wctomb}
+};
+
+
+static struct encoding *
+get_encoding (fz_context *ctx, const char *name)
+{
+  int len = sizeof encodings / sizeof (struct encoding);
+  for (int i = 0; i < len; ++i) {
+    if (strcmp (name, encodings[i].name) == 0)
+      return &encodings[i];
+  }
+  pdfout_throw (ctx, "unknown encoding '%s'", name);
+}
 
 char *
 pdfout_char_conv (fz_context *ctx, const char *fromcode, const char *tocode,
@@ -824,14 +849,12 @@ pdfout_char_conv_buffer (fz_context *ctx, const char *fromcode,
   mbtowc_func mbtowc = NULL;
   wctomb_func wctomb = NULL;
     
-  struct encoding *encoding = get_encoding (fromcode, strlen (fromcode));
+  struct encoding *encoding = get_encoding (ctx, fromcode);
   
-  if (encoding == NULL)
-    pdfout_throw (ctx, "unknown encoding '%s'", fromcode);
   
   mbtowc = encoding->mbtowc;
   
-  encoding = get_encoding (tocode, strlen (tocode));
+  encoding = get_encoding (ctx, tocode);
   
   if (encoding == NULL)
     pdfout_throw (ctx, "unknown encoding '%s'", tocode);

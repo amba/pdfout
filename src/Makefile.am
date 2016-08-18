@@ -17,7 +17,6 @@ info-dict.c \
 info-dict.h \
 charset-conversion.c \
 charset-conversion.h \
-encodings.h \
 open-write-pdf.c \
 text-extraction.c \
 alloc.c \
@@ -26,11 +25,6 @@ data.h \
 json.c \
 tmp-stream.h \
 tmp-stream.c
-
-charset-conversion.c: encodings.h
-encodings.h: encodings.gperf
-	gperf $(srcdir)/encodings.gperf > $(srcdir)/encodings.h-t && \
-	mv $(srcdir)/encodings.h-t $(srcdir)/encodings.h
 
 libshared_with_tests_a_SOURCES = \
 shared-with-tests.h \
