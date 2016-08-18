@@ -1,5 +1,5 @@
 # Run gnulib tests last (see sec. 3.9 in gnulib manual).
-SUBDIRS = . gl src gl-tests
+SUBDIRS = . gl src
 BUILD_DOC = perl -I "$(srcdir)/doc" "$(srcdir)/doc/build-doc.pl"
 
 all-local:
@@ -24,6 +24,9 @@ distcheck-hook:
 
 html-local:
 	 $(BUILD_DOC) --build "$(srcdir)/doc"
+
+check-local:
+	prove "-I$(srcdir)/test" "$(srcdir)/test/"
 
 EXTRA_DIST = COPYING COPYRIGHT README AUTHORS INSTALL TODO
 

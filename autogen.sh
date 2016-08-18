@@ -57,10 +57,9 @@ if test $skip_gnulib = false; then
   if test -n "$GNULIB_TOOL"; then
     GNULIB_MODULES='
 argmatch
-tempname
 manywarnings
 progname
-copy-file
+xvasprintf
 unistr/u8-check
 unistr/u8-uctomb
 '

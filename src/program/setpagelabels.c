@@ -77,7 +77,7 @@ pdfout_command_setpagelabels (int argc, char **argv)
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   fz_context *ctx = pdfout_new_context ();
-  pdf_document *doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  pdf_document *doc = pdf_open_document (ctx, pdf_filename);
 
   pdfout_data *labels;
   if (remove_page_labels == false)

@@ -14,8 +14,6 @@ pdfout.c \
 commands.def \
 shared.c \
 shared.h \
-debug-io-handle.c \
-debug-io-handle.h \
 getoutline.c \
 setoutline.c \
 getinfo.c \

@@ -18,7 +18,6 @@
 
 #include "common.h"
 #include "shared.h"
-#include "tempname.h"
 #include "charset-conversion.h"
 #include "data.h"
 
@@ -65,17 +64,17 @@ Expression '" #expr "' did not throw as expected\n", __FILE__, __LINE__); \
 
 
 static void
-write_pdf (fz_context *ctx, pdf_document *doc, debug_io_handle *handle,
+write_pdf (fz_context *ctx, pdf_document *doc, pdfout_tmp_stream *handle,
 	   pdf_write_options *opts)
 {
-  fz_output *output = debug_io_handle_output (ctx, handle);
+  fz_output *output = pdfout_tmp_stream_output (ctx, handle);
   pdf_write_document (ctx, doc, output, opts);
 }
 
 static pdf_document *
-open_pdf (fz_context *ctx, debug_io_handle *handle)
+open_pdf (fz_context *ctx, pdfout_tmp_stream *handle)
 {
-  fz_stream *stream = debug_io_handle_stream (ctx, handle);
+  fz_stream *stream = pdfout_tmp_stream_stream (ctx, handle);
   pdf_document *doc = pdf_open_document_with_stream (ctx, stream);
   if (doc->repair_attempted || doc->freeze_updates)
     error (1, 0, "pdf_open_document: broken_pdf");
@@ -94,7 +93,7 @@ check_incremental_update (void)
 
   pdf_document *doc = pdf_create_document (ctx);
 
-  debug_io_handle *handle = debug_io_handle_new (ctx);
+  pdfout_tmp_stream *handle = pdfout_tmp_stream_new (ctx);
 
   write_pdf (ctx, doc, handle, &opts);
   pdf_drop_document (ctx, doc);
@@ -142,7 +141,7 @@ check_incremental_update_xref (void)
 
   opts.do_incremental = 0;
 
-  debug_io_handle *handle = debug_io_handle_new (ctx);
+  pdfout_tmp_stream *handle = pdfout_tmp_stream_new (ctx);
   write_pdf (ctx, doc[0], handle, &opts);
   doc[1] = open_pdf (ctx, handle);
   

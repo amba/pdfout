@@ -69,4 +69,16 @@ Read up to C<len> bytes from the stream C<stm>. Will throw on read
 error. Return the number of read bytes. If the return value is smaller than
 C<len>, end-of-file was reached.
 
+=item
+
+ fz_off_t fz_tell(fz_context *ctx, fz_stream *stm);
+
+Return the current reading position.
+
+=item
+
+ void fz_seek(fz_context *ctx, fz_stream *stm, fz_off_t offset, int whence);
+
+Seek a stream. Like fseek.
+
 =back

@@ -7,6 +7,7 @@ pdfout_copy_stream (fz_context *ctx, fz_stream *from, fz_output *too)
   unsigned char *buffer = fz_malloc (ctx, buffer_len);
 
   int read;
+  fz_seek (ctx, from, 0, SEEK_SET);
   do
     {
       read = fz_read (ctx, from, buffer, buffer_len);

@@ -22,7 +22,6 @@
 
 #include "common.h"
 #include "charset-conversion.h"
-#include "minmax.h"
 #include "c-strcase.h"
 
 #ifndef ucs4_t

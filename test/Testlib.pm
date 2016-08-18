@@ -10,6 +10,7 @@ use experimental 'postderef';
 use File::Temp qw/tempfile tempdir/;
 use File::Spec::Functions;
 use File::Copy;
+use File::Basename;
 
 use Exporter 'import';
 
@@ -76,12 +77,13 @@ sub set_get_test (%args) {
 }
 
 sub test_data ($file) {
-    return catfile('data', $file);
+    my $file_dir = dirname (__FILE__);
+    return catfile ($file_dir, 'data', $file);
 }
 
 	
 sub new_pdf () {
-    my $file = catfile('data', 'empty10.pdf');
+    my $file = test_data ('empty10.pdf');
     my (undef, $tempfile) = tempfile(DIR => $tempdir);
 
     copy ($file, $tempfile)

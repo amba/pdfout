@@ -69,7 +69,7 @@ pdfout_command_repair (int argc, char **argv)
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   ctx = pdfout_new_context ();
-  doc = pdfout_pdf_open_document (ctx, pdf_filename);
+  doc = pdf_open_document (ctx, pdf_filename);
 
   if (doc->repair_attempted == 0)
     {
