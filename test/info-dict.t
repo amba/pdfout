@@ -2,7 +2,7 @@
 use warnings;
 use strict;
 use utf8;
-use 5.024;
+use 5.020;
 
 use Test::Pdfout::Command tests => 11;
 use Test::More;

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use warnings;
 use strict;
-use 5.024;
+use 5.020;
 
 use Test::Pdfout::Command tests => 22;
 use Testlib;
