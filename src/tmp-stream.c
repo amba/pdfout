@@ -40,6 +40,7 @@ pdfout_tmp_stream_drop (fz_context *ctx, pdfout_tmp_stream *handle)
 
   /* Also closes handle->tmp.  */
   fz_drop_stream (ctx, handle->stream);
+  free (handle);
 }
 
 

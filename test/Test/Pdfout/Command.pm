@@ -179,7 +179,7 @@ sub pdfout_ok (%args) {
     elsif (ref $command ne 'ARRAY') {
 	croak "argument 'command' must be an arrayref";
     }
-    unshift $command->@*, './pdfout';
+    unshift $command->@*, './src/program/pdfout';
     
     if ($use_valgrind) {
 	unshift $command->@*, qw/valgrind -q --error-exitcode=126

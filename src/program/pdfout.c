@@ -143,7 +143,9 @@ main (int argc, char **argv)
 	   argv[0]);
 
   /* use the full command name in argv[1] */
-  argv[1] = xasprintf ("%s %s", argv[0], command_name_list[argmatch_result]);
+  if (asprintf (&argv[1], "%s %s", argv[0],
+		command_name_list[argmatch_result]) == -1)
+    error (1, errno, "asprintf");
   set_program_name (argv[1]);
 
   /* finally call the command... */

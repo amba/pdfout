@@ -43,6 +43,8 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc,
   fz_output *output = fz_new_output_with_path (ctx, output_filename, false);
 
   pdfout_copy_stream (ctx, input, output);
+  fz_drop_output (ctx, output);
+  pdfout_tmp_stream_drop (ctx, tmp);
 }
 
 pdf_document *
