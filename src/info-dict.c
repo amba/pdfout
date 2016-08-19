@@ -1,10 +1,11 @@
 #include "common.h"
-#include "c-ctype.h"
 
 /* FIXME: test date check function.  */
 
 /* atoi replacement for non null-terminated strings.  */
 /* Return -1 on error.  */
+
+
 static int get_number (const char **s, int num_len, int *len)
 {
   if (num_len > *len)
@@ -13,7 +14,7 @@ static int get_number (const char **s, int num_len, int *len)
   int retval = 0;
   for (int i = 0; i < num_len; ++i)
     {
-      if (c_isdigit ((*s)[i]))
+      if (pdfout_isdigit ((*s)[i]))
 	retval = retval * 10 + ((*s)[i] - '0');
       else
 	return -1;

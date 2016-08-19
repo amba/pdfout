@@ -27,22 +27,10 @@
 #include <string.h>
 #include <error.h>
 #include <assert.h>
-#include <xalloc.h>
-#include <progname.h>
 
 int pdfout_batch_mode = 0;
 
-char *
-pdfout_append_suffix (const char *filename, const char *suffix)
-{
-  size_t filename_len = strlen (filename);
-  size_t suffix_len = strlen (suffix);
-  char *result = xcharalloc (filename_len + suffix_len + 1);
-  
-  memcpy (result, filename, filename_len);
-  memcpy (result + filename_len, suffix, suffix_len + 1);
-  return result;
-}
+
 
 const char *
 pdfout_outline_suffix (enum pdfout_outline_format format)
@@ -101,7 +89,6 @@ pdfout_errno_vmsg (int errno, const char *format, va_list ap)
   if (pdfout_batch_mode)
     return;
   
-  fprintf (stderr, "%s: ", program_name);
   vfprintf (stderr, format, ap);
 
   if (errno)

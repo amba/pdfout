@@ -28,6 +28,7 @@ static struct argp_option options[] = {
   {0}
 };
 
+static fz_context *ctx;
 static char *pdf_filename;
 static FILE *output;
 
@@ -52,7 +53,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       
     case ARGP_KEY_END:
       if (use_default_filename)
-	output = open_default_write_file (state, pdf_filename, ".info");
+	output = open_default_write_file (ctx, pdf_filename, ".info");
       else
 	output = stdout;
       break;
@@ -71,15 +72,14 @@ static struct argp_child children[] = {
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
 void
-pdfout_command_getinfo (int argc, char **argv)
+pdfout_command_getinfo (fz_context *ctx_arg, int argc, char **argv)
 {
   pdfout_data *hash;
-  fz_context *ctx;
   pdf_document *doc;
-    
+
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
-  ctx = pdfout_new_context ();
   doc = pdf_open_document (ctx, pdf_filename);
 
   hash = pdfout_info_dict_get (ctx, doc);

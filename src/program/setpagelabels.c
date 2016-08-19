@@ -27,6 +27,7 @@ static struct argp_option options[] = {
   {0}
 };
 
+static fz_context *ctx;
 static char *pdf_filename;
 static char *output_filename;
 static FILE *input;
@@ -54,7 +55,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
       
     case ARGP_KEY_END:
       if (use_default_filename)
-	input = open_default_read_file (state, pdf_filename, ".pagelabels");
+	input = open_default_read_file (ctx, pdf_filename, ".pagelabels");
       else
 	input = stdin;
     default:
@@ -72,8 +73,9 @@ static struct argp_child children[] = {
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
 void
-pdfout_command_setpagelabels (int argc, char **argv)
+pdfout_command_setpagelabels (fz_context *ctx_arg, int argc, char **argv)
 {
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   fz_context *ctx = pdfout_new_context ();

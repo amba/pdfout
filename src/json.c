@@ -1,8 +1,5 @@
 #include "common.h"
 #include "data.h"
-#include "c-ctype.h"
-#include "unistr.h"
-#include "uniwidth.h"
 
 typedef struct scanner_s {
   fz_stream *stream;
@@ -36,6 +33,7 @@ typedef enum token_e {
   TOK_NAME_SEPARATOR,
   
 } token;
+
 
 static void scanner_read (fz_context *ctx, scanner *scanner)
 {
@@ -144,13 +142,13 @@ static const char *json_check_number (const char *number, int len)
   if (len && *number == '0')
     {
       ++number, --len;
-      if (len && c_isdigit (*number))
+      if (len && pdfout_isdigit (*number))
 	return "Leading zero in number";
     }
   else if (len && *number >= '1' && *number <= '9')
     {
       ++number, --len;
-      while (len && c_isdigit (*number))
+      while (len && pdfout_isdigit (*number))
 	++number, --len;
     }
   else
@@ -160,9 +158,9 @@ static const char *json_check_number (const char *number, int len)
   if (len && *number == '.')
     {
       ++number, --len;
-      if (len && c_isdigit (*number))
+      if (len && pdfout_isdigit (*number))
 	{
-	  while (len && c_isdigit (*number))
+	  while (len && pdfout_isdigit (*number))
 	    ++number, --len;
 	}
       else
@@ -170,14 +168,14 @@ static const char *json_check_number (const char *number, int len)
     }
 
   /* Optional exp.  */
-  if (len && c_tolower (*number) == 'e')
+  if (len && pdfout_tolower(*number) == 'e')
     {
       ++number, --len;
       if (len && (*number == '-' || *number == '+'))
 	++number, --len;
-      if (len && c_isdigit (*number))
+      if (len && pdfout_isdigit (*number))
 	{
-	  while (len && c_isdigit (*number))
+	  while (len && pdfout_isdigit (*number))
 	    ++number, --len;
 	}
       else
@@ -195,7 +193,7 @@ scanner_scan_number (fz_context *ctx, scanner *scanner)
 {
   scanner->value->len = 0;
   char c;
-  while (c = scanner->lookahead, c_isdigit (c) || c == 'e' || c == 'E'
+  while (c = scanner->lookahead, pdfout_isdigit (c) || c == 'e' || c == 'E'
 	 || c == '-' || c == '+' || c == '.')
     push_byte (ctx, scanner, scanner->lookahead);
 
@@ -222,10 +220,10 @@ static int get_hex_sequence (fz_context *ctx, scanner *scanner)
   int retval = 0;
   for (int i = 0; i < 4; ++i)
     {
-      int lah = c_tolower (scanner->lookahead);
-      if (c_isxdigit (lah))
+      int lah = pdfout_tolower (scanner->lookahead);
+      if (pdfout_isxdigit (lah))
 	{
-	  retval = retval * 16 + (c_isdigit(lah) ? lah - '0' : lah - 'a' + 10);
+	  retval = retval * 16 + (pdfout_isdigit(lah) ? lah - '0' : lah - 'a' + 10);
 	  scanner_read (ctx, scanner);
 	}
       else
@@ -237,9 +235,9 @@ static int get_hex_sequence (fz_context *ctx, scanner *scanner)
   
 static void utf16_escape_sequence (fz_context *ctx, scanner *scanner)
 {
-  int leading = get_hex_sequence (ctx, scanner);
+  uint32_t leading = get_hex_sequence (ctx, scanner);
   
-  int uc;
+  uint32_t uc;
   if (leading <= 0xD7FF || leading >= 0xE000)
     {
       uc = leading;
@@ -263,12 +261,8 @@ trailing surrogate.");
     }
   
   uint8_t buf[4];
-  int len = u8_uctomb (buf, uc, 4);
-  if (len < 1)
-    {
-      pdfout_msg ("invalid codepoint: U+%x", uc);
-      abort();
-    }
+  int len = pdfout_uctomb (ctx, buf, uc, 4);
+
   fz_write_buffer (ctx, scanner->value, buf, len);
 }
 

@@ -33,5 +33,8 @@ Used code fragments:
 - The mbtowc_xxx and wctomb_xxx functions in src/charset-conversion.c are
   derived from GNU libiconv.
 
+- The u8_uctomb and u8_check functions in src/charset-conversion.c are
+  derived from GNU Gnulib.
+
 - src/resolve-dest.c is copied from mupdf's source file source/pdf/pdf-annot.c
   and is licensed under the GNU AGPL v3+.

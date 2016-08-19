@@ -20,9 +20,6 @@
 /* if set, do not print any status messages to stderr  */
 extern int pdfout_batch_mode;
 
-/* append SUFFIX to FILENAME. */
-char *pdfout_append_suffix (const char *filename, const char *suffix);
-
 enum pdfout_outline_format {
   PDFOUT_OUTLINE_YAML,
   PDFOUT_OUTLINE_WYSIWYG

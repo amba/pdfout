@@ -41,6 +41,7 @@ static struct argp_option options[] = {
   {0}
 };
 
+static fz_context *ctx;
 static int page_count = 1;
 static float height, width;
 static const char *output_filename = "/dev/stdout"; /* FIXME: non portable */
@@ -116,11 +117,11 @@ static struct argp_child children[] = {
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
 void
-pdfout_command_create (int argc, char **argv)
+pdfout_command_create (fz_context *ctx_arg, int argc, char **argv)
 {
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
-  fz_context *ctx = pdfout_new_context ();
   fz_rect rect = {0, 0, width, height};
   pdf_document *doc = pdfout_create_blank_pdf (ctx, page_count, &rect);
   
@@ -164,7 +165,7 @@ static void
 get_size (struct argp_state *state, const char *paper_size, float *width,
 	  float *height)
 {
-  char *upcased = upcase (xstrdup (paper_size));
+  char *upcased = upcase (fz_strdup (ctx, paper_size));
 
   /* ISO 216 / 269 */
 

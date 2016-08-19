@@ -17,11 +17,7 @@
 
 #include "common.h"
 #include <string.h>
-#include <xalloc.h>
 #include <exitfail.h>
-#include <c-ctype.h>
-#include <argmatch.h>
-#include <unistr.h>
 
 
 int
@@ -218,8 +214,3 @@ pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
   exit (exit_failure);
 }
 
-char *
-pdfout_check_utf8 (const char *s, size_t n)
-{
-  return (char *) u8_check ((const uint8_t *) s, n);
-}

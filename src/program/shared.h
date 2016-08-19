@@ -4,7 +4,7 @@
 #include <exitfail.h>
 
 /* command function prototypes  */
-typedef void command_func_t (int argc, char **argv);
+typedef void command_func_t (fz_context *ctx, int argc, char **argv);
 #define DEF_COMMAND(name, type, function, description)	\
   command_func_t function;
 #include "commands.def"
@@ -46,8 +46,7 @@ char *lowercase (char *s);
 /* Call c_toupper on each byte of S.  */
 char *upcase (char *s);
   
-/* Lowercase arg and run argmatch.  */
-ptrdiff_t argcasematch (char *arg, const char *const *valid);
+int strmatch (const char *key, const char *const *list);
   
 /* Calls argp_failure on error.  */
 FILE *xfopen (struct argp_state *state, const char *path, const char *mode);
@@ -58,19 +57,19 @@ fz_context *pdfout_new_context (void);
 void pdfout_argp_parse (const struct argp *argp, int argc, char ** argv,
 			unsigned flags, int *arg_index, void *input);
 
-/* Append SUFFIX to FILENAME and call xfopen on the resulting filename. */
-FILE *open_default_read_file (struct argp_state *state,
-			      const char *filename, const char *suffix);
+/* Append SUFFIX to FILENAME and call fopen on the resulting filename. */
+FILE *open_default_read_file (fz_context *ctx, const char *filename,
+			      const char *suffix);
 
-FILE *open_default_write_file (struct argp_state *state,
-			       const char *filename, const char *suffix);
+FILE *open_default_write_file (fz_context *ctx, const char *filename,
+			       const char *suffix);
 
 /* calls exit (EX_USAGE) on error */
 enum pdfout_outline_format pdfout_outline_get_format (struct argp_state *state,
 						      char *format);
 
-/* calls exit (EX_USAGE) on error */
-int *pdfout_parse_page_range (const char *range, int page_count);
+int *pdfout_parse_page_range (fz_context *ctx, const char *range,
+			      int page_count);
 
 #define PDFOUT_OUTLINE_FORMATS "YAML|WYSIWYG"
 #define PDFOUT_OUTLINE_FORMAT_OPTION \

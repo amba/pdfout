@@ -27,6 +27,7 @@ static struct argp_option options[] = {
   {0}
 };
 
+static fz_context *ctx;
 static char *pdf_filename;
 static FILE *output;
 
@@ -51,7 +52,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
     case ARGP_KEY_END:
       if (use_default_filename)
-	output = open_default_write_file (state, pdf_filename, ".pagelabels");
+	output = open_default_write_file (ctx, pdf_filename, ".pagelabels");
       else
 	output = stdout;
       break;
@@ -70,11 +71,11 @@ static struct argp_child children[] = {
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
 void
-pdfout_command_getpagelabels (int argc, char **argv)
+pdfout_command_getpagelabels (fz_context *ctx_arg, int argc, char **argv)
 {
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 
-  fz_context *ctx = pdfout_new_context ();
   pdf_document *doc = pdf_open_document (ctx, pdf_filename);
 
   pdfout_data *labels = pdfout_page_labels_get (ctx, doc);

@@ -17,7 +17,6 @@
 
 #include "common.h"
 #include "shared.h"
-#include <progname.h>
 
 /* setup table of commands from commands.def.  */
 
@@ -115,10 +114,6 @@ static struct argp argp = {options, parse_opt};
 int
 main (int argc, char **argv)
 {
-  ptrdiff_t argmatch_result;
-
-  set_program_name (argv[0]);
-
   argp_program_version = PDFOUT_VERSION;
   argp_program_bug_address = PACKAGE_BUGREPORT;
 
@@ -135,21 +130,21 @@ main (int argc, char **argv)
       exit (0);
     }
   
-  argmatch_result = argcasematch (argv[1], command_name_list);
+  int result = strmatch (argv[1], command_name_list);
   
-  if (argmatch_result < 0)
+  if (result < 0)
     error (1, 0, "invalid command '%s'.\n"
 	   "Try '%s -l' for the list of allowed commands.", argv[1],
 	   argv[0]);
 
   /* use the full command name in argv[1] */
   if (asprintf (&argv[1], "%s %s", argv[0],
-		command_name_list[argmatch_result]) == -1)
+		command_name_list[result]) == -1)
     error (1, errno, "asprintf");
-  set_program_name (argv[1]);
 
   /* finally call the command... */
-  command_list[argmatch_result].function (argc - 1, &argv[1]);
+  fz_context *ctx = pdfout_new_context ();
+  command_list[result].function (ctx, argc - 1, &argv[1]);
   exit (0);
 }
 

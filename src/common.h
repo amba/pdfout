@@ -24,11 +24,6 @@
 #include <mupdf/fitz.h>
 #include <mupdf/pdf.h>
 
-
-#include <xalloc.h>
-#include <xvasprintf.h>
-#include <argmatch.h>
-
 #include "tmp-stream.h"
 #include "shared-with-tests.h"
 #include "data.h"
@@ -36,6 +31,37 @@
 #include "page-labels.h"
 #include "info-dict.h"
 #include "outline.h"
+
+static inline bool
+pdfout_isdigit (char c)
+{
+  return c >= '0' && c <= '9';
+}
+
+static inline bool
+pdfout_isxdigit (char c)
+{
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')
+    || (c >= 'A' && c <= 'F');
+}
+
+static inline char
+pdfout_tolower (char c)
+{
+  if (c >= 'A' && c <= 'Z')
+    return c + ('a' - 'A');
+  else
+    return c;
+}
+
+static inline char
+pdfout_toupper (char c)
+{
+  if (c >= 'a' && c <= 'z')
+    return c - ('a' - 'A');
+  else
+    return c;
+}
 
 
 void pdfout_copy_stream (fz_context *ctx, fz_stream *from, fz_output *too);
@@ -60,6 +86,8 @@ void pdfout_text_get_page (FILE *stream, fz_context *ctx,
 void pdfout_write_document (fz_context *ctx, pdf_document *doc,
 			    const char *pdf_filename,
 			    const char *output_filename);
+
+int pdfout_uctomb (fz_context *ctx, uint8_t *buf, uint32_t uc, int n);
 
 char *pdfout_check_utf8 (const char *s, size_t n);
   

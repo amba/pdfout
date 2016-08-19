@@ -21,6 +21,8 @@
 #include "charset-conversion.h"
 #include "data.h"
 
+static fz_context *ctx;
+
 #define test_assert(expr)					\
   do								\
     {								\
@@ -64,7 +66,7 @@ Expression '" #expr "' did not throw as expected\n", __FILE__, __LINE__); \
 
 
 static void
-write_pdf (fz_context *ctx, pdf_document *doc, pdfout_tmp_stream *handle,
+write_pdf (pdf_document *doc, pdfout_tmp_stream *handle,
 	   pdf_write_options *opts)
 {
   fz_output *output = pdfout_tmp_stream_output (ctx, handle);
@@ -72,7 +74,7 @@ write_pdf (fz_context *ctx, pdf_document *doc, pdfout_tmp_stream *handle,
 }
 
 static pdf_document *
-open_pdf (fz_context *ctx, pdfout_tmp_stream *handle)
+open_pdf (pdfout_tmp_stream *handle)
 {
   fz_stream *stream = pdfout_tmp_stream_stream (ctx, handle);
   pdf_document *doc = pdf_open_document_with_stream (ctx, stream);
@@ -89,15 +91,13 @@ check_incremental_update (void)
   const char *subject = "check incremental update";
   int num;
 
-  fz_context *ctx = pdfout_new_context ();
-
   pdf_document *doc = pdf_create_document (ctx);
 
   pdfout_tmp_stream *handle = pdfout_tmp_stream_new (ctx);
 
-  write_pdf (ctx, doc, handle, &opts);
+  write_pdf (doc, handle, &opts);
   pdf_drop_document (ctx, doc);
-  doc = open_pdf (ctx, handle);
+  doc = open_pdf (handle);
 
   num = pdf_create_object (ctx, doc);
   info = pdf_new_dict (ctx, doc, 1);
@@ -111,9 +111,9 @@ check_incremental_update (void)
 
   opts.do_incremental = 1;
   
-  write_pdf (ctx, doc, handle, &opts);
+  write_pdf (doc, handle, &opts);
   pdf_drop_document (ctx, doc);
-  doc = open_pdf (ctx, handle);
+  doc = open_pdf (handle);
   
   
   exit (0);
@@ -128,22 +128,19 @@ static void
 check_incremental_update_xref (void)
 {
   pdf_write_options opts = { 0 };
-  fz_context *ctx;
   /* to run Memcheck-clean, keep a pointer to each doc  */
   pdf_document *doc[3];
   pdf_obj *info;
   const char *subject = "check incremental update with xref";
   int num;
 
-  ctx = pdfout_new_context ();
-  
   doc[0] = pdf_create_document (ctx);
 
   opts.do_incremental = 0;
 
   pdfout_tmp_stream *handle = pdfout_tmp_stream_new (ctx);
-  write_pdf (ctx, doc[0], handle, &opts);
-  doc[1] = open_pdf (ctx, handle);
+  write_pdf (doc[0], handle, &opts);
+  doc[1] = open_pdf (handle);
   
   /* ensure that incremental update will have xref stream */
   doc[1]->has_xref_streams = 1;
@@ -160,8 +157,8 @@ check_incremental_update_xref (void)
 
 
   opts.do_incremental = 1;
-  write_pdf (ctx, doc[1], handle, &opts);
-  doc[2] = open_pdf (ctx, handle);
+  write_pdf (doc[1], handle, &opts);
+  doc[2] = open_pdf (handle);
   
   exit (0);
 }
@@ -212,8 +209,6 @@ static void print_string (const char *string, size_t len)
 static void
 check_string_conversions (void)
 {
-  fz_context *ctx = pdfout_new_context();
-
   /* FIXME: check trailing zero for 'C' encoding. */
   /* FIXME: check with just enough space and just too little space.  */
   
@@ -523,8 +518,6 @@ static void check_json_emitter (fz_context *ctx)
 }
 static void check_json (void)
 {
-  fz_context *ctx = pdfout_new_context ();
-  
   check_json_parser_values (ctx);
 
   check_json_parser (ctx);
@@ -535,8 +528,6 @@ static void check_json (void)
 
 static void check_data (void)
 {
-  fz_context *ctx = pdfout_new_context ();
-
   pdfout_data *hash = pdfout_data_hash_new (ctx);
 
   const char *s1 = "key1";
@@ -617,7 +608,8 @@ static struct argp_child children[] = {
 static struct argp argp = { options, parse_opt, usage, doc, children };
 
 void
-pdfout_command_debug (int argc, char **argv)
+pdfout_command_debug (fz_context *ctx_arg, int argc, char **argv)
 {
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
 }

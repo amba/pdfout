@@ -31,6 +31,7 @@ static struct argp_option options[] = {
   {0}
 };
 
+static fz_context *ctx;
 static char *pdf_filename;
 static FILE *output;
 static char *page_range;
@@ -57,7 +58,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       argp_usage (state);
     case ARGP_KEY_END:
       if (use_default_filename)
-	output = open_default_write_file (state, pdf_filename, ".txt");
+	output = open_default_write_file (ctx, pdf_filename, ".txt");
       else
 	output = stdout;
       break;
@@ -76,16 +77,16 @@ static struct argp_child children[] = {
 static struct argp argp = {options, parse_opt, usage, doc, children};
 
 void
-pdfout_command_gettxt (int argc, char **argv)
+pdfout_command_gettxt (fz_context *ctx_arg, int argc, char **argv)
 {
-  fz_context *ctx;
   pdf_document *doc;
   int  i, page_count;
   int *pages;
 
   /* only move a copy of pages to soothe Memcheck */
   int *pages_ptr;
-  
+
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
   ctx = pdfout_new_context ();
@@ -93,11 +94,11 @@ pdfout_command_gettxt (int argc, char **argv)
   page_count = pdf_count_pages (ctx, doc);
 
   if (page_range == NULL) {
-    pages = XNMALLOC (3, int);
+    pages = fz_malloc (ctx, 3 * sizeof (int));
     pages[0] = 1; pages[1] = page_count; pages[2] = 0;
   }
   else
-    pages = pdfout_parse_page_range (page_range, page_count);
+    pages = pdfout_parse_page_range (ctx, page_range, page_count);
   
 
   for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)

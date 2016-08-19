@@ -28,6 +28,7 @@ static struct argp_option options[] = {
   {0}
 };
 
+static fz_context *ctx;
 static char *pdf_filename;
 static char *output_filename;
 static bool check;
@@ -61,14 +62,12 @@ static const struct argp_child children[] = {{&pdfout_general_argp},{0}};
 static struct argp argp = {options, parse_opt, usage, args_doc, children};
 
 void
-pdfout_command_repair (int argc, char **argv)
+pdfout_command_repair (fz_context *ctx_arg, int argc, char **argv)
 {
-  fz_context *ctx;
   pdf_document *doc;
-  
+  ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
-  ctx = pdfout_new_context ();
   doc = pdf_open_document (ctx, pdf_filename);
 
   if (doc->repair_attempted == 0)

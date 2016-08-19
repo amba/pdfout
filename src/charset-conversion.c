@@ -22,7 +22,6 @@
 
 #include "common.h"
 #include "charset-conversion.h"
-#include "c-strcase.h"
 
 #ifndef ucs4_t
 # define ucs4_t uint32_t
@@ -959,3 +958,193 @@ pdfout_str_obj_to_utf8 (fz_context *ctx, pdf_obj *string, int *len)
   /* FIXME: proper try/catch */
   return pdfout_pdf_to_utf8 (ctx, text, text_len, len);
 }
+
+
+/* 
+   Copyright (C) 2002, 2005-2006, 2009-2016 Free Software Foundation, Inc.
+   Written by Bruno Haible <bruno@clisp.org>, 2002.
+
+   This program is free software: you can redistribute it and/or modify it
+   under the terms of the GNU Lesser General Public License as published
+   by the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   Store a character in UTF-8 string. Copied and adapted from GNU Gnulib file
+   lib/unistr/u8-uctomp.c.  */
+
+static int
+u8_uctomb (uint8_t *s, ucs4_t uc, int n)
+{
+  if (uc < 0x80)
+    {
+      if (n > 0)
+        {
+          s[0] = uc;
+          return 1;
+        }
+      /* else return -2, below.  */
+    }
+  else
+    {
+      int count;
+
+      if (uc < 0x800)
+        count = 2;
+      else if (uc < 0x10000)
+        {
+          if (uc < 0xd800 || uc >= 0xe000)
+            count = 3;
+          else
+            return -1;
+        }
+#if 0
+      else if (uc < 0x200000)
+        count = 4;
+      else if (uc < 0x4000000)
+        count = 5;
+      else if (uc <= 0x7fffffff)
+        count = 6;
+#else
+      else if (uc < 0x110000)
+        count = 4;
+#endif
+      else
+        return -1;
+
+      if (n >= count)
+        {
+          switch (count) /* note: code falls through cases! */
+            {
+#if 0
+            case 6: s[5] = 0x80 | (uc & 0x3f); uc = uc >> 6; uc |= 0x4000000;
+            case 5: s[4] = 0x80 | (uc & 0x3f); uc = uc >> 6; uc |= 0x200000;
+#endif
+            case 4: s[3] = 0x80 | (uc & 0x3f); uc = uc >> 6; uc |= 0x10000;
+            case 3: s[2] = 0x80 | (uc & 0x3f); uc = uc >> 6; uc |= 0x800;
+            case 2: s[1] = 0x80 | (uc & 0x3f); uc = uc >> 6; uc |= 0xc0;
+	      /*case 1:*/ s[0] = uc;
+	    default:;
+	      
+            }
+          return count;
+        }
+    }
+  return -2;
+}
+
+
+/*
+   Check UTF-8 string.  Copied from GNU Gnulib file
+   lib/unistr/u8-check.c.  */
+
+static const uint8_t *
+u8_check (const uint8_t *s, size_t n)
+{
+  const uint8_t *s_end = s + n;
+
+  while (s < s_end)
+    {
+      /* Keep in sync with unistr.h and u8-mbtouc-aux.c.  */
+      uint8_t c = *s;
+
+      if (c < 0x80)
+        {
+          s++;
+          continue;
+        }
+      if (c >= 0xc2)
+        {
+          if (c < 0xe0)
+            {
+              if (s + 2 <= s_end
+                  && (s[1] ^ 0x80) < 0x40)
+                {
+                  s += 2;
+                  continue;
+                }
+            }
+          else if (c < 0xf0)
+            {
+              if (s + 3 <= s_end
+                  && (s[1] ^ 0x80) < 0x40 && (s[2] ^ 0x80) < 0x40
+                  && (c >= 0xe1 || s[1] >= 0xa0)
+                  && (c != 0xed || s[1] < 0xa0))
+                {
+                  s += 3;
+                  continue;
+                }
+            }
+          else if (c < 0xf8)
+            {
+              if (s + 4 <= s_end
+                  && (s[1] ^ 0x80) < 0x40 && (s[2] ^ 0x80) < 0x40
+                  && (s[3] ^ 0x80) < 0x40
+                  && (c >= 0xf1 || s[1] >= 0x90)
+#if 1
+                  && (c < 0xf4 || (c == 0xf4 && s[1] < 0x90))
+#endif
+                 )
+                {
+                  s += 4;
+                  continue;
+                }
+            }
+#if 0
+          else if (c < 0xfc)
+            {
+              if (s + 5 <= s_end
+                  && (s[1] ^ 0x80) < 0x40 && (s[2] ^ 0x80) < 0x40
+                  && (s[3] ^ 0x80) < 0x40 && (s[4] ^ 0x80) < 0x40
+                  && (c >= 0xf9 || s[1] >= 0x88))
+                {
+                  s += 5;
+                  continue;
+                }
+            }
+          else if (c < 0xfe)
+            {
+              if (s + 6 <= s_end
+                  && (s[1] ^ 0x80) < 0x40 && (s[2] ^ 0x80) < 0x40
+                  && (s[3] ^ 0x80) < 0x40 && (s[4] ^ 0x80) < 0x40
+                  && (s[5] ^ 0x80) < 0x40
+                  && (c >= 0xfd || s[1] >= 0x84))
+                {
+                  s += 6;
+                  continue;
+                }
+            }
+#endif
+        }
+      /* invalid or incomplete multibyte character */
+      return s;
+    }
+  return NULL;
+}
+
+int
+pdfout_uctomb (fz_context *ctx, uint8_t *buf, ucs4_t uc, int n)
+{
+  int len = u8_uctomb (buf, uc, n);
+  
+  if (len == -1)
+    pdfout_throw (ctx, "Invalid codepoint: U+%x", uc);
+  else if (len == -2)
+    pdfout_throw (ctx, "Buffer length %d is not sufficient", n);
+
+  return len;
+}
+	       
+char *
+pdfout_check_utf8 (const char *s, size_t n)
+{
+  return (char *) u8_check ((const uint8_t *) s, n);
+}
+

@@ -16,15 +16,30 @@
 
 
 #include "shared.h"
-#include <c-ctype.h>
-#include <argmatch.h>
+
+static bool
+streq(const char *a, const char *b)
+{
+  return strcmp (a, b) == 0;
+}
+
+int
+strmatch (const char *key, const char *const *list)
+{
+  for (int i = 0; list[i]; ++i)
+    {
+      if (streq(key, list[i]))
+	return i;
+    }
+  return -1;
+}
 
 char *
 upcase (char *s)
 {
   char *p;
   for (p = s; *p; ++p)
-    *p = c_toupper (*p);
+    *p = pdfout_toupper (*p);
   return s;
 }
 
@@ -33,15 +48,10 @@ lowercase (char *s)
 {
   char *p;
   for (p = s; *p; ++p)
-    *p = c_tolower (*p);
+    *p = pdfout_tolower (*p);
   return s;
 }
 
-ptrdiff_t
-argcasematch (char *arg, const char *const *valid)
-{
-  return argmatch (lowercase (arg), valid, NULL, 0);
-}
 
 /* general options */
 
@@ -98,22 +108,6 @@ struct argp pdfout_pdf_output_argp = {
 };
 
 
-FILE *
-xfopen (struct argp_state *state, const char *path, const char *mode)
-{
-  FILE *result = fopen (path, mode);
-  if (result == NULL)
-    {
-      const char *mode_string = strcmp (mode, "r") == 0 ? "for reading" :
-	strcmp (mode, "w") == 0 ? "for writing" :
-	xasprintf ("(mode '%s')", mode);
-      argp_failure (state, argp_err_exit_status, errno,
-		    "cannot open file '%s' %s", path, mode_string);
-    }
-  
-  return result;
-}
-
 void
 pdfout_argp_parse (const struct argp * argp, int argc, char ** argv,
 		   unsigned flags, int *arg_index, void *input)
@@ -140,29 +134,52 @@ pdfout_new_context (void)
 }
 
 static FILE *
-open_default_file (struct argp_state *state, const char *filename,
+fopen_throw (fz_context *ctx, const char *filename, const char *mode)
+{
+  FILE *result = fopen (filename, mode);
+
+  if (result == NULL)
+      pdfout_throw_errno (ctx, "cannot open '%s'", filename);
+  
+  return result;
+}
+
+static char *
+append_suffix (fz_context *ctx, const char *filename, const char *suffix)
+{
+  size_t filename_len = strlen (filename);
+  size_t suffix_len = strlen (suffix);
+  char *result = fz_malloc (ctx, filename_len + suffix_len + 1);
+  
+  memcpy (result, filename, filename_len);
+  memcpy (result + filename_len, suffix, suffix_len + 1);
+  return result;
+}
+
+static FILE *
+open_default_file (fz_context *ctx, const char *filename,
 		   const char *suffix, const char *mode)
 {
-  char *default_filename = pdfout_append_suffix (filename, suffix);
-  FILE *file = xfopen (state, default_filename, mode);
-  if (strcmp (mode, "w") == 0)
-    pdfout_msg ("writing output to file '%s'", default_filename);
+  char *default_filename = append_suffix (ctx, filename, suffix);
+  FILE *file = fopen_throw (ctx, default_filename, mode);
+  if (streq (mode, "w"))
+    pdfout_warn (ctx, "writing output to file '%s'", default_filename);
   free (default_filename);
   return file;
 }
 
 FILE *
-open_default_read_file (struct argp_state *state, const char *filename,
+open_default_read_file (fz_context *ctx, const char *filename,
 			const char *suffix)
 {
-  return open_default_file (state, filename, suffix, "r");
+  return open_default_file (ctx, filename, suffix, "r");
 }
 
 FILE *
-open_default_write_file (struct argp_state *state, const char *filename,
+open_default_write_file (fz_context *ctx, const char *filename,
 			 const char *suffix)
 {
-  return open_default_file (state, filename, suffix, "w");
+  return open_default_file (ctx, filename, suffix, "w");
 }
 
 
@@ -185,9 +202,9 @@ static void list_formats (FILE *stream)
 enum pdfout_outline_format
 pdfout_outline_get_format (struct argp_state *state, char *format)
 {
-  ptrdiff_t result;
+  int result;
   
-  result = argcasematch (format, outline_format_list);
+  result = strmatch (format, outline_format_list);
 
   if (result >= 0)
     return result;
@@ -293,13 +310,13 @@ get_range (int *result, char *ranges, int page_count)
 }
 
 int *
-pdfout_parse_page_range (const char *ranges, int page_count)
+pdfout_parse_page_range (fz_context *ctx, const char *ranges, int page_count)
 {
   int *result;
   int result_len = 2;
   /* find result len */
   const char *range_ptr;
-  char *ranges_copy = xstrdup (ranges);
+  char *ranges_copy = fz_strdup (ctx, ranges);
 
   for (range_ptr = ranges; *range_ptr; ++range_ptr)
     {
@@ -307,7 +324,7 @@ pdfout_parse_page_range (const char *ranges, int page_count)
 	++result_len;
     }
 
-  result = XNMALLOC (2 * result_len, int);
+  result = fz_malloc (ctx, 2 * result_len * sizeof (int));
   
   if (get_range (result, ranges_copy, page_count))
     exit (1);

@@ -1,7 +1,4 @@
 #include "common.h"
-#include "c-ctype.h"
-#include "unistr.h"
-#include "uniwidth.h"
 
 enum data_type {
   SCALAR,

@@ -100,3 +100,25 @@ Convert UTF-8 to PDF string. If possible, use PDFDOCENCODING. If that fails,
 use UTF-16.
 
 =back
+
+=head2 Lightweight UTF-8 support functions
+
+=over
+
+=item
+
+ char *pdfout_check_utf8 (const char *s, size_t n);
+
+Check if the string C<s> of length C<n> contains valid UTF-8. If it contains
+invalid UTF-8, return a pointer to the first invalid unit. Return C<NULL>, if
+the string is valid.
+
+=item
+
+ int pdfout_uctomb (fz_context *ctx, uint8_t *buf, ucs4_t uc, int n);
+
+Convert the Unicode codepoint C<uc> to UTF-8. Store the result in
+C<buf>, which has length C<n>. Throw for invalid codepoint or if C<n> is too
+small. Always use C<n = 4>.
+
+=back
