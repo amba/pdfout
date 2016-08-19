@@ -1,7 +1,6 @@
 #ifndef PDFOUT_ARGP_SHARED_H
 #define PDFOUT_ARGP_SHARED_H
 #include "../common.h"
-#include <exitfail.h>
 
 /* command function prototypes  */
 typedef void command_func_t (fz_context *ctx, int argc, char **argv);

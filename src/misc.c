@@ -17,8 +17,6 @@
 
 #include "common.h"
 #include <string.h>
-#include <exitfail.h>
-
 
 int
 pdfout_strtoui (fz_context *ctx, const char *s)
@@ -211,6 +209,6 @@ pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
   
   return ret;
  error:
-  exit (exit_failure);
+  exit (1);
 }
 

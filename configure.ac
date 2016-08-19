@@ -24,7 +24,7 @@ gl_MANYWARN_ALL_GCC([warnings])
 # Set up the list of the pointless, undesired warnings.
 nw="-W -Wextra -Wdouble-promotion -Wshadow -Wvariadic-macros \
 -Wsuggest-attribute=noreturn -Wjump-misses-init -Wmissing-field-initializers \
--Wunused-parameter"
+-Wunused-parameter -Wformat-nonliteral"
 # Enable all GCC warnings not in this list.
 gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 

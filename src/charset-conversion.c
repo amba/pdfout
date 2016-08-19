@@ -54,8 +54,7 @@ typedef unsigned state_t;
  */
 
 static int
-ascii_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
-	      _GL_UNUSED int n)
+ascii_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s, int n)
 {
   unsigned char c = *s;
   if (c < 0x80) {
@@ -66,8 +65,7 @@ ascii_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
 }
 
 static int
-ascii_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc,
-	      _GL_UNUSED int n)
+ascii_wctomb (conv_t conv, unsigned char *r, ucs4_t wc, int n)
 {
   if (wc < 0x0080) {
     *r = wc;
@@ -83,7 +81,7 @@ ascii_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc,
 /* Specification: RFC 3629 */
 
 static int
-utf8_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
+utf8_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 	     int n)
 {
   unsigned char c = s[0];
@@ -157,7 +155,7 @@ utf8_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
 }
 
 static int
-utf8_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
+utf8_wctomb (conv_t conv, unsigned char *r, ucs4_t wc, int n)
 {
   int count;
   if (wc < 0x80)
@@ -198,7 +196,7 @@ utf8_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
 /* Specification: RFC 2781 */
 
 static int
-utf16be_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
+utf16be_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 		int n)
 {
   int count = 0;
@@ -231,7 +229,7 @@ utf16be_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
 }
 
 static int
-utf16be_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
+utf16be_wctomb (conv_t conv, unsigned char *r, ucs4_t wc, int n)
 {
   if (!(wc >= 0xd800 && wc < 0xe000))
     {
@@ -273,7 +271,7 @@ utf16be_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
 /* Specification: RFC 2781 */
 
 static int
-utf16le_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
+utf16le_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 		int n)
 {
   int count = 0;
@@ -306,7 +304,7 @@ utf16le_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
 }
 
 static int
-utf16le_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc,
+utf16le_wctomb (conv_t conv, unsigned char *r, ucs4_t wc,
 		int n)
 {
   if (!(wc >= 0xd800 && wc < 0xe000))
@@ -460,7 +458,7 @@ utf16_wctomb (conv_t conv, unsigned char *r, ucs4_t wc, int n)
 /* Specification: Unicode 3.1 Standard Annex #19 */
 
 static int
-utf32be_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
+utf32be_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 		int n)
 {
   if (n >= 4)
@@ -478,7 +476,7 @@ utf32be_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
 }
 
 static int
-utf32be_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
+utf32be_wctomb (conv_t conv, unsigned char *r, ucs4_t wc, int n)
 {
   if (wc < 0x110000 && !(wc >= 0xd800 && wc < 0xe000))
     {
@@ -503,7 +501,7 @@ utf32be_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
 /* Specification: Unicode 3.1 Standard Annex #19 */
 
 static int
-utf32le_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
+utf32le_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s,
 		int n)
 {
   if (n >= 4)
@@ -521,7 +519,7 @@ utf32le_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
 }
 
 static int
-utf32le_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc, int n)
+utf32le_wctomb (conv_t conv, unsigned char *r, ucs4_t wc, int n)
 {
   if (wc < 0x110000 && !(wc >= 0xd800 && wc < 0xe000))
     {
@@ -656,8 +654,8 @@ static const unsigned short pdfdoc_2uni_2[64] = {
 };
 
 static int
-pdfdoc_mbtowc (_GL_UNUSED conv_t conv, ucs4_t *pwc, const unsigned char *s,
-	       _GL_UNUSED int n)
+pdfdoc_mbtowc (conv_t conv, ucs4_t *pwc, const unsigned char *s,
+	        int n)
 {
   unsigned char c = *s;
   if (c < 0x10)
@@ -736,8 +734,8 @@ static const unsigned char pdfdoc_pagefb[8] = {
 };
 
 static int
-pdfdoc_wctomb (_GL_UNUSED conv_t conv, unsigned char *r, ucs4_t wc,
-	       _GL_UNUSED int n)
+pdfdoc_wctomb (conv_t conv, unsigned char *r, ucs4_t wc,
+	        int n)
 {
   unsigned char c = 0;
   if (wc < 0x0018)
