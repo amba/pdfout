@@ -585,7 +585,7 @@ static struct argp_option options[] = {
 };
 
 static error_t
-parse_opt (int key, _GL_UNUSED char *arg, _GL_UNUSED struct argp_state *state)
+parse_opt (int key, char *arg, struct argp_state *state)
 {
   switch (key)
     {

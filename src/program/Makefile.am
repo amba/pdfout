@@ -1,5 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/gl -I$(top_builddir)/gl \
-  -I$(top_builddir)
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_builddir)
 
 AM_CPPFLAGS += -I$(top_srcdir)/mupdf/include
 
@@ -32,7 +31,6 @@ test.c
 LDADD = \
 ../libcommon.a \
 ../libshared-with-tests.a \
-$(top_builddir)/gl/libgnu.a \
 $(abs_top_builddir)/mupdf/libmupdf.a \
 $(abs_top_builddir)/mupdf/libmupdfthird.a \
 $(abs_top_builddir)/mupdf/libmupdf.a

@@ -1,6 +1,6 @@
 SUBDIRS =  . program
 
-AM_CPPFLAGS = -I$(top_srcdir)/gl -I$(top_builddir)/gl -I$(top_builddir)
+AM_CPPFLAGS = -I$(top_builddir)
 AM_CPPFLAGS += -I$(top_srcdir)/mupdf/include
 
 AM_CFLAGS = $(WARN_CFLAGS)

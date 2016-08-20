@@ -13,7 +13,6 @@ AC_CONFIG_HEADERS([config.h])
 dnl Checks for programs.
 
 AC_PROG_CC_C99
-gl_EARLY
 
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR]) dnl workaround for automake 1.11
 
@@ -84,12 +83,9 @@ AS_IF([test -n "$MUPDF_CFLAGS"],
 AC_SUBST([MUPDF_MAKE_COMMAND])
 AC_SUBST([MUPDF_XCFLAGS])
 
-gl_INIT
-
 AC_SUBST([MUPDF_REQUIRED_LIBS], ["-lm $LIBS"])
 LIBS=
 
-AC_CONFIG_FILES([Makefile gl/Makefile gl-tests/Makefile src/Makefile
-	          src/program/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/program/Makefile])
 
 AC_OUTPUT

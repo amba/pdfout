@@ -62,8 +62,7 @@ static struct argp_option general_options[] = {
 };
 
 static error_t
-general_parse_opt (int key, _GL_UNUSED char *arg,
-		   _GL_UNUSED struct argp_state *state)
+general_parse_opt (int key, char *arg, struct argp_state *state)
 {
   switch (key)
     {
@@ -92,8 +91,7 @@ static struct argp_option pdf_output_options[] = {
 };
 
 static error_t
-pdf_output_parse_opt (int key, _GL_UNUSED char *arg,
-		      _GL_UNUSED struct argp_state *state)
+pdf_output_parse_opt (int key, char *arg, struct argp_state *state)
 {
   switch (key)
     {
