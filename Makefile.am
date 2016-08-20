@@ -1,5 +1,5 @@
 # Run gnulib tests last (see sec. 3.9 in gnulib manual).
-SUBDIRS = . gl src
+SUBDIRS = . src
 BUILD_DOC = perl -I "$(srcdir)/doc" "$(srcdir)/doc/build-doc.pl"
 
 all-local:

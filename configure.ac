@@ -7,7 +7,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign])
 AM_SILENT_RULES([yes])
 AM_MAINTAINER_MODE
-AC_CONFIG_MACRO_DIRS([m4 gl/m4])
+AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_SRCDIR([src/outline.c])
 AC_CONFIG_HEADERS([config.h])
 dnl Checks for programs.
@@ -19,37 +19,37 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR]) dnl workaround for automake 1.11
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-gl_MANYWARN_ALL_GCC([warnings])
-# Set up the list of the pointless, undesired warnings.
-nw="-W -Wextra -Wdouble-promotion -Wshadow -Wvariadic-macros \
--Wsuggest-attribute=noreturn -Wjump-misses-init -Wmissing-field-initializers \
--Wunused-parameter -Wformat-nonliteral"
-# Enable all GCC warnings not in this list.
-gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
+dnl gl_MANYWARN_ALL_GCC([warnings])
+dnl # Set up the list of the pointless, undesired warnings.
+dnl nw="-W -Wextra -Wdouble-promotion -Wshadow -Wvariadic-macros \
+dnl -Wsuggest-attribute=noreturn -Wjump-misses-init -Wmissing-field-initializers \
+dnl -Wunused-parameter -Wformat-nonliteral"
+dnl # Enable all GCC warnings not in this list.
+dnl gl_MANYWARN_COMPLEMENT([warnings], [$warnings], [$nw])
 
 
-AC_ARG_ENABLE([warnings],
-	[AS_HELP_STRING([--enable-warnings],
-	[enable many compiler warnings])],
-	[AS_IF([test "$enableval" = "yes"],
-	       [for w in $warnings;
-	          do gl_WARN_ADD([$w], [WARN_CFLAGS])
-		done
-	       ])])
+dnl AC_ARG_ENABLE([warnings],
+dnl 	[AS_HELP_STRING([--enable-warnings],
+dnl 	[enable many compiler warnings])],
+dnl 	[AS_IF([test "$enableval" = "yes"],
+dnl 	       [for w in $warnings;
+dnl 	          do gl_WARN_ADD([$w], [WARN_CFLAGS])
+dnl 		done
+dnl 	       ])])
 	       
 
-AC_ARG_ENABLE([Werror],
-	[AS_HELP_STRING([--enable-Werror],
-			[compile with -Werror])],
-	[AS_IF([test "$enableval" = "yes"], 
-               [gl_WARN_ADD([-Werror], [WARN_CFLAGS])
-	        gl_WARN_ADD([-Wno-error=suggest-attribute=pure], [WARN_CFLAGS])
-		gl_WARN_ADD([-Wno-error=unused-parameter], [WARN_CFLAGS])
-		gl_WARN_ADD([-Wno-error=suggest-attribute=format],
-		[WARN_CFLAGS])
-		#gl_WARN_ADD([-Wno-error=format-security], [WARN_CFLAGS])
-		gl_WARN_ADD([-Wno-error=inline], [WARN_CFLAGS])
-		gl_WARN_ADD([-Wno-error=clobbered], [WARN_CFLAGS])])])
+dnl AC_ARG_ENABLE([Werror],
+dnl 	[AS_HELP_STRING([--enable-Werror],
+dnl 			[compile with -Werror])],
+dnl 	[AS_IF([test "$enableval" = "yes"], 
+dnl                [gl_WARN_ADD([-Werror], [WARN_CFLAGS])
+dnl 	        gl_WARN_ADD([-Wno-error=suggest-attribute=pure], [WARN_CFLAGS])
+dnl 		gl_WARN_ADD([-Wno-error=unused-parameter], [WARN_CFLAGS])
+dnl 		gl_WARN_ADD([-Wno-error=suggest-attribute=format],
+dnl 		[WARN_CFLAGS])
+dnl 		#gl_WARN_ADD([-Wno-error=format-security], [WARN_CFLAGS])
+dnl 		gl_WARN_ADD([-Wno-error=inline], [WARN_CFLAGS])
+dnl 		gl_WARN_ADD([-Wno-error=clobbered], [WARN_CFLAGS])])])
 	      
 dnl Checks for libraries.
 dnl use pkg-config if possible

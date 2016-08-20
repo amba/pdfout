@@ -1,4 +1,4 @@
-SUBDIRS =  . program
+SUBDIRS = . program
 
 AM_CPPFLAGS = -I$(top_builddir)
 AM_CPPFLAGS += -I$(top_srcdir)/mupdf/include
