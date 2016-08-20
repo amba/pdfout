@@ -76,8 +76,7 @@ int *pdfout_parse_page_range (fz_context *ctx, const char *range,
 "outline format, default: YAML, case-insensitive"
 
 #define PDFOUT_VERSION \
-  PACKAGE_STRING "\
-\n\
+"pdfout 0.1\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\
 \nThis is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law."

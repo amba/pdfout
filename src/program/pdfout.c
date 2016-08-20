@@ -114,8 +114,8 @@ static struct argp argp = {options, parse_opt};
 int
 main (int argc, char **argv)
 {
-  argp_program_version = PDFOUT_VERSION;
-  argp_program_bug_address = PACKAGE_BUGREPORT;
+  /* argp_program_version = PDFOUT_VERSION; */
+  /* argp_program_bug_address = PACKAGE_BUGREPORT; */
 
   
   if (argc < 2)
