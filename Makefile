@@ -9,10 +9,6 @@ pdfout_obj := $(subst $(srcdir)/,, $(patsubst %.c, %.o, $(pdfout_source)))
 
 pdfout := src/program/pdfout
 
-all: $(pdfout)
-
-$(pdfout): $(pdfout_obj) | mupdf
-
 mupdf-out := mupdf-build
 ALL_LDLIBS := $(mupdf-out)/libmupdf.a $(mupdf-out)/libmupdfthird.a -lm
 
@@ -24,7 +20,7 @@ objdirs := src src/program
 $(objdirs):
 	mkdir -p $@
 
-$(pdfout_obj): $(pdfout_header) | $(objdirs)
+$(pdfout_obj): $(pdfout_header) | $(objdirs) mupdf
 
 # Do not pass down command line arguments to the mupdf make.
 # mupdf needs it's own command line arguments like XCFLAGS.
