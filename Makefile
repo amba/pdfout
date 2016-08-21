@@ -7,12 +7,13 @@ pdfout_header := $(wildcard $(srcdir)/src/*.h $(srcdir)/src/program/*.h)
 pdfout_source := $(wildcard $(srcdir)/src/*.c $(srcdir)/src/program/*.c)
 pdfout_obj := $(subst $(srcdir)/,, $(patsubst %.c, %.o, $(pdfout_source)))
 
-pdfout = src/program/pdfout
+pdfout := src/program/pdfout
+
 all: $(pdfout)
 
 $(pdfout): mupdf $(pdfout_obj)
 
-ALL_LDLIBS = mupdf/libmupdf.a mupdf/libmupdfthird.a -lm
+ALL_LDLIBS := mupdf/libmupdf.a mupdf/libmupdfthird.a -lm
 
 $(pdfout): $(pdfout_obj)
 	$(CC) $(LDFLAGS) -o $@ $(pdfout_obj) $(ALL_LDLIBS)
@@ -33,9 +34,9 @@ mupdf:
 OUT=$(CURDIR)/mupdf XCFLAGS="$(CFLAGS)" SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS= \
 verbose=yes
 
-ALL_CFLAGS = -std=gnu99 $(CFLAGS)
-ALL_CPPFLAGS = -I$(srcdir)/src -I$(srcdir)/mupdf/include $(CPPFLAGS)
-COMPILE.c = $(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(TARGET_ARCH) -c
+ALL_CFLAGS := -std=gnu99 $(CFLAGS)
+ALL_CPPFLAGS := -I$(srcdir)/src -I$(srcdir)/mupdf/include $(CPPFLAGS)
+COMPILE.c := $(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(TARGET_ARCH) -c
 
 check:
 	echo FIXME; exit 1
