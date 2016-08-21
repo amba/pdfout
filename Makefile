@@ -43,10 +43,20 @@ build_doc := perl -I $(srcdir)/doc $(srcdir)/doc/build-doc.pl
 html:
 	$(build_doc) --build $(srcdir)/doc
 
-clean-obj := $(wildcard src/*.o src/program/*.o) src/program/pdfout\
+clean-obj := $(wildcard src/*.o src/program/*.o) src/program/pdfout \
              $(mupdf-out)
 
 clean:
 	rm -rf $(clean-obj)
+
+INSTALL := install
+prefix ?= /usr/local
+bindir ?= $(prefix)/bin
+
+install: $(pdfout)
+	install -d $(DESTDIR)$(bindir)
+	install $(pdfout) $(DESTDIR)$(bindir)
+
+
 
 .PHONY: all pdfout mupdf check html clean
