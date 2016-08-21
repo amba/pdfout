@@ -9,7 +9,3 @@ git submodule update --init
 		 thirdparty/zlib thirdparty/mujs thirdparty/harfbuzz
 		 
 )
-
-# generate configure and Makefile.ins
-echo "running autoreconf -fiv"
-autoreconf -iv
