@@ -38,12 +38,15 @@ ALL_CFLAGS := -std=gnu99 $(CFLAGS)
 ALL_CPPFLAGS := -I$(srcdir)/src -I$(srcdir)/mupdf/include $(CPPFLAGS)
 COMPILE.c := $(CC) $(ALL_CFLAGS) $(ALL_CPPFLAGS) $(TARGET_ARCH) -c
 
-check:
-	echo FIXME; exit 1
-
 build_doc := perl -I $(srcdir)/doc $(srcdir)/doc/build-doc.pl
 
 html:
 	$(build_doc) --build $(srcdir)/doc
 
-.PHONY: all pdfout mupdf check html
+clean-obj := $(wildcard src/*.o src/program/*.o) src/program/pdfout\
+             $(mupdf-out)
+
+clean:
+	rm -rf $(clean-obj)
+
+.PHONY: all pdfout mupdf check html clean
