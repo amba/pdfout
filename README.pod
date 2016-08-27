@@ -10,13 +10,16 @@ L<mupdf|http://mupdf.com> library.
 =over
 
 =item -
+
 dump and modify outlines, page labels and keys of the information
 dictionary. These support JSON for input and output.
 
 =item -
+
 extract text
 
 =item -
+
 repair broken cross-reference tables
 
 =back
