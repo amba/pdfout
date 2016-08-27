@@ -2,21 +2,24 @@
 
 =head1 pdfout
 
-pdfout is a lightweight PDF toolkit written in C. It is based on the
+pdfout is a lightweight PDF toolkit written in C. It is heavily based on the
 L<mupdf|http://mupdf.com> library.
 
 =head2 Features
 
 =over
 
-=item - dump and modify outlines, page labels and keys of the information
+=item -
+dump and modify outlines, page labels and keys of the information
 dictionary. These support JSON for input and output.
 
-=item - extract text
+=item -
+extract text
 
-=item - repair broken cross-reference tables
+=item -
+repair broken cross-reference tables
 
-=end
+=back
 
 
 
