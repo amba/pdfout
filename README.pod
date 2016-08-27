@@ -1,0 +1,54 @@
+=pod
+
+=head1 pdfout
+
+pdfout is a lightweight PDF toolkit written in C. It is based on the
+L<mupdf|http://mupdf.com> library.
+
+=head2 Features
+
+=over
+
+=item - dump and modify outlines, page labels and keys of the information
+dictionary. These support JSON for input and output.
+
+=item - extract text
+
+=item - repair broken cross-reference tables
+
+=end
+
+
+
+=head2 Installing
+
+Download and checkout the mupdf submodule:
+
+ user $ git clone git://github.com/amba/pdfout.git && cd pdfout
+ user $ ./submodule-init.pl
+
+Apart from mupdf, there are no thirdparty dependencies.
+
+Build and install with
+
+ user $ make
+ user $ make install prefix=$HOME/local
+
+Now you can run
+
+ pdfout --describe-commands
+
+to list the available subcommands.
+
+=head2 Copying
+
+pdfout is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+   
+Copyright (C) 2015-2016 AUTHORS
+
+See the F<COPYRIGHT> file for full details on used libraries and code derived
+from other projects.
+
