@@ -2,17 +2,14 @@ pdfout is licensed under the terms of the GNU General Public License, either
 version 3 of the License, or (at your option) any later version.
 
 It is heavily based on work of other free software projects.
-We are grateful to the authors of those.
 
 Used libraries:
 
  Library    | License        
 ------------+---------------
  MuPDF      | AGPLv3+      
- GNU Gnulib | GPLv3+         
- libyaml    | X11 (aka. MIT)
 
-dependencies of mupdf:
+mupdf's submodules:
  Library  | License
 ----------+-----------
  freetype | GPLv2+ / Freetype Project License
@@ -23,10 +20,6 @@ dependencies of mupdf:
 
 
 Used code fragments:
-
-- the grep command (src/program/grep.c) is based loosely on GNU Grep.
-  
-- The autogen.sh script is derived from GNU libunistring.
 
 - The allocators in src/alloc.c are derived from GNU gnulib's xalloc module.
 

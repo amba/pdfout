@@ -44,7 +44,7 @@ Build and install with
 
 Now you can run
 
- pdfout --describe-commands
+ user $ pdfout --describe-commands
 
 to list the available subcommands.
 
