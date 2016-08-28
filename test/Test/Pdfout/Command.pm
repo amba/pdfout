@@ -17,7 +17,7 @@ use Test::Builder 1.001014;
 
 use parent 'Test::Builder::Module';
 
-use Getopt::Long qw/:config pass_through/;
+use Getopt::Long qw/:config gnu_compat/;
 
 our @EXPORT = qw/
 pdfout_ok
@@ -25,11 +25,17 @@ file_like
 /;
 
 my $use_valgrind;
+my $pdfout;
 
 GetOptions(
     'valgrind' => \$use_valgrind,
+    'pdfout=s' => \$pdfout,
     )
     or die "GetOptions";
+
+if (not $pdfout) {
+    croak "missing --pdfout argument";
+}
 
 my $class = __PACKAGE__;
 my $builder = $class->builder;
@@ -179,13 +185,15 @@ sub pdfout_ok (%args) {
     elsif (ref $command ne 'ARRAY') {
 	croak "argument 'command' must be an arrayref";
     }
-    unshift $command->@*, './src/program/pdfout';
+    
+    unshift $command->@*, $pdfout;
     
     if ($use_valgrind) {
 	unshift $command->@*, qw/valgrind -q --error-exitcode=126
                                 --leak-check=full/;
     }
 
+    $args{command} = $command;
     return command_ok(%args);
 }
 

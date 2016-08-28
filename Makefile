@@ -1,26 +1,22 @@
-srcdir := $(dir $(lastword $(MAKEFILE_LIST)))
+OUT := build
 
-vpath %.h $(srcdir)
-vpath %.c $(srcdir)
-
-pdfout_header := $(wildcard $(srcdir)/src/*.h $(srcdir)/src/program/*.h)
-pdfout_source := $(wildcard $(srcdir)/src/*.c $(srcdir)/src/program/*.c)
-pdfout_obj := $(subst $(srcdir)/,, $(patsubst %.c, %.o, $(pdfout_source)))
-
-mupdf-dir := $(srcdir)/mupdf
+pdfout_header := $(wildcard src/*.h src/program/*.h)
+pdfout_source := $(wildcard src/*.c src/program/*.c)
+pdfout_obj := $(addprefix $(OUT)/, $(patsubst %.c, %.o, $(pdfout_source)))
 
 # We need to rebuild, if the mupdf headers change.
-mupdf-inc := $(mupdf-dir)/include/mupdf
-mupdf_header := $(wildcard $(mupdf-inc)/*.h $(mupdf-inc)/pdf/*.h \
-                           $(mupdf-inc)/fitz/*.h)
+mupdf_inc := mupdf/include/mupdf
+mupdf_header := $(wildcard $(mupdf_inc)/*.h $(mupdf_inc)/pdf/*.h \
+                           $(mupdf_inc)/fitz/*.h)
 
 all_header := $(pdfout_header) $(mupdf_header)
 
-pdfout := src/program/pdfout
+pdfout := $(OUT)/pdfout
 
-mupdf-out := mupdf-build
-mupdf-libs := $(mupdf-out)/libmupdf.a $(mupdf-out)/libmupdfthird.a
-ALL_LDLIBS :=  $(mupdf-libs) -lm
+mupdf_out := $(OUT)/mupdf
+
+mupdf_libs := $(mupdf_out)/libmupdf.a $(mupdf_out)/libmupdfthird.a
+ALL_LDLIBS :=  $(mupdf_libs) -lm
 
 ifneq "$(verbose)" "yes"
 quiet_cc = @ echo '   ' CC $@ ;
@@ -28,52 +24,29 @@ quiet_link = @ echo '   ' LD $@ ;
 endif
 
 # Do not touch user variables $(CC), $(CFLAGS), ...
-# They must always come last, do give maximum control to the command line.
+# They must always come last, to give maximum control to the command line.
 
 all_cc = $(quiet_cc) $(CC)
 all_link = $(quiet_link) $(CC)
 all_cflags := -std=gnu99 $(CFLAGS)
-all_cppflags := -I$(srcdir)/src -I$(srcdir)/mupdf/include $(CPPFLAGS)
+all_cppflags := -Isrc -Imupdf/include $(CPPFLAGS)
+
+$(pdfout): $(pdfout_obj)
+	$(all_link) $(LDFLAGS) -o $@ $(pdfout_obj) $(ALL_LDLIBS)
 
 COMPILE.c = $(all_cc) $(all_cflags) $(all_cppflags) $(TARGET_ARCH) -c
 
-$(pdfout): $(pdfout_obj) $(mupdf-libs)
-	$(all_link) $(LDFLAGS) -o $@ $(pdfout_obj) $(ALL_LDLIBS)
+objdirs := $(OUT)/src $(OUT)/src/program
 
-objdirs := src src/program
+$(OUT)/%.o: %.c $(all_header) | $(objdirs)
+	$(COMPILE.c) $< -o $@
+
 
 $(objdirs):
 	mkdir -p $@
 
-$(pdfout_obj): $(all_header) | $(objdirs)
-
-# Do not pass down command line arguments to the mupdf make.
-# mupdf needs it's own command line arguments like XCFLAGS.
-MAKEOVERRIDES :=
-
-# Always rebuild $(mupdf-libs).
-# Use pattern rule, otherwise the recipe would be run twice.
-# We cannot make $(mupdf-libs) phony, as phony targets are not searched by
-# pattern rules. Only libmupdf.a depends on FORCE. Otherwise, the submake gets
-# run twice.
-$(mupdf-out)/libmupdf.a: FORCE
-libmupdf%.a:
-	$(MAKE) -C $(mupdf-dir) libs third \
-	build=debug \
-	verbose=$(verbose) \
-	OUT=$(CURDIR)/$(mupdf-out) \
-	XCFLAGS="$(CFLAGS)" \
-	SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=
-
-FORCE: ;
-
-build_doc := perl -I $(srcdir)/doc $(srcdir)/doc/build-doc.pl
-
-html:
-	$(build_doc) --build $(srcdir)/doc
-
-clean-obj := $(wildcard src/*.o src/program/*.o) src/program/pdfout \
-             $(mupdf-out)
+clean-obj := $(wildcard $(OUT)/src/*.o $(OUT)/src/program/*.o) $(OUT)/pdfout \
+             $(mupdf_out)
 
 clean:
 	rm -rf $(clean-obj)
@@ -88,4 +61,4 @@ install: $(pdfout)
 
 
 
-.PHONY: all pdfout check html clean FORCE
+.PHONY: all clean
