@@ -1,3 +1,4 @@
+.NOTPARALLEL:
 srcdir := $(dir $(lastword $(MAKEFILE_LIST)))
 
 vpath %.h $(srcdir)
@@ -37,7 +38,7 @@ all_cppflags := -I$(srcdir)/src -I$(srcdir)/mupdf/include $(CPPFLAGS)
 
 COMPILE.c = $(all_cc) $(all_cflags) $(all_cppflags) $(TARGET_ARCH) -c
 
-$(pdfout): $(pdfout_obj) $(mupdf-libs)
+$(pdfout): mupdf $(pdfout_obj)
 	$(all_link) $(LDFLAGS) -o $@ $(pdfout_obj) $(ALL_LDLIBS)
 
 objdirs := src src/program
@@ -51,21 +52,13 @@ $(pdfout_obj): $(all_header) | $(objdirs)
 # mupdf needs it's own command line arguments like XCFLAGS.
 MAKEOVERRIDES :=
 
-# Always rebuild $(mupdf-libs).
-# Use pattern rule, otherwise the recipe would be run twice.
-# We cannot make $(mupdf-libs) phony, as phony targets are not searched by
-# pattern rules. Only libmupdf.a depends on FORCE. Otherwise, the submake gets
-# run twice.
-$(mupdf-out)/libmupdf.a: FORCE
-libmupdf%.a:
+mupdf:
 	$(MAKE) -C $(mupdf-dir) libs third \
 	build=debug \
 	verbose=$(verbose) \
 	OUT=$(CURDIR)/$(mupdf-out) \
 	XCFLAGS="$(CFLAGS)" \
 	SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=
-
-FORCE: ;
 
 build_doc := perl -I $(srcdir)/doc $(srcdir)/doc/build-doc.pl
 
@@ -88,4 +81,4 @@ install: $(pdfout)
 
 
 
-.PHONY: all pdfout check html clean FORCE
+.PHONY: all mupdf html clean
