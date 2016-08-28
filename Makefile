@@ -66,7 +66,7 @@ libmupdf%.a:
 	SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=
 
 FORCE: ;
-.PHONY: FORCE
+
 build_doc := perl -I $(srcdir)/doc $(srcdir)/doc/build-doc.pl
 
 html:
@@ -88,4 +88,4 @@ install: $(pdfout)
 
 
 
-.PHONY: all pdfout check html clean
+.PHONY: all pdfout check html clean FORCE
