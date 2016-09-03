@@ -4,9 +4,18 @@ Yet another PDF analysis and manipulation toolkit. pdfout is a command-line
 front-end to L<mupdf|http://www.mupdf.com>, a fast library supporting PDF
 parsing, rendering , creation and manipulation.
 
+=head2 General information
+
+=over
+
+=item * L<Installation and testing|build>
+
+=back
+
 =head2 Extraction and Manipulation commands
 
 =over
+
 
 =item * L<The information dictionary|info>
 
