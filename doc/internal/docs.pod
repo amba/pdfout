@@ -35,5 +35,5 @@ Linking to a subheading in the current file is done with
 
  L<Description|#name of subheading>
 
-Fixme: L<#The TOC>.
+Fixme: The TOC.
 

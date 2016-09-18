@@ -6,8 +6,9 @@ use strict;
 use experimental 'signatures';
 use experimental 'postderef';
 
-use File::Spec::Functions qw/catfile/;
+use File::Spec::Functions qw/catfile splitdir/;
 use File::Copy;
+use File::Find;
 use File::Path qw/make_path remove_tree/;
 use Getopt::Long qw/:config gnu_getopt/;
 
@@ -321,7 +322,60 @@ sub check {
 # doc
 #
 
+use lib 'doc';
 
+sub build_doc {
+    require Pod::Simple::XHTML::Pdfout;
+
+    my $out = 'build';
+    GetOptions(
+	'out|o=s' => \$out
+	);
+
+    $out = catfile($out, 'html');
+    make_path($out);
+    copy(catfile('doc', 'style.css'), catfile($out, 'style.css'))
+	or die "cannot copy style.css $!";
+    
+    my @files = qw/
+                     make.pl
+/;
+
+    find({
+	wanted => sub {
+	    my $file = $_;
+	    if (-f $file && $file =~ /\.pod$/) {
+		push @files, $file;
+	    }
+	},
+	no_chdir => 1,
+	 },
+	 'doc');
+
+    for my $file (@files) {
+	pod_to_html($out, $file);
+    }
+}
+
+sub pod_to_html ($out, $file) {
+    my @split = splitdir $file;
+    if ($split[0] eq 'doc') {
+	shift @split;
+    }
+    $split[-1] =~ s/\.(pl|pm|pod|t)$/.html/;
+    my $html = catfile($out, join('-', @split));
+    warn "processing: file: $file, html: $html\n";
+
+    open my $fh, '>', $html
+	or die "cannot open '$html': $!";
+
+    my $parser = Pod::Simple::XHTML::Pdfout->new();
+    $parser->output_fh($fh);
+    $parser->parse_file($file);
+    if ($parser->any_errata_seen()) {
+	die "file '$file' has pod errors\n";
+    }
+}
 
 
 

@@ -6,11 +6,11 @@
 
 =over
 
-=item L<< C<null> |#null objects >>
+=item L<< null |#null objects >>
 
 represents the null PDF object.
 
-=item L<< C<bool> |#bool objects >>
+=item L<< bool |#bool objects >>
 
 either true or false.
 
@@ -19,37 +19,37 @@ either true or false.
 
 =over
 
-=item C<int>
+=item int
 
 holds a C C<int>.
 
-=item C<int_offset>
+=item int_offset
 
 holds a C<fz_off_t>.
 
-=item C<real>
+=item real
 
 holds a C C<float>.
 
 =back
 
-=item L<< C<name> |#name objects >>
+=item L<< name |#name objects >>
 
 holds a null-terminated string.
 
-=item L<< C<string> |#string objects >>
+=item L<< string |#string objects >>
 
 holds a buffer and it's length.
 
-=item C<array>
+=item array
 
 holds a list of other objects.
 
-=item L<< C<dict> |#dict objects >>
+=item L<< dict |#dict objects >>
 
 holds a list of key value pairs of other objects.
 
-=item C<indirect>
+=item indirect
 
 holds a pointer to an indirect object (object und generation numbers).
 

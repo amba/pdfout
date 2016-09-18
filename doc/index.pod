@@ -8,7 +8,7 @@ parsing, rendering , creation and manipulation.
 
 =over
 
-=item * L<Installation and testing|build>
+=item * L<Installation and testing|make>
 
 =back
 
@@ -25,17 +25,17 @@ parsing, rendering , creation and manipulation.
 
 =over
 
-=item * L<Manual internals|internal/docs>
+=item * L<Manual internals|internal-docs>
 
-=item * L<Metadata getters and setters|internal/get_set>
+=item * L<Metadata getters and setters|internal-get_set>
 
-=item * L<The pdfout_data type|internal/data-formats>
+=item * L<The pdfout_data type|internal-data-formats>
 
-=item * L<Character set conversion|internal/charset-conversion>
+=item * L<Character set conversion|internal-charset-conversion>
 
-=item * L<Creation of blank PDFs|internal/create-pdf>
+=item * L<Creation of blank PDFs|internal-create-pdf>
 
-=item * L<Miscellaneous helper functions|internal/misc>
+=item * L<Miscellaneous helper functions|internal-misc>
 
 =back
 
@@ -45,9 +45,9 @@ parsing, rendering , creation and manipulation.
 
 =over
 
-=item * L<Buffers and streams|mupdf/buffer-stream-output>
+=item * L<Buffers and streams|mupdf-buffer-stream-output>
 
-=item * L<Memory allocators|mupdf/allocators>
+=item * L<Memory allocators|mupdf-allocators>
 
 =back
 
@@ -55,10 +55,10 @@ parsing, rendering , creation and manipulation.
 
 =over
 
-=item * L<PDF document|mupdf/pdf-document>
+=item * L<PDF document|mupdf-pdf-document>
 
-=item * L<PDF objects|mupdf/objects>
+=item * L<PDF objects|mupdf-objects>
 
-=item * L<The xref table: adding, removing and replacing indirect objects|mupdf/xref>
+=item * L<The xref table: adding, removing and replacing indirect objects|mupdf-xref>
 
 =back
