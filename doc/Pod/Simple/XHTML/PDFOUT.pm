@@ -3,6 +3,7 @@ package Pod::Simple::XHTML::PDFOUT;
 use 5.010;
 use warnings;
 use strict;
+use Carp;
 
 use parent qw/Pod::Simple::XHTML/;
 sub new {
@@ -22,27 +23,22 @@ sub set_css {
 	'<link rel="stylesheet" href="' . $css . '" type="text/css" />');
 }
 
-sub resolve_pod_page_link {
-    my ($self, $to, $section) = @_;
-    return undef unless defined $to || defined $section;
+sub resolve_pod_page_link ($self, $to, $section){
+    if (not defined $to) {
+	croak "missing 'to' in link";
+    }
 
-    my $link;
-    if ($to && $section) {
-	$link = "$to/$section";
-    }
-    elsif ($to) {
-	$link = $to;
-    }
-    elsif ($section) {
-	$link = $section;
+    if (defined $section) {
+	croak "'section' not allowed in link";
     }
     
-    my $num_pounds = $link =~ tr/#//;
+    
+    my $num_pounds = $to =~ tr/#//;
     if ($num_pounds == 0) {
-	return "$link.html";
+	return "$to.html";
     }
     elsif ($num_pounds == 1) {
-	$link =~ /(.*)#(.*)/;
+	$to =~ /(.*)#(.*)/;
 	my $file = $1;
 	my $dest = $2;
 	$dest = $self->idify($self->encode_entities($dest), 1);
@@ -53,7 +49,7 @@ sub resolve_pod_page_link {
 	return $result;
     }
     else {
-	die "too many '#' characters in '$link'";
+	die "too many '#' characters in '$to'";
     }
 }
 
