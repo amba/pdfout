@@ -39,8 +39,8 @@ Apart from mupdf, there are no thirdparty dependencies.
 
 Build and install with
 
- user $ make
- user $ make install prefix=$HOME/local
+ user $ ./make.pl
+ user $ ./make.pl --install --prefix=$HOME/local
 
 Now you can run
 

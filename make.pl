@@ -321,10 +321,6 @@ sub check {
 # doc
 #
 
-sub build_doc {
-    require cafile(qw/doc Pod Simple XHTML PDFOUT.pm/);
-    
-}
 
 
 
