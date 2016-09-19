@@ -26,25 +26,21 @@ elsif (substr($command, 0, 1) eq '-') {
     $command = 'build';
 }
 
+my %command_sub = (
+    'build' => \&build,
+    'clean' => \&clean,
+    'check' => \&check,
+    'doc'   => \&build_doc,
+    'submodules' => \&submodules,
+    );
 
-if ($command eq 'build') {
-    build();
-}
-elsif ($command eq 'clean') {
-    clean();
-}
-elsif ($command eq 'check') {
-    check();
-}
-elsif ($command eq 'doc') {
-    build_doc();
-}
-else {
-    die "unkown command '$command'\n";
+if (not exists $command_sub{$command}) {
+        die "unkown command '$command'\n";
 }
 
+$command_sub{$command}();
 
-=head1 Subcommands
+=head1 Building and testing pdfout
 
 =head2 build
 
@@ -378,6 +374,28 @@ sub pod_to_html ($out, $file) {
 }
 
 
+sub submodules {
+    say 'checking out git submodules';
 
+    my @command = qw/git submodule update --init/;
+    safe_system ("@command", @command);
+    
+    chdir 'mupdf'
+	or die 'cannot change directory to mupdf';
+
+    # We do not need the curl submodule.
+    my @mupdf_submodles = qw(
+thirdparty/freetype 
+thirdparty/jbig2dec
+thirdparty/jpeg
+thirdparty/openjpeg
+thirdparty/zlib
+thirdparty/mujs
+thirdparty/harfbuzz
+);
+
+    @command = (qw/git submodule update --init/, @mupdf_submodles);
+    safe_system ("@command", @command);
+}
 
 	
