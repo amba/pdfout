@@ -373,10 +373,11 @@ the output will be written into F<build/html/>.
 This requires 
 L<Pod::Simple::XHTML|https://metacpan.org/pod/Pod::Simple::XHTML>.
 
- Options
+ Options:
       --out=OUTPUT_DIR        put output into OUTPUT_DIR/html
 
 =cut
+
 use lib 'doc';
 
 sub build_doc {
@@ -432,6 +433,13 @@ sub pod_to_html ($out, $file) {
     }
 }
 
+=head2 submodules
+
+ ./make.pl submodules
+
+Check out the mupdf submodule and mupdf's own submodules.
+
+=cut
 
 sub submodules {
     say 'checking out git submodules';
