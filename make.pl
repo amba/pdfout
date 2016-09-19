@@ -41,10 +41,31 @@ if (not exists $command_sub{$command}) {
 $command_sub{$command}();
 
 =head1 Building and testing pdfout
+ 
+This document describes the details of pdfout's build system.
+
+All build and test tasks are run with the F<make.pl> script. It supports the
+following list of subcommands:
 
 =head2 build
 
-Build the mupdf libraries and the pdfout binary.
+ ./make.pl build [OPTION]
+ or: ./make.pl [OPTION]
+
+Build the pdfout binary. In a first step, this will build the mupdf submodule.
+
+The default build directory is F<build>.
+
+ Options:
+      --out=OUTPUT_DIR        alternative build directory.
+      --cc=CC                 name of the C compiler
+  -c, --cflags=CFLAGS         additional compiler flags
+      --cppflags=CPPFLAGS     additional preprocessor flags
+      --ldflags=LDFLAGS       additional linker flags
+      --prefix=PREFIX         installation prefix
+      --install               install pdfout
+  -j, --jobs=JOBS             number of jobs used by make
+  -v, --verbose               Show build commands
 
 =cut
 
@@ -241,6 +262,17 @@ sub verbose_string ($verbose) {
 
 =head2 clean
 
+ ./make.pl clean [OPTION]
+
+Clean the build directory. By default everything is cleaned. The options give
+you more fine-grained control.
+
+ Options:
+      --out=OUTPUT_DIR        target directory
+      --mupdf                 only clean the mupdf build
+      --pdfout                keep the mupdf build
+      --html                  only clean the doc output
+
 =cut
 
 use File::Path 'remove_tree';
@@ -249,11 +281,13 @@ sub clean {
     my $out = 'build';
     my $mupdf;
     my $pdfout;
+    my $html;
     
     GetOptions(
 	'out=s' => \$out,
 	'mupdf' => \$mupdf,
 	'pdfout' => \$pdfout,
+	'html' => \$html,
 	) or die "GetOptions";
 
     
@@ -266,14 +300,29 @@ sub clean {
 	remove_tree(catfile($out, 'src'));
     }
 
-    if (!($mupdf || $pdfout)) {
+    if ($html) {
+	remove_tree(catfile($out, 'html'));
+    }
+    
+    if (!($mupdf || $pdfout || $html)) {
 	remove_tree($out);
     }
 }
 
 =head2 check
 
-Test pdfout.
+ ./make.pl check
+ or ./make.pl check --tests='info-dict.t page-count.t'
+
+Test a pdfout build. This will run all F<*.t> files in the F<test> directory.
+
+ Options:
+      --out=OUTPUT_DIR        build directory
+  -j, --jobs=JOBS             number of parallel jobs
+      --valgrind              run tests under valgrind
+  -t, --tests=TESTS           run only these tests
+
+Using valgrind will only work, if the build does not use optimization.
 
 =cut
 
@@ -314,10 +363,20 @@ sub check {
     exit ($prove->run() ? 0 : 1);
 }
     
-#
-# doc
-#
+=head2 doc
 
+ ./make.pl doc
+
+Build the documentation. This will produce nicely formatted XHTML. By default,
+the output will be written into F<build/html/>.
+
+This requires 
+L<Pod::Simple::XHTML|https://metacpan.org/pod/Pod::Simple::XHTML>.
+
+ Options
+      --out=OUTPUT_DIR        put output into OUTPUT_DIR/html
+
+=cut
 use lib 'doc';
 
 sub build_doc {

@@ -33,7 +33,9 @@ repair broken cross-reference tables
 Download and checkout the mupdf submodule:
 
  user $ git clone git://github.com/amba/pdfout.git && cd pdfout
- user $ ./submodule-init.pl
+
+Check out the mupdf submodule:
+ user $ ./make.pl submodules
 
 Apart from mupdf, there are no thirdparty dependencies.
 
