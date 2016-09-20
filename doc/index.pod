@@ -10,6 +10,8 @@ parsing, rendering , creation and manipulation.
 
 =item * L<Installation and testing|make>
 
+=item * L<README>
+
 =back
 
 =head2 Extraction and Manipulation commands

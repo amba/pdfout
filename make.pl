@@ -395,6 +395,7 @@ sub build_doc {
     
     my @files = qw/
                      make.pl
+                     README.pod
 /;
 
     find({

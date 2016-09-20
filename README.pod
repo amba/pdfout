@@ -35,6 +35,7 @@ Download and checkout the mupdf submodule:
  user $ git clone git://github.com/amba/pdfout.git && cd pdfout
 
 Check out the mupdf submodule:
+
  user $ ./make.pl submodules
 
 Apart from mupdf, there are no thirdparty dependencies.
