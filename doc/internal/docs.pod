@@ -2,21 +2,14 @@
 
 =head1 Contributing to pdfout's documentation
 
-The documentation is maintained as L<Pod|http://perldoc.perl.org/perlpod.html>
+The documentation is maintained as L<Pod|https://metacpan.org/pod/distribution/perl/pod/perlpod.pod>
 in the F<doc/> subdirectory.
 
-Running the command
-
- make html
-
-will build the documentation in F<html/>.
-
-Internally this uses
-L<Pod::Simple::XHTML|http://search.cpan.org/perldoc?Pod::Simple::XHTML>.
+L<Building the documentation|make#doc> is performed by F<make.pl>.
 
 =head2 The TOC
 
-FIXME
+The L<table of contents|index> of the documentation is maintained in F<doc/index.pod>.
 
 =head2 Links
 
@@ -34,6 +27,4 @@ To link to a subheading, use
 Linking to a subheading in the current file is done with
 
  L<Description|#name of subheading>
-
-Fixme: The TOC.
 
