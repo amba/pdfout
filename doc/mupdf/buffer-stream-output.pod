@@ -11,6 +11,36 @@ A new C<fz_buffer> is created with
 
  fz_buffer *fz_new_buffer(fz_context *ctx, size_t capacity);
 
+Increase the refcount with
+
+ fz_buffer *fz_keep_buffer(fz_context *ctx, fz_buffer *buf);
+
+Drop the buffer with
+
+ void fz_drop_buffer(fz_context *ctx, fz_buffer *buf);
+
+The C<fz_buffer> struct has the following fields:
+
+ struct fz_buffer_s
+ {
+ 	int refs;
+ 	unsigned char *data;
+ 	size_t cap, len;
+ 	int unused_bits;
+ 	int shared;
+ };
+
+=head3 Writing to buffers
+
+ void fz_write_buffer(fz_context *ctx, fz_buffer *buf, const void *data, size_t len);
+ void fz_write_buffer_byte(fz_context *ctx, fz_buffer *buf, int val);
+ size_t fz_buffer_printf(fz_context *ctx, fz_buffer *buffer, const char *fmt, ...);
+ size_t fz_buffer_vprintf(fz_context *ctx, fz_buffer *buffer, const char *fmt, va_list args);
+
+
+See L<Writing to output streams|#Writing to output streams> for details on the
+printf-like functions. 
+
 =head2 Output streams
 
 The C<fz_output> stream is a abstract output handle. It can output to files and
@@ -31,7 +61,9 @@ Increase the refcount of C<buffer>.
 
 Deallocate an output and drop/close the underlying object.
 
-=head3 Operations on output streams
+=head3 Writing to output streams.
+
+These all throw on write error.
 
 =over
 
@@ -39,7 +71,73 @@ Deallocate an output and drop/close the underlying object.
 
  void fz_write(fz_context *ctx, fz_output *out, const void *data, size_t size);
 
-Throw on write error.
+=item
+
+ fz_putc(fz_context *ctx, fz_output *out, unsigned_char *x);
+
+=item
+
+ fz_puts(fz_context *ctx, fz_output *out, const void *string);
+
+Output string. Does not append a newline.
+
+=item
+
+ void fz_printf(fz_context *ctx, fz_output *out, const char *fmt, ...);
+ void fz_vprintf(fz_context *ctx, fz_output *out, const char *fmt, va_list ap);
+ size_t fz_vsnprintf(char *buffer, size_t space, const char *fmt, va_list args);
+ size_t fz_snprintf(char *buffer, size_t space, const char *fmt, ...);
+
+For those, the allowed printf conversion specifiers are C<%c, %d, %o, %s, %u,
+%x>. The only allowed modifier is zero padding, e.g. C<%02d>.
+
+Custom conversion specifiers:
+
+=over
+
+=item C<%f, %g>
+
+Return shortest possible decimal representation of a float.
+
+=item C<%C>
+
+UTF-8 encoded int.
+
+=item C<%M, %R, %P>
+
+output C<fz_matrix*, fz_rect*, fz_point*> respectively.
+
+=item C<%q, %(>
+
+output escaped strings in C/PDF syntax.
+
+=item C<%ll{d,u,x}>
+
+indicate 64-bit values.
+
+=item C<%z{d,u,x}>
+
+indicate C<size_t> value.
+
+=item C<%Z{d,u,x}>
+
+indicate C<fz_off_t> value.
+
+=back
+
+=back
+
+=head3 Other operations
+
+=over
+
+=item
+
+ void fz_seek_output(fz_context *ctx, fz_output *out, fz_off_t off, int whence);
+
+=item
+
+ fz_off_t fz_tell_output(fz_context *ctx, fz_output *out);
 
 =back
 

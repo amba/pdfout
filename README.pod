@@ -45,11 +45,18 @@ Build and install with
  user $ ./make.pl
  user $ ./make.pl --install --prefix=$HOME/local
 
+See the L<docs|https://amba.github.io/pdfout/make.html> for full details.
+
 Now you can run
 
  user $ pdfout --describe-commands
 
 to list the available subcommands.
+
+=head2 Documentation
+
+So far, the L<docs|https://amba.github.io/pdfout/index.html> mostly cover
+the build and internals. More docs on the commands are currently being written.
 
 =head2 Copying
 
@@ -63,3 +70,4 @@ Copyright (C) 2015-2016 AUTHORS
 See the F<COPYRIGHT> file for full details on used libraries and code derived
 from other projects.
 
+     

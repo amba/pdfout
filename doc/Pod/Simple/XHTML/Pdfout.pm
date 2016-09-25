@@ -27,9 +27,9 @@ sub set_css ($parser, $css) {
 
 sub resolve_pod_page_link ($self, $to, $section){
     if (not defined $to) {
-	croak "missing 'to' in link";
+	croak "no 'to' in link. section: $section";
     }
-
+    
     if (defined $section) {
 	croak "'section' not allowed in link";
     }

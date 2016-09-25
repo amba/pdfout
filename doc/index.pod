@@ -16,12 +16,7 @@ parsing, rendering , creation and manipulation.
 
 =head2 Extraction and Manipulation commands
 
-=over
-
-
-=item * L<The information dictionary|info>
-
-=back
+TODO
 
 =head2 Internals
 

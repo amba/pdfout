@@ -31,6 +31,7 @@ my %command_sub = (
     'clean' => \&clean,
     'check' => \&check,
     'doc'   => \&build_doc,
+    'upload-doc' => \&upload_doc,
     'submodules' => \&submodules,
     );
 
@@ -322,6 +323,8 @@ Test a pdfout build. This will run all F<*.t> files in the F<test> directory.
       --valgrind              run tests under valgrind
   -t, --tests=TESTS           run only these tests
 
+This requires L<Test::Files|https://metacpan.org/pod/Test::Files>. 
+
 Using valgrind will only work, if the build does not use optimization.
 
 =cut
@@ -381,14 +384,17 @@ L<Pod::Simple::XHTML|https://metacpan.org/pod/Pod::Simple::XHTML>.
 use lib 'doc';
 
 sub build_doc {
-    require Pod::Simple::XHTML::Pdfout;
-
     my $out = 'build';
     GetOptions(
 	'out|o=s' => \$out
 	);
 
     $out = catfile($out, 'html');
+    generate_doc($out);
+}
+
+sub generate_doc ($out) {
+    require Pod::Simple::XHTML::Pdfout;
     make_path($out);
     copy(catfile('doc', 'style.css'), catfile($out, 'style.css'))
 	or die "cannot copy style.css $!";
@@ -434,6 +440,21 @@ sub pod_to_html ($out, $file) {
     }
 }
 
+sub safe_chdir ($dir) {
+    chdir $dir
+	or die "cannot chdir to '$dir': $!";
+}
+
+sub upload_doc {
+    my $out = '/home/simon/amba.github.io/pdfout';
+    remove_tree($out);
+    generate_doc($out);
+    safe_chdir $out;
+    my @command = (qw/git commit -am/, "update pdfout docs");
+    safe_system("@command", @command);
+    @command = qw/git push/;
+    safe_system("@command", @command);
+}
 =head2 submodules
 
  ./make.pl submodules
@@ -448,8 +469,7 @@ sub submodules {
     my @command = qw/git submodule update --init/;
     safe_system ("@command", @command);
     
-    chdir 'mupdf'
-	or die 'cannot change directory to mupdf';
+    safe_chdir 'mupdf';
 
     # We do not need the curl submodule.
     my @mupdf_submodles = qw(
