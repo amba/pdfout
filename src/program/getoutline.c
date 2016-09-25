@@ -19,20 +19,19 @@
 #include "shared.h"
 
 static char usage[] = "PDF_FILE";
-static char doc[] = "Dump outline to standard output.\n";
+static char doc[] = "Dump outline to standard output.\n\v";
 
 static struct argp_option options[] = {
-  /* {PDFOUT_OUTLINE_FORMAT_OPTION}, */
   {"default-filename", 'd', 0, 0,
-   "write output to file PDF_FILE.outline.FORMAT"},
+   "write output to file PDF_FILE.outline"},
+  {"wysiwyg", 'w', 0, 0, "use wysiwyg format"},
   {0}
 };
 
 static fz_context *ctx;
 static char *pdf_filename;
 static FILE *output;
-/* enum pdfout_outline_format format; */
-
+static bool use_wysiwyg;
 
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
@@ -42,6 +41,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     {
     /* case 'f': format = pdfout_outline_get_format (state, arg); break; */
     case 'd': use_default_filename = true; break;
+    case 'w': use_wysiwyg = true; break;
       
     case ARGP_KEY_ARG:
       if (state->arg_num == 0)
@@ -57,8 +57,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case ARGP_KEY_END:
       if (use_default_filename)
 	output = open_default_write_file (ctx, pdf_filename, ".outline");
-      /* 					  pdfout_outline_suffix (format)); */
-      /* else */
+      else
 	output = stdout;
       break;
       
@@ -85,7 +84,12 @@ pdfout_command_getoutline (fz_context *ctx_arg, int argc, char **argv)
   pdfout_data *outline = pdfout_outline_get (ctx, doc);
 
   fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
-  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
+
+  pdfout_emitter *emitter;
+  if (use_wysiwyg)
+    emitter = pdfout_emitter_outline_wysiwyg_new (ctx, out);
+  else
+    emitter = pdfout_emitter_json_new (ctx, out);
   
   pdfout_emitter_emit (ctx, emitter, outline);
   

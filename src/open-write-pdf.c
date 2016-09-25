@@ -3,6 +3,7 @@
 void
 pdfout_copy_stream (fz_context *ctx, fz_stream *from, fz_output *too)
 {
+  /* Do not use fz_read_all, as it has a size limitation.  */
   int buffer_len = 32768;
   unsigned char *buffer = fz_malloc (ctx, buffer_len);
 

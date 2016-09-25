@@ -77,3 +77,15 @@ Equivalent to C<fz_warn>.
 
 =head2 IO functions
 
+=over
+
+=item
+
+ ssize_t pdfout_getline (fz_context *ctx, fz_buffer **buffer_ptr, fz_stream *stm);
+
+Read a line from C<stm>. Stops after the next C<'\n'> or EOF. Return the length
+of the read string (including the newline) and copy it into C<*buffer_ptr>.
+If C<*buffer_ptr> is C<NULL>, allocate a new buffer.
+Throw on read error.
+
+=back

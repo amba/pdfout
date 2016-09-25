@@ -1,22 +1,4 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "common.h"
-#include <string.h>
 
 int
 pdfout_strtoui (fz_context *ctx, const char *s)
@@ -212,3 +194,38 @@ pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
   exit (1);
 }
 
+static void zero_term_buffer (fz_context *ctx, fz_buffer *buf)
+{
+  fz_write_buffer_byte (ctx, buf, 0);
+  --buf->len;
+}
+
+ssize_t
+pdfout_getline (fz_context *ctx, fz_buffer **buffer_ptr, fz_stream *stm)
+{
+  if (*buffer_ptr == NULL)
+    *buffer_ptr = fz_new_buffer(ctx, 0);
+
+  fz_buffer *buffer = *buffer_ptr;
+  
+  buffer->len = 0;
+  ssize_t len = 0;
+  while (1)
+    {
+      int c = fz_read_byte (ctx, stm);
+      if (c == EOF)
+	{
+	  if (len == 0)
+	    return -1;
+	  zero_term_buffer(ctx, buffer);
+	  return len;
+	}
+      fz_write_buffer_byte(ctx, buffer, c);
+      ++len;
+      if (c == '\n')
+	{
+	  zero_term_buffer (ctx, buffer);
+	  return len;
+	}
+    }
+}

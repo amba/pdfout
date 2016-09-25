@@ -322,6 +322,7 @@ Test a pdfout build. This will run all F<*.t> files in the F<test> directory.
   -j, --jobs=JOBS             number of parallel jobs
       --valgrind              run tests under valgrind
   -t, --tests=TESTS           run only these tests
+      --timer                 print elapsed time after each test
 
 This requires L<Test::Files|https://metacpan.org/pod/Test::Files>. 
 
@@ -335,12 +336,14 @@ sub check {
     my $jobs = 1;
     my $tests;
     my $out = 'build';
+    my $timer;
     
     GetOptions (
-	"valgrind" => \$valgrind,
 	"jobs|j=i" => \$jobs,
+	"valgrind" => \$valgrind,
 	"tests|t=s" => \$tests,
 	"out=s" => \$out,
+	"timer" => \$timer,
 	);
     
     my @argv = ($test_dir);
@@ -355,6 +358,7 @@ sub check {
 	jobs => $jobs,
 	argv => \@argv,
 	test_args => ['--pdfout', catfile($out, 'pdfout')],
+	timer => $timer
     };
 
     if ($valgrind) {

@@ -56,8 +56,7 @@ These never throw.
 
 Create a new scalar with
 
- pdfout_data *pdfout_data_scalar_new (fz_context *ctx, const char *value,
-			              int len);
+ pdfout_data *pdfout_data_scalar_new (fz_context *ctx, const char *value, int len);
 
 Return the value of a scalar with
 
@@ -156,8 +155,19 @@ To add a null-terminated key with a scalar value, use this function:
 
 Recursively free.
 
+=head3 Comparison
 
+A deep comparison of two C<pdfout_data> types is performed with the following
+function:
 
+ int pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y);
+
+=head3 Copying
+
+A deep copy of a C<pdfout_data> type is created by
+
+ pdfout_data *pdfout_data_copy (fz_context *ctx, pdfout_data *data);
+ 
 =head1 Parsing and Emitting
 
 
