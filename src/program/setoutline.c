@@ -23,8 +23,8 @@ static char doc[] = "Read the new outline from standard input.\n";
 
 static struct argp_option options[] = {
   {"output", 'o', "FILE", 0, PDFOUT_NO_INCREMENTAL},
-  /* {PDFOUT_OUTLINE_FORMAT_OPTION}, */
   {"default-filename", 'd', 0, 0, "read input from PDF_FILE.outline.FORMAT"},
+  {"wysiwyg", 'w', 0, 0, "use wysiwyg format"},
   {"remove", 'r', 0, 0, "remove outline"},
   {0}
 };
@@ -34,6 +34,8 @@ static char *pdf_filename;
 static char *output_filename;
 static FILE *input;
 static bool remove_outline;
+static bool use_wysiwyg;
+
 /* static enum pdfout_outline_format format; */
 
 static error_t parse_opt (int key, char *arg, struct argp_state *state)
@@ -44,7 +46,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
     case 'o': output_filename = arg; break;
     case 'd': use_default_filename = true; break;
     case 'r': remove_outline = true; break;
-    /* case 'f': format = pdfout_outline_get_format (state, arg); break; */
+    case 'w': use_wysiwyg = true; break;
       
     case ARGP_KEY_ARG:
       if (state->arg_num == 0)
@@ -91,7 +93,12 @@ pdfout_command_setoutline (fz_context *ctx_arg, int argc, char **argv)
   if (remove_outline == false)
     {
       fz_stream *stm = fz_open_file_ptr (ctx, input);
-      pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
+      pdfout_parser *parser;
+      if (use_wysiwyg)
+	parser = pdfout_parser_outline_wysiwyg_new (ctx, stm);
+      else
+	parser = pdfout_parser_json_new (ctx, stm);
+      
       outline = pdfout_parser_parse (ctx, parser);
     }
   else

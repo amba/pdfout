@@ -634,7 +634,7 @@ pdfout_parser_json_new (fz_context *ctx, fz_stream *stm)
 
 /* Emitter stuff. */
 
-typedef struct json_emitter_s {
+typedef struct {
   pdfout_emitter super;
   
   fz_output *out;
@@ -666,7 +666,7 @@ static bool is_literal (const char *value, int len)
 }
 
 static void
-pdfout_json_escape_string (fz_context *ctx, fz_output *out, const char *value,
+json_escape_string (fz_context *ctx, fz_output *out, const char *value,
 			   int value_len)
 {
   if (is_literal (value, value_len)
@@ -714,7 +714,7 @@ emit_string (fz_context *ctx, json_emitter *emitter, pdfout_data *data)
   fz_output *out = emitter->out;
   int value_len;
   const char *value = pdfout_data_scalar_get (ctx, data, &value_len);
-  pdfout_json_escape_string (ctx, out, value, value_len);
+  json_escape_string (ctx, out, value, value_len);
 }
 
 static void emit_indent (fz_context *ctx, json_emitter *emitter)
@@ -810,7 +810,7 @@ emitter_emit (fz_context *ctx, pdfout_emitter *emitter, pdfout_data *data)
 {
   json_emitter *e = (json_emitter *) emitter;
   if (e->finished)
-    pdfout_throw (ctx, "Call to finished JSON emitter");
+    pdfout_throw (ctx, "finished JSON emitter called");
 
   e->finished = true;
   
@@ -834,4 +834,16 @@ pdfout_emitter_json_new (fz_context *ctx, fz_output *stm)
   result->indent_level = 0;
   
   return &result->super;
+}
+
+
+
+void
+pdfout_data_debug (fz_context *ctx, pdfout_data *data)
+{
+  fz_output *out = fz_stderr (ctx);
+  pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
+  pdfout_emitter_emit (ctx, emitter, data);
+  pdfout_emitter_drop (ctx, emitter);
+  fz_drop_output (ctx, out);
 }

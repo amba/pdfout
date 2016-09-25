@@ -493,6 +493,59 @@ pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y)
     return 1;
 }
 
+static pdfout_data *
+copy_scalar (fz_context *ctx, pdfout_data *scalar)
+{
+  int len;
+  const char *data = pdfout_data_scalar_get (ctx, scalar, &len);
+  return pdfout_data_scalar_new (ctx, data, len);
+}
+
+static pdfout_data *
+copy_array (fz_context *ctx, pdfout_data *array)
+{
+  int len = pdfout_data_array_len (ctx, array);
+  pdfout_data *result = pdfout_data_array_new (ctx);
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *entry = pdfout_data_array_get (ctx, array, i);
+      pdfout_data *copy = pdfout_data_copy (ctx, entry);
+      pdfout_data_array_push (ctx, result, copy);
+    }
+  return result;
+}
+
+static pdfout_data *
+copy_hash (fz_context *ctx, pdfout_data *hash)
+{
+  int len = pdfout_data_hash_len (ctx, hash);
+  pdfout_data *result = pdfout_data_hash_new (ctx);
+  for (int i = 0; i < len; ++i)
+    {
+      pdfout_data *key = pdfout_data_hash_get_key (ctx, hash, i);
+      pdfout_data *value = pdfout_data_hash_get_value (ctx, hash, i);
+
+      pdfout_data *key_copy = pdfout_data_copy (ctx, key);
+      pdfout_data *value_copy = pdfout_data_copy (ctx, value);
+
+      pdfout_data_hash_push (ctx, result, key_copy, value_copy);
+    }
+  return result;
+}
+  
+pdfout_data *
+pdfout_data_copy (fz_context *ctx, pdfout_data *data)
+{
+  if (pdfout_data_is_scalar (ctx, data))
+    return copy_scalar (ctx, data);
+  else if (pdfout_data_is_hash (ctx, data))
+    return copy_hash (ctx, data);
+  else if (pdfout_data_is_array (ctx, data))
+    return copy_array (ctx, data);
+  else
+    abort ();
+}
+
 /* Parser and emitter stuff.  */
 
 

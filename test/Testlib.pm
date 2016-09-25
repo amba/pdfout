@@ -42,9 +42,9 @@ sub get_command ($command) {
 
 sub set_get_test (%args) {
     my $input = $args{input};
-    my $expected_out = $args{expected_out};
-    if (not defined $expected_out) {
-	$expected_out = $input;
+    my $expected = $args{expected};
+    if (not defined $expected) {
+	$expected = $input;
     }
     my $command = $args{command};
 
@@ -59,7 +59,7 @@ sub set_get_test (%args) {
     # Get
     pdfout_ok(
 	command => [get_command($command), $pdf],
-	expected_out => $expected_out
+	expected_out => $expected
 	);
 
     # Broken input

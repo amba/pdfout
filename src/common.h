@@ -34,6 +34,13 @@
 #include "outline.h"
 
 static inline bool
+pdfout_isspace (char c)
+{
+  return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t'
+    || c == '\v';
+}
+
+static inline bool
 pdfout_isdigit (char c)
 {
   return c >= '0' && c <= '9';
@@ -78,7 +85,7 @@ pdf_obj *pdfout_resolve_dest(fz_context *ctx, pdf_document *doc, pdf_obj *dest,
   ((t *) pdfout_x2nrealloc_imp (ctx, p, pn, sizeof (t)))
 
 void *pdfout_x2nrealloc_imp (fz_context *ctx, void *p, int *pn, unsigned s);
-  
+
 void pdfout_text_get_page (FILE *stream, fz_context *ctx,
 			   pdf_document *doc, int page_number);
 
@@ -111,6 +118,9 @@ float pdfout_strtof_nan (const char *string);
 /* dies on all errors */
 float pdfout_strtof (fz_context *ctx, const char *string);
 float pdfout_strtof_old (const char *string);
+
+ssize_t
+pdfout_getline (fz_context *ctx, fz_buffer **buffer, fz_stream *stm);
 
 void PDFOUT_NORETURN PDFOUT_PRINTFLIKE (2)
 pdfout_throw_errno (fz_context *ctx, const char *fmt, ...);

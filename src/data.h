@@ -79,6 +79,10 @@ void pdfout_data_hash_get_key_value (fz_context *ctx, pdfout_data *hash,
 
 int pdfout_data_cmp (fz_context *ctx, pdfout_data *x, pdfout_data *y);
 
+pdfout_data *pdfout_data_copy (fz_context *ctx, pdfout_data *data);
+  
+void pdfout_data_debug (fz_context *ctx, pdfout_data *data);
+
 /*  Parsers.  */
 typedef struct pdfout_parser_s pdfout_parser;
 
@@ -98,6 +102,8 @@ pdfout_data *pdfout_parser_parse (fz_context *ctx, pdfout_parser *parser);
 
 pdfout_parser *pdfout_parser_json_new (fz_context *ctx, fz_stream *stm);
 
+pdfout_parser *pdfout_parser_outline_wysiwyg_new (fz_context *ctx,
+						  fz_stream *stm);
 /* Emitters. */
 
 typedef struct pdfout_emitter_s pdfout_emitter;
@@ -121,5 +127,7 @@ void pdfout_emitter_emit (fz_context *ctx, pdfout_emitter *emitter,
 
 pdfout_emitter *pdfout_emitter_json_new (fz_context *ctx, fz_output *out);
 
+pdfout_emitter *pdfout_emitter_outline_wysiwyg_new (fz_context *ctx,
+						    fz_output *out);
 
 #endif	/* PDFOUT_DATA_H */
