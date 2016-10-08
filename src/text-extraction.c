@@ -57,7 +57,7 @@ pdfout_text_get_page (FILE *stream, fz_context *ctx,
   sheet = fz_new_stext_sheet (ctx);
 
   text = fz_new_stext_page_from_page_number (ctx, &doc->super, page_number,
-					     sheet);
+					     sheet, 0);
   
   /* printf ("in pdfout_text_get_page, page_number: %d, page->len: %d\n", */
   /* 	  page_number, text->len); */
