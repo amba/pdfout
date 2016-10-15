@@ -9,6 +9,8 @@ typedef void command_func_t (fz_context *ctx, int argc, char **argv);
 #include "commands.def"
 #undef DEF_COMMAND
 
+extern char *pdfout_program_name;
+
 /* first value for option enums to be used in commands */
 #define PDFOUT_ARGP_PRIVATE_ENUM = INT_MAX / 2
 

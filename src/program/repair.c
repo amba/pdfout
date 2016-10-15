@@ -64,6 +64,7 @@ static struct argp argp = {options, parse_opt, usage, args_doc, children};
 void
 pdfout_command_repair (fz_context *ctx_arg, int argc, char **argv)
 {
+  --argc; argv = &argv[1];
   pdf_document *doc;
   ctx = ctx_arg;
   pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
