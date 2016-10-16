@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 6;
+use Test::Pdfout::Command tests => 9;
 use Testlib;
 
 my $input = <<'EOD';

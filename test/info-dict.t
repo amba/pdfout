@@ -37,22 +37,6 @@ set_get_test (
     input => $input,
     ); 
 
-# non-incremental update
-{
-    my $pdf = new_pdf ();
-    my $output = new_tempfile ();
-
-    pdfout_ok (
-	command => ['setinfo', $pdf, '-o', $output],
-	input => $input,
-	);
-    pdfout_ok (
-	command => ['getinfo', $output],
-	expected_out => $input,
-	);
-    compare_ok($pdf, test_data("empty10.pdf"), "original file is untouched");
-}
-
 # append option
 {
     my $pdf = new_pdf ();

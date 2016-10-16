@@ -100,6 +100,23 @@ sub set_get_test (%args) {
 		 "file matches input");
     }
     
+    {
+	# non-incremental update
+	my $pdf = new_pdf ();
+	my $output = new_tempfile ();
+
+	pdfout_ok (
+	    command => [set_command($command), $pdf, '-o', $output],
+	    input => $input,
+	    );
+	pdfout_ok (
+	    command => [get_command($command), $output],
+	    expected_out => $expected,
+	    );
+	
+	compare_ok($pdf, test_data("empty10.pdf"),
+		   "original file is untouched");
+    }
     # Broken input
     my $broken_input = $args{broken_input};
     if ($broken_input) {
