@@ -77,7 +77,6 @@ sub set_get_test (%args) {
 	my $pdf = new_pdf();
 	
 	my $default_filename = $pdf . '.' . $command->[0];
-	carp "default_filename: $default_filename";
 	open my $fh, '>', $default_filename
 	    or die "open";
 	binmode $fh, ':utf8';
