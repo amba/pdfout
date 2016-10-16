@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 9;
+use Test::Pdfout::Command tests => 13;
 use Testlib;
 
 my $input = <<'EOD';
@@ -21,5 +21,7 @@ set_get_test(
     broken_input => [
 	'"abc"',
 	],
-    input => $input
+    input => $input,
+    empty => "[]\n",
+    
     );

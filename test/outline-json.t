@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 13;
+use Test::Pdfout::Command tests => 17;
 use Test::More;
 use Testlib;
 
@@ -18,7 +18,7 @@ set_get_test(
     '[{"title": "abc", "page": 11}]',
     # open not a bool
 	'[{"title": "abc", "page": 1, "open": "a"}]'],
-    
+    empty => "[]\n",
     input => <<'EOD'
 [
   {

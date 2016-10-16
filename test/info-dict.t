@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 14;
+use Test::Pdfout::Command tests => 18;
 use Test::More;
 use Test::Files;
 use Testlib;
@@ -35,6 +35,7 @@ set_get_test (
 	'{"ModDate": "D:20151"}'
     ],
     input => $input,
+    empty => "{}\n",
     ); 
 
 # append option

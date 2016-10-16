@@ -57,7 +57,11 @@ sub set_get_test (%args) {
     if (not defined $command) {
 	croak "no command";
     }
-
+    
+    my $empty = $args{empty};
+    if (not defined $empty) {
+	croak "no empty";
+    }
     {
 	# Set and get, using stdin/stdout
 	my $pdf = new_pdf();
@@ -70,6 +74,15 @@ sub set_get_test (%args) {
 	pdfout_ok(
 	    command => [get_command($command), $pdf],
 	    expected_out => $expected
+	    );
+
+	# remove
+	pdfout_ok(
+	    command => [set_command($command), '--remove', $pdf]
+	    );
+	pdfout_ok(
+	    command => [get_command($command), $pdf],
+	    expected_out => $empty
 	    );
     }
     {
@@ -115,6 +128,17 @@ sub set_get_test (%args) {
 	
 	compare_ok($pdf, test_data("empty10.pdf"),
 		   "original file is untouched");
+
+	# combination of remove and non-incremental
+	$output = new_tempfile ();
+	pdfout_ok (
+	    command => [set_command($command), $pdf, '--remove', '-o',
+			$output],
+	    );
+	pdfout_ok (
+	    command => [get_command($command), $output],
+	    expected_out => $empty
+	    );
     }
     # Broken input
     my $broken_input = $args{broken_input};
