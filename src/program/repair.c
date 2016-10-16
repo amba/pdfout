@@ -1,48 +1,10 @@
 #include "common.h"
 #include "shared.h"
 
-/* static const char usage[] = "PDF_FILE [-o OUTPUT_FILE]"; */
-/* static const char args_doc[] = "Overwrite PDF_FILE with the repaired file\n"; */
-/* static struct argp_option options[] = { */
-/*   {"output", 'o', "FILE", 0, */
-/*    "write output to FILE"}, */
-/*   {"check", 'c', 0, 0, */
-/* "only check PDF_FILE's integrity. If it is broken, exit with non-zero status"}, */
-/*   {0} */
-/* }; */
-
 static fz_context *ctx;
 static char *pdf_filename;
 static char *output_filename;
 static bool check;
-
-/* static error_t */
-/* parse_opt (int key, char *arg, struct argp_state *state) */
-/* { */
-/*   switch (key) */
-/*     { */
-/*     case 'o': output_filename = arg; break; */
-/*     case 'c': check = true; break; */
-      
-/*     case ARGP_KEY_ARG: */
-/*       switch (state->arg_num) */
-/* 	{ */
-/* 	case 0: pdf_filename = arg; break; */
-/* 	default: return ARGP_ERR_UNKNOWN; */
-/* 	} */
-/*       break; */
-
-/*     case ARGP_KEY_NO_ARGS: */
-/*       argp_usage (state); */
-
-/*     default: */
-/*       return ARGP_ERR_UNKNOWN; */
-/*     } */
-/*   return 0; */
-/* } */
-
-/* static const struct argp_child children[] = {{&pdfout_general_argp},{0}}; */
-/* static struct argp argp = {options, parse_opt, usage, args_doc, children}; */
 
 static struct option longopts[] = {
   {"help", no_argument, NULL, 'h'},
