@@ -109,11 +109,6 @@ parse_options (int argc, char **argv)
 int
 main (int argc, char **argv)
 {
-  /* argp_program_version = PDFOUT_VERSION; */
-  /* argp_program_bug_address = PACKAGE_BUGREPORT; */
-  
-  pdfout_program_name = argv[0];
-  
   if (argc == 1)
     {
       print_usage();

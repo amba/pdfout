@@ -11,7 +11,7 @@ static struct option longopts[] = {
   {"help", no_argument, NULL, 'h'},
   {"usage", no_argument, NULL, 'u'},
   {"default-filename", no_argument, NULL, 'd'},
-  {"output", no_argument, NULL, 'o'},
+  {"output", required_argument, NULL, 'o'},
   {"remove", no_argument, NULL, 'r'},
   {NULL, 0, NULL, 0}
 };
