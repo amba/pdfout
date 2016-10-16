@@ -16,7 +16,7 @@ env:
 
 script:
   - ./make.pl submodules
-  - ./make.pl
+  - ./make.pl -j4
   - ./make.pl check $VALGRIND
 
 notifications:
