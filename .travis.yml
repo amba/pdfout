@@ -1,0 +1,25 @@
+# get perlbrew environment
+language: perl
+
+sudo: required
+
+perl:
+  - "5.20"
+  
+install:
+  - cpanm Test::Files
+  - sudo apt-get install valgrind
+
+env:
+  - VALGRIND=
+  - VALGRIND=--valgrind
+
+script:
+  - ./make.pl submodules
+  - ./make.pl
+  - ./make.pl check $VALGRIND
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always
