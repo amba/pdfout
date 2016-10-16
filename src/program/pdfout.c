@@ -2,6 +2,7 @@
 #include "shared.h"
 
 char *pdfout_program_name = NULL;
+
 /* setup table of commands from commands.def.  */
 
 enum command_type {
@@ -60,15 +61,16 @@ static struct option longopts[] = {
 static void
 print_help ()
 {
-  printf ("Usage: %s SUBCOMMAND [PDF_FILE] ...\n", pdfout_program_name);
-  puts ("\
-or pdfout -hVld\n\
-\n\
+  printf ("Usage: %s SUBCOMMAND [PDF_FILE] ...\n\
+or %s -hVld\n", pdfout_program_name, pdfout_program_name);
+
+  puts("\n\
  Options:\n\
   -d, --describe-commands    describe all supported commands\n\
   -l, --list-commands        list all supported command names\n\
   -h, --help                 give this help list\n\
-  -V, --version              print program version");
+  -V, --version              print program version\
+");
 }
 
 static void list_commands (void);
@@ -123,6 +125,13 @@ main (int argc, char **argv)
       parse_options (argc, argv);
       exit (0);
     }
+
+  fz_context *ctx = pdfout_new_context ();
+
+  int name_len = strlen (argv[0]) + strlen(argv[1]) + 2;
+  pdfout_program_name = fz_malloc (ctx, name_len);
+  pdfout_snprintf_imp (ctx, pdfout_program_name, name_len, "%s %s",
+		       argv[0], argv[1]);
   
   int result = strmatch (argv[1], command_name_list);
   
@@ -131,8 +140,8 @@ main (int argc, char **argv)
 	   "Try '%s -l' for the list of allowed commands.", argv[1],
 	   argv[0]);
 
-  fz_context *ctx = pdfout_new_context ();
-  command_list[result].function (ctx, argc, argv);
+  argv[1] = pdfout_program_name;
+  command_list[result].function (ctx, --argc, ++argv);
   exit (0);
 }
 

@@ -79,8 +79,6 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_gettxt (fz_context *ctx_arg, int argc, char **argv)
 {
-  --argc; argv = &argv[1];
-  
   pdf_document *doc;
   int  i, page_count;
   int *pages;

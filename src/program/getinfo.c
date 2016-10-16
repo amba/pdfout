@@ -74,7 +74,6 @@ static struct argp argp = {options, parse_opt, usage, doc, children};
 void
 pdfout_command_getinfo (fz_context *ctx_arg, int argc, char **argv)
 {
-  --argc; argv = &argv[1];
   pdfout_data *hash;
   pdf_document *doc;
 
