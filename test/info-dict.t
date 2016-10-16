@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 11;
+use Test::Pdfout::Command tests => 14;
 use Test::More;
 use Test::Files;
 use Testlib;
