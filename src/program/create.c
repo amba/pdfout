@@ -1,127 +1,146 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
 
 #include "common.h"
 #include "shared.h"
 
-static char usage[] = " > file.pdf";
-static char doc[] = "Create empty PDF file.\n"
-  "Redirect to a plain file to get a valid PDF."
-  "Paper size defaults to A4\n";
-
-static struct argp_option options[] = {
-  {"output", 'o', "FILE", 0, "Write PDF to FILE"},
-  {"pages", 'p', "NUM", 0, "Create NUM pages (default: 1)"},
-  {"paper-size", 's', "SIZE", 0, "use one of the following paper sizes:"},
-  {"ISO 216: A0, A1, ..., A10, B0, ..., B10", 0, 0, OPTION_DOC, 0, 2},
-  {"DIN extensions to ISO 216: 2A0, 4A0", 0, 0, OPTION_DOC, 0, 3},
-  {"ISO 269: C0, ... C10, DL, C7/C6, C6/C5, E4" , 0, 0, OPTION_DOC, 0, 4},
-  {"ANSI/ASME Y14.1: 'ANSI A' (us letter), ... , 'ANSI E'",
-   0, 0, OPTION_DOC, 0, 5},
-  {"landscape", 'l', 0, 0, "use landscape versions of the above formats", 6},
-  {0, 0, 0, 0, "manual paper size selection: (1 pt = 1/72 in = 0.352778 mm)"},
-  {"height", 'h', "FLOAT", 0, "set height to FLOAT pt"},
-  {"width", 'w', "FLOAT", 0, "set width to FLOAT pt"},
-  {"use either option 'paper-size' (and optionally 'landscape')"
-   " or both of the 'width' and 'height' options." , 0, 0, OPTION_DOC},
-  {0}
-};
 
 static fz_context *ctx;
 static int page_count = 1;
 static float height, width;
 static const char *output_filename = "/dev/stdout"; /* FIXME: non portable */
 
-static void get_size (struct argp_state *state, const char *paper_size,
-		      float *width, float *height);
-
-static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
-{
-  static const char *paper_size;
-  static bool landscape;
-  switch (key)
-    {
-    case 's': paper_size = arg; break;
-    case 'l': landscape = true; break;
-    case 'o': output_filename = arg; break;
-    case 'p':
-      page_count = pdfout_strtoint_null_old (arg);
-      if (page_count < 0)
-	argp_error (state, "argument of option --page has to be positiv");
-      break;
-      
-    case 'h':
-      height = pdfout_strtof_old (arg);
-      if (height <= 0)
-	argp_error (state, "height must be positive");
-      break;
-      
-    case 'w':
-      width = pdfout_strtof_old (arg);
-      if (width <= 0)
-	argp_error (state, "width must be positive");
-      break;
-      
-    case ARGP_KEY_END:
-
-      if (!height != !width)
-	argp_error (state, "need both of the 'height' and 'width' options");
-
-      if (paper_size && height)
-	argp_error (state, "use either option 'paper-size'"
-		    " or options 'height' and 'width'");
-
-      if (height == 0 && paper_size == NULL)
-	/* Set to default.  */
-	paper_size = "A4";
-      
-      if (paper_size)
-	{
-	  get_size (state, paper_size, &width, &height);
-	  if (landscape)
-	    {
-	      float tmp = width;
-	      width = height;
-	      height = tmp;
-	    }
-	}
-      break;
-      
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
-
-static struct argp_child children[] = {
-      {&pdfout_pdf_output_argp, 0, "", -2},
-      {&pdfout_general_argp, 0, NULL, 0},
-      {0}
+enum {
+  HEIGHT_OPTION = 127,
 };
 
-static struct argp argp = {options, parse_opt, usage, doc, children};
+static struct option longopts[] = {
+  {"help", no_argument, NULL, 'h'},
+  {"usage", no_argument, NULL, 'u'},
+  {"output", required_argument, NULL, 'o'},
+  {"pages", required_argument, NULL, 'p'},
+  {"paper-size", required_argument, NULL, 's'},
+  {"landscape", no_argument, NULL, 'l'},
+  {"height", required_argument, NULL, HEIGHT_OPTION},
+  {"width", required_argument, NULL, 'w'},
+  {NULL, 0, NULL, 0}
+};
+
+static void
+print_usage ()
+{
+  printf ("Usage: %s [OPTIONS] > OUTPUT.pdf\n", pdfout_program_name);
+}
+
+static void
+print_help ()
+{
+  print_usage ();
+  puts ("\
+Create empty PDF file.\n\
+Redirect to a plain file to get a valid PDF.\n\
+Paper size defaults to A4\n\
+\n\
+ Options:\n\
+  -o, --output=FILE          Write PDF to FILE\n\
+  -p, --pages=NUM            Create NUM pages (default: 1)\n\
+  -s, --paper-size=SIZE      use one of the following paper sizes:\n\
+  ISO 216: A0, A1, ..., A10, B0, ..., B10\n\
+  DIN extensions to ISO 216: 2A0, 4A0\n\
+  ISO 269: C0, ... C10, DL, C7/C6, C6/C5, E4\n\
+  ANSI/ASME Y14.1: 'ANSI A' (us letter), ... , 'ANSI E'\n\
+  -l, --landscape            use landscape versions of the above formats\n\
+\n\
+ manual paper size selection: (1 pt = 1/72 in = 0.352778 mm)\n\
+      --height=FLOAT         set height to FLOAT pt\n\
+  -w, --width=FLOAT          set width to FLOAT pt\n\
+  use either option 'paper-size' (and optionally 'landscape') or both of the\n\
+  'width' and 'height' options.\n\
+\n\
+ general options:\n\
+  -h, --help                 Give this help list\n\
+  -u, --usage                Give a short usage message\n\
+");
+}
+
+static void get_size (const char *paper_size, float *width, float *height);
+
+static void
+parse_options (int argc, char **argv)
+{
+  const char *paper_size = NULL;
+  bool landscape = false;
+  
+  int optc;
+  while ((optc = getopt_long (argc, argv, "huo:p:s:lh:w:", longopts, NULL))
+	 != -1)
+    {
+      switch (optc)
+	{
+	case 'h':
+	  print_help ();
+	  exit (0);
+	case 'u':
+	  print_usage ();
+	  exit (0);
+	case 'o':
+	  output_filename = optarg;
+	  break;
+	case 'p':
+	  page_count = pdfout_strtoint_null_old (optarg);
+	  break;
+	case 's':
+	  paper_size = optarg;
+	  break;
+	case 'l':
+	  landscape = true;
+	  break;
+	case HEIGHT_OPTION:
+	  height = pdfout_strtof_old (optarg);
+	  break;
+	case 'w':
+	  width = pdfout_strtof_old (optarg);
+	  break;
+	  
+	default:
+	  print_usage ();
+	  exit (1);
+	}
+    }
+
+  if (page_count < 0)
+    pdfout_throw (ctx, "argument of option --pages has to be positiv");
+
+  if (height < 0 || width < 0)
+    pdfout_throw (ctx, "height and width must be positive");
+
+  if (!height != !width)
+    pdfout_throw (ctx, "need both --height and --width options");
+
+  if (paper_size && height)
+    pdfout_throw (ctx, "use either option --paper-size "
+	      "or options --height and --width");
+
+  if (height == 0 && paper_size == NULL)
+    /* Set to default.  */
+    paper_size = "A4";
+
+  if (paper_size)
+    {
+      get_size (paper_size, &width, &height);
+      if (landscape)
+	{
+	  float tmp = width;
+	  width = height;
+	  height = tmp;
+	}
+    }
+}
 
 void
 pdfout_command_create (fz_context *ctx_arg, int argc, char **argv)
 {
   ctx = ctx_arg;
-  pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
-
+  parse_options (argc, argv);
+  
   fz_rect rect = {0, 0, width, height};
   pdf_document *doc = pdfout_create_blank_pdf (ctx, page_count, &rect);
   
@@ -159,27 +178,24 @@ static void get_ansi_paper_size (float width_in, float height_in,
   *height_pt = height_in * 72;
 }
 
-#define DIE(state, size) argp_error (state, "unknown paper size '%s'", size)
-
 static void
-get_size (struct argp_state *state, const char *paper_size, float *width,
-	  float *height)
+get_size (const char *paper_size, float *width, float *height)
 {
-  char *upcased = upcase (fz_strdup (ctx, paper_size));
+  char *size_copy = fz_strdup (ctx, paper_size);
 
   /* ISO 216 / 269 */
 
-  if (strlen (upcased) <= 3
-      && (upcased[0] == 'A' || upcased[0] == 'B' || upcased[0] == 'C'))
+  if (strlen (size_copy) <= 3
+      && (size_copy[0] == 'A' || size_copy[0] == 'B' || size_copy[0] == 'C'))
     {
       char *tailptr;
       int width0, height0;	/* size of A0/B0/C0 in mm */
-      int n = pdfout_strtoint_old (upcased + 1, &tailptr);
+      int n = pdfout_strtoint_old (size_copy + 1, &tailptr);
       if (tailptr[0] != '\0' || n < 0 || n > 10)
-	DIE (state, paper_size);
-      if (upcased[0] == 'A')
+	pdfout_throw (ctx, "unknown paper size '%s'", paper_size);
+      if (size_copy[0] == 'A')
 	width0 = 841, height0 = 1189;
-      else if (upcased[0] == 'B')
+      else if (size_copy[0] == 'B')
 	width0 = 1000, height0 = 1414;
       else
 	width0 = 917, height0 = 1297;
@@ -187,10 +203,10 @@ get_size (struct argp_state *state, const char *paper_size, float *width,
       get_iso_paper_size (n, width0, height0, width, height);
     }
   
-  else if (strcmp (upcased, "2A0") == 0 || strcmp (upcased, "4A0") == 0)
+  else if (strcmp (size_copy, "2A0") == 0 || strcmp (size_copy, "4A0") == 0)
     {
       int n;
-      if (upcased[0] == '2')
+      if (size_copy[0] == '2')
 	n = -1;
       else
 	n = -2;
@@ -198,37 +214,37 @@ get_size (struct argp_state *state, const char *paper_size, float *width,
       get_iso_paper_size (n, 841, 1189, width, height);
     }
   
-  else if (strcmp (upcased, "DL") == 0)
+  else if (strcmp (size_copy, "DL") == 0)
     get_iso_paper_size (0, 110, 220, width, height);
   
-  else if (strcmp (upcased, "C7/C6") == 0)
+  else if (strcmp (size_copy, "C7/C6") == 0)
     get_iso_paper_size (0, 81, 162, width, height);
   
-  else if (strcmp (upcased, "C6/C5") == 0)
+  else if (strcmp (size_copy, "C6/C5") == 0)
     get_iso_paper_size (0, 114, 229, width, height);
 
-  else if (strcmp (upcased, "E4") == 0)
+  else if (strcmp (size_copy, "E4") == 0)
     get_iso_paper_size (0, 280, 400, width, height);
 
   /* ANSI */
   
-  else if (strcmp (upcased, "ANSI A") == 0)
+  else if (strcmp (size_copy, "ANSI A") == 0)
     get_ansi_paper_size (8.5, 11., width, height);
 
-  else if (strcmp (upcased, "ANSI B") == 0)
+  else if (strcmp (size_copy, "ANSI B") == 0)
     get_ansi_paper_size (11., 17., width, height);
 
-  else if (strcmp (upcased, "ANSI C") == 0)
+  else if (strcmp (size_copy, "ANSI C") == 0)
     get_ansi_paper_size (17., 22., width, height);
 
-  else if (strcmp (upcased, "ANSI D") == 0)
+  else if (strcmp (size_copy, "ANSI D") == 0)
     get_ansi_paper_size (22., 34., width, height);
 
-  else if (strcmp (upcased, "ANSI E") == 0)
+  else if (strcmp (size_copy, "ANSI E") == 0)
     get_ansi_paper_size (34., 44., width, height);
 
   else
-    DIE (state, paper_size);
+    pdfout_throw (ctx, "unknown paper size '%s'", paper_size);
   
-  free (upcased);
+  free (size_copy);
 }

@@ -1,20 +1,3 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "shared.h"
 
 static bool
@@ -32,92 +15,6 @@ strmatch (const char *key, const char *const *list)
 	return i;
     }
   return -1;
-}
-
-char *
-upcase (char *s)
-{
-  char *p;
-  for (p = s; *p; ++p)
-    *p = pdfout_toupper (*p);
-  return s;
-}
-
-char *
-lowercase (char *s)
-{
-  char *p;
-  for (p = s; *p; ++p)
-    *p = pdfout_tolower (*p);
-  return s;
-}
-
-
-/* general options */
-
-static struct argp_option general_options[] = {
-  {0, 0, 0, 0, "general options:", -1},
-  {"batch-mode", 'b', 0, 0, "do not print any status messages"},
-  {0}
-};
-
-static error_t
-general_parse_opt (int key, char *arg, struct argp_state *state)
-{
-  switch (key)
-    {
-    case 'b':
-      pdfout_batch_mode = 1;
-      break;
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
-
-struct argp pdfout_general_argp = {general_options, general_parse_opt};
-
-
-/* pdf output options */
-
-static struct argp_option pdf_output_options[] = {
-  {0, 0, 0, 0, "pdf output options:"},
-
-  /* FIXME: option to update producer */
-  /* {"no-info", PDFOUT_NO_INFO, 0, 0, */
-  /*  "do not update the 'Producer' key in the information dictionary."}, */
-  /* {0, 0, 0, 0, "options controlling encoding:"}, */
-  {0}
-};
-
-static error_t
-pdf_output_parse_opt (int key, char *arg, struct argp_state *state)
-{
-  switch (key)
-    {
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
-
-struct argp pdfout_pdf_output_argp = {
-  pdf_output_options, pdf_output_parse_opt
-};
-
-
-void
-pdfout_argp_parse (const struct argp * argp, int argc, char ** argv,
-		   unsigned flags, int *arg_index, void *input)
-{
-  error_t err;
-  
-  err = argp_parse (argp, argc, argv, flags, arg_index, input);
-  if (err)
-    {
-      pdfout_errno_msg (err, "error: argp_parse");
-      exit (1);
-    }
 }
 
 fz_context *
@@ -178,46 +75,6 @@ open_default_write_file (fz_context *ctx, const char *filename,
 			 const char *suffix)
 {
   return open_default_file (ctx, filename, suffix, "w");
-}
-
-
-
-
-static const char *const outline_format_list[] = {"yaml", "wysiwyg", NULL};
-
-static void list_formats (FILE *stream)
-{
-  const char *const *list = &outline_format_list[1];
-
-  fprintf (stream, "known formats: %s", outline_format_list[0]);
-  
-      for (; *list; ++list)
-	fprintf (stream, ", %s", *list);
-
-      fprintf (stream, "\n");
-}
-
-enum pdfout_outline_format
-pdfout_outline_get_format (struct argp_state *state, char *format)
-{
-  int result;
-  
-  result = strmatch (format, outline_format_list);
-
-  if (result >= 0)
-    return result;
-  
-  if (result == -1)
-    fprintf (state->err_stream, "%s: unknown outline format: '%s'\n",
-	     state->name, format);
-
-  else if (result == -2)
-    fprintf (state->err_stream, "%s: ambiguous outline format: '%s'\n",
-	     state->name, format);
-
-  fprintf (state->err_stream, "%s: ", state->name);
-  list_formats (state->err_stream);
-  exit (argp_err_exit_status);
 }
 
 #define MSG(fmt, args...) \

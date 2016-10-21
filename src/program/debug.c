@@ -1,21 +1,3 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-/* End each test here with exit (0).  */
-
 #include "common.h"
 #include "shared.h"
 #include "charset-conversion.h"
@@ -559,57 +541,75 @@ static void check_data (void)
   pdfout_data_drop (ctx, hash);
   exit (0);
 }
-
-
-
-static char usage[] = "";
-static char doc[] = "Run checks, called by make check\v";
-
 enum {
   INCREMENTAL_UPDATE = CHAR_MAX + 1,
   INCREMENTAL_UPDATE_XREF,
   STRING_CONVERSIONS,
-  REGEX,
   JSON,
   DATA,
-  OUTLINE,
 };
 
-static struct argp_option options[] = {
-  {"incremental-update", INCREMENTAL_UPDATE},
-  {"incremental-update-xref", INCREMENTAL_UPDATE_XREF},
-  {"string-conversions", STRING_CONVERSIONS},
-  {"json", JSON},
-  {"data", DATA},
-    {0}
+static struct option longopts[] = {
+  {"incremental-update", no_argument, NULL, INCREMENTAL_UPDATE},
+  {"incremental-update-xref", no_argument, NULL, INCREMENTAL_UPDATE_XREF},
+  {"string-conversions", no_argument, NULL, STRING_CONVERSIONS},
+  {"json", no_argument, NULL, JSON},
+  {"data", no_argument, NULL, DATA},
+  {NULL, 0 , NULL, 0}
 };
 
-static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
+static void
+print_usage (void)
 {
-  switch (key)
-    {
-    case INCREMENTAL_UPDATE: check_incremental_update (); break;
-    case INCREMENTAL_UPDATE_XREF: check_incremental_update_xref (); break;
-    case STRING_CONVERSIONS: check_string_conversions (); break;
-    case JSON: check_json (); break;
-    case DATA: check_data (); break;
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
+  printf ("Usage: %s COMMAND_OPTION\n", pdfout_program_name);
 }
 
-static struct argp_child children[] = {
-  {&pdfout_general_argp, 0, NULL, 0},
-  {0}
-};
+static void
+print_help (void)
+{
+  print_usage ();
+  puts("\
+Run whitebox test.\n\
+\n\
+ Tests:\n\\n\
+      --incremental-update\n\
+      --incremental-update-xref\n\
+      --string-conversions\n\
+      --json\n\
+      --data\n\
+\n\
+ general options:\n\
+  -h, --help                 Give this help list\n\
+  -u, --usage                Give a short usage message\n\
+");
+}
 
-static struct argp argp = { options, parse_opt, usage, doc, children };
+static void
+parse_options (int argc, char **argv)
+{
+  int optc;
+  while ((optc = getopt_long (argc, argv, "hu", longopts, NULL)) != -1)
+    {
+      switch (optc)
+	{
+	case 'h': print_help (); exit (0);
+	case 'u': print_usage (); exit (0);
+	case INCREMENTAL_UPDATE: check_incremental_update (); break;
+	case INCREMENTAL_UPDATE_XREF: check_incremental_update_xref (); break;
+	case STRING_CONVERSIONS: check_string_conversions (); break;
+	case JSON: check_json (); break;
+	case DATA: check_data (); break;
+	default:
+	  print_usage ();
+	  exit (1);
+	}
+    }
+  abort();
+}
 
 void
 pdfout_command_debug (fz_context *ctx_arg, int argc, char **argv)
 {
   ctx = ctx_arg;
-  pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
+  parse_options (argc, argv);
 }

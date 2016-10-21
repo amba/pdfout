@@ -1,22 +1,7 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "common.h"
 #include "shared.h"
+
+char *pdfout_program_name = NULL;
 
 /* setup table of commands from commands.def.  */
 
@@ -47,88 +32,101 @@ static const struct command command_list[] = {
   {0}
 };
 
-/*
-   suggested reading on argp:
-   Ben Asselstine: Step-by-Step into Argp
-   (https://savannah.nongnu.org/projects/argpbook)
-
-   glibc manual: Parsing Program Options with Argp
-   (https://www.gnu.org/software/libc/manual/html_node/Argp.html) */
 
 /* top level help and usage */
 
-static struct argp_option options[] = {
-  {"list-commands", 'l', 0, 0, "list all supported command names"},
-  {"describe-commands", 'd', 0, 0, "describe all supported commands"},
-  {"help", 'h', 0, 0, "give this help list", -1},
-  {"usage", 'u', 0, OPTION_HIDDEN, "", -1},
-  {"version", 'V', 0, 0, "print program version", -1},
-  {0}
-};
-
-static void list_commands (void);
-static void describe_commands (char *prog_name);
-
-static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
+static void
+print_usage ()
 {
-  const char try_help[] = "Try '%s --help' for more information.\n";
-  switch (key)
-    {
-    case 'l':
-      list_commands ();
-      exit (0);
-      
-    case 'd':
-      describe_commands (state->name);
-      exit (0);
-      
-    case 'h':
-      fprintf (state->out_stream, "Usage: %s SUBCOMMAND [PDF_FILE] ...\n"
-	       "  or: %s -dlhV\n\n", state->name, state->name);
-      argp_state_help (state, state->out_stream,
-		       ARGP_HELP_LONG | ARGP_HELP_EXIT_OK
-		       | ARGP_HELP_DOC | ARGP_HELP_BUG_ADDR);
-      exit (0);
-      
-    case 'V':
-      fprintf (state->out_stream, "%s\n", argp_program_version);
-      exit (0);
-      
-    case 'u':
-      fprintf (state->out_stream, try_help, state->name);
-      exit (0);
-      
-    case ARGP_KEY_END:
-      fprintf (state->out_stream, try_help, state->name);
-      exit (1);
-      
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
+  fprintf (stderr, "Try '%s --help' for more information.\n",
+	   pdfout_program_name);
 }
 
-static struct argp argp = {options, parse_opt};
+static void
+print_version ()
+{
+  printf ("pdfout version %s\n", PDFOUT_VERSION);
+}
+
+
+static struct option longopts[] = {
+  {"help", no_argument, NULL, 'h'},
+  {"version", no_argument, NULL, 'V'},
+  {"usage", no_argument, NULL, 'u'},
+  {"list-commands", no_argument, NULL, 'l'},
+  {"describe-commands", no_argument, NULL, 'd'},
+  {NULL, 0, NULL, 0},
+};
+
+static void
+print_help ()
+{
+  printf ("Usage: %s SUBCOMMAND [PDF_FILE] ...\n\
+or %s -hVld\n", pdfout_program_name, pdfout_program_name);
+
+  puts("\n\
+ Options:\n\
+  -d, --describe-commands    describe all supported commands\n\
+  -l, --list-commands        list all supported command names\n\
+  -h, --help                 give this help list\n\
+  -V, --version              print program version\
+");
+}
+
+static void list_commands (void);
+static void describe_commands ();
+
+static void
+parse_options (int argc, char **argv)
+{
+  int optc;
+  while ((optc = getopt_long (argc, argv, "hVuld", longopts, NULL)) != -1)
+    {
+      switch (optc)
+	{
+	case 'h':
+	  print_help();
+	  break;
+	case 'u':
+	  print_usage();
+	  break;
+	case 'V':
+	  print_version();
+	  break;
+	case 'l':
+	  list_commands();
+	  break;
+	case 'd':
+	  describe_commands();
+	  break;
+	default:
+	  print_usage();
+	  exit (1);
+	}
+    }
+}
 
 int
 main (int argc, char **argv)
 {
-  argp_program_version = PDFOUT_VERSION;
-  /* argp_program_bug_address = PACKAGE_BUGREPORT; */
-
-  
-  if (argc < 2)
+  if (argc == 1)
     {
-      pdfout_argp_parse (&argp, argc, argv, ARGP_NO_HELP, NULL, NULL);
+      print_usage();
       exit (1);
     }
   else if (argv[1][0] == '-')
     {
-      /* we provide our own --help option */
-      pdfout_argp_parse (&argp, argc, argv,  ARGP_NO_HELP, NULL, NULL);
+      /* First argument not a command name but an option.  */
+      parse_options (argc, argv);
       exit (0);
     }
+
+  fz_context *ctx = pdfout_new_context ();
+
+  int name_len = strlen (argv[0]) + strlen(argv[1]) + 2;
+  pdfout_program_name = fz_malloc (ctx, name_len);
+  pdfout_snprintf_imp (ctx, pdfout_program_name, name_len, "%s %s",
+		       argv[0], argv[1]);
   
   int result = strmatch (argv[1], command_name_list);
   
@@ -137,14 +135,8 @@ main (int argc, char **argv)
 	   "Try '%s -l' for the list of allowed commands.", argv[1],
 	   argv[0]);
 
-  /* use the full command name in argv[1] */
-  if (asprintf (&argv[1], "%s %s", argv[0],
-		command_name_list[result]) == -1)
-    error (1, errno, "asprintf");
-
-  /* finally call the command... */
-  fz_context *ctx = pdfout_new_context ();
-  command_list[result].function (ctx, argc - 1, &argv[1]);
+  argv[1] = pdfout_program_name;
+  command_list[result].function (ctx, --argc, ++argv);
   exit (0);
 }
 
@@ -159,12 +151,10 @@ list_commands (void)
 }
 
 static void
-describe_commands (char *prog_name)
+describe_commands ()
 {
   const struct command *command;
   printf ("This build of pdfout supports the following commands:\n");
-  printf ("(Try '%s COMMAND --help' to learn more about COMMAND.)\n",
-	  prog_name);
 
   for (command = &command_list[0]; command->name != NULL; ++command)
     if (command->type == REGULAR)

@@ -6,7 +6,6 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <argp.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -21,6 +20,8 @@
 #include <math.h>
 #include <stdbool.h>
 #include <error.h>
+
+#include <getopt.h>
 
 #include <mupdf/fitz.h>
 #include <mupdf/pdf.h>

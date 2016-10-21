@@ -1,80 +1,82 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
-
 #include "common.h"
 #include "shared.h"
-
-static char usage[] = "PDF_FILE";
-static char doc[] = "Extract text and write it to standard output.\n";
-
-
-
-static struct argp_option options[] = {
-  {"default-filename", 'd', 0, 0,
-   "write output to PDF_FILE.txt"},
-  {"page-range", 'p', "PAGE1[-PAGE2][,PAGE3[-PAGE4]...]", 0,
-   "only print text for the specified page ranges."},
-  {0}
-};
 
 static fz_context *ctx;
 static char *pdf_filename;
 static FILE *output;
 static char *page_range;
 
-
-static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
-{
-  static bool use_default_filename;
-  switch (key)
-    {
-    case 'd': use_default_filename = true; break;
-    case 'p': page_range = arg; break;
-      
-    case ARGP_KEY_ARG:
-      switch (state->arg_num)
-	{
-	case 0: pdf_filename = arg; break;
-	default: return ARGP_ERR_UNKNOWN;
-	}
-      break;
-
-    case ARGP_KEY_NO_ARGS:
-      argp_usage (state);
-    case ARGP_KEY_END:
-      if (use_default_filename)
-	output = open_default_write_file (ctx, pdf_filename, ".txt");
-      else
-	output = stdout;
-      break;
-
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
-
-static struct argp_child children[] = {
-   {&pdfout_general_argp, 0, NULL, 0},
-   {0}
+static struct option longopts[] = {
+  {"help", no_argument, NULL, 'h'},
+  {"usage", no_argument, NULL, 'u'},
+  {"default-filename", no_argument, NULL, 'd'},
+  {"page-range", required_argument, NULL, 'p'},
+  {NULL, 0, NULL, 0}
 };
 
-static struct argp argp = {options, parse_opt, usage, doc, children};
+static void
+print_usage ()
+{
+  printf ("Usage: %s [OPTIONS] PDF_FILE\n", pdfout_program_name);
+}
+
+static void
+print_help ()
+{
+  print_usage ();
+  puts ("\
+Extract text and print it to stdout.\n\
+\n\
+ Options:\n\
+  -d, --default-filename     Write output to PDF_FILE.txt\n\
+  -p, --page-range=PAGE1[-PAGE2][,PAGE3[-PAGE4]...]\n\
+                             Only print text for the specified page ranges\n\
+\n\
+ general options:\n\
+  -h, --help                 Give this help list\n\
+  -u, --usage                Give a short usage message\n\
+");
+}
+
+static void
+parse_options (int argc, char **argv)
+{
+  int optc;
+  bool use_default_filename = false;
+  while ((optc = getopt_long (argc, argv, "hudp:", longopts, NULL)) != -1)
+    {
+      switch (optc)
+	{
+	case 'h':
+	  print_help ();
+	  exit (0);
+	case 'u':
+	  print_usage ();
+	  exit (0);
+	case 'd':
+	  use_default_filename = true;
+	  break;
+	case 'p':
+	  page_range = optarg;
+	  break;
+	default:
+	  print_usage ();
+	  exit (1);
+	}
+    }
+
+  if (argc - 1 < optind)
+    {
+      print_usage ();
+      exit (1);
+    }
+  pdf_filename = argv[optind];
+
+  if (use_default_filename)
+    output = open_default_write_file (ctx, pdf_filename, ".txt");
+  else
+    output = stdout;
+}
 
 void
 pdfout_command_gettxt (fz_context *ctx_arg, int argc, char **argv)
@@ -87,9 +89,9 @@ pdfout_command_gettxt (fz_context *ctx_arg, int argc, char **argv)
   int *pages_ptr;
 
   ctx = ctx_arg;
-  pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
   
-  ctx = pdfout_new_context ();
+  parse_options(argc, argv);
+  
   doc = pdf_open_document (ctx, pdf_filename);
   page_count = pdf_count_pages (ctx, doc);
 

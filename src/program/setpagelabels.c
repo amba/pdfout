@@ -1,31 +1,5 @@
-/* The pdfout document modification and analysis tool.
-   Copyright (C) 2015 AUTHORS (see AUTHORS file)
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
-
 #include "common.h"
 #include "shared.h"
-
-static char usage[] = "PDF_FILE";
-static char doc[] = "Modify page labels\n";
-
-static struct argp_option options[] = {
-  {"default-filename", 'd', 0, 0, "read input from PDF_FILE.pagelabels"},
-  {"output", 'o', "FILE", 0, PDFOUT_NO_INCREMENTAL},
-  {"remove", 'r', 0, 0, "remove page labels"},
-  {0}
-};
 
 static fz_context *ctx;
 static char *pdf_filename;
@@ -33,52 +7,89 @@ static char *output_filename;
 static FILE *input;
 static bool remove_page_labels;
 
-static error_t parse_opt (int key, char *arg, struct argp_state *state)
-{
-  static bool use_default_filename;
-  switch (key)
-    {
-    case 'o': output_filename = arg; break;
-    case 'r': remove_page_labels = true; break;
-    case 'd': use_default_filename = true; break;
-      
-    case ARGP_KEY_ARG:
-      if (state->arg_num == 0)
-	pdf_filename = arg;
-      else
-	return ARGP_ERR_UNKNOWN;
-      break;
-
-    case ARGP_KEY_NO_ARGS:
-      argp_usage (state);
-      break;
-      
-    case ARGP_KEY_END:
-      if (use_default_filename)
-	input = open_default_read_file (ctx, pdf_filename, ".pagelabels");
-      else
-	input = stdin;
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
-  return 0;
-}
-
-static struct argp_child children[] = {
-   {&pdfout_pdf_output_argp, 0, "", -2},
-   {&pdfout_general_argp, 0, NULL, 0},
-   {0}
+static struct option longopts[] = {
+  {"help", no_argument, NULL, 'h'},
+  {"usage", no_argument, NULL, 'u'},
+  {"default-filename", no_argument, NULL, 'd'},
+  {"output", required_argument, NULL, 'o'},
+  {"remove", no_argument, NULL, 'r'},
+  {NULL, 0, NULL, 0}
 };
 
-static struct argp argp = {options, parse_opt, usage, doc, children};
+static void
+print_usage ()
+{
+  printf ("Usage: %s [OPTIONS] PDF_FILE\n", pdfout_program_name);
+}
+
+static void
+print_help ()
+{
+  print_usage ();
+  puts ("\
+Modify page labels. Reads JSON from stdin\n\
+\n\
+  -d, --default-filename     Write output to PDF_FILE.pagelabels\n\
+  -o, --output=FILE          Write modified document to FILE\n\
+  -r, --remove               Remove page labels\n\
+\n\
+ general options:\n\
+  -h, --help                 Give this help list\n\
+  -u, --usage                Give a short usage message\n\
+");
+}
+
+
+static void
+parse_options (int argc, char **argv)
+{
+  int optc;
+  bool use_default_filename = false;
+  while ((optc = getopt_long (argc, argv, "hudo:r", longopts, NULL)) != -1)
+    {
+      switch (optc)
+	{
+	case 'h':
+	  print_help ();
+	  exit (0);
+	case 'u':
+	  print_usage ();
+	  exit (0);
+	case 'd':
+	  use_default_filename = true;
+	  break;
+	case 'o':
+	  output_filename = optarg;
+	  break;
+	case 'r':
+	  remove_page_labels = true;
+	  break;
+	default:
+	  print_usage ();
+	  exit (1);
+	}
+    }
+
+  if (argc - 1 < optind)
+    {
+      print_usage ();
+      exit (1);
+    }
+  pdf_filename = argv[optind];
+
+  if (use_default_filename)
+    input = open_default_read_file (ctx, pdf_filename, ".pagelabels");
+  else
+    input = stdin;
+}
 
 void
 pdfout_command_setpagelabels (fz_context *ctx_arg, int argc, char **argv)
 {
   ctx = ctx_arg;
-  pdfout_argp_parse (&argp, argc, argv, 0, 0, 0);
+
+  parse_options (argc, argv);
   
-  fz_context *ctx = pdfout_new_context ();
   pdf_document *doc = pdf_open_document (ctx, pdf_filename);
 
   pdfout_data *labels;

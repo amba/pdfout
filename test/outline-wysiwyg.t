@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 10;
+use Test::Pdfout::Command tests => 20;
 use Test::More;
 use Testlib;
 
@@ -47,4 +47,5 @@ title1 1
             8 8
     9 10
 EOD
+    empty => "",
     );
