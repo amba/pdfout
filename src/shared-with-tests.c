@@ -1,7 +1,3 @@
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE
-#endif
-
 #include "shared-with-tests.h"
 #include <stdio.h>
 #include <stdlib.h>
