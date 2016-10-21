@@ -13,9 +13,11 @@ use File::Copy;
 use File::Basename;
 
 use Exporter 'import';
-
+use utf8;
+use Test::Files;
 use Test::Pdfout::Command;
-
+use Carp;
+use Encode 'encode';
 our @EXPORT = qw/
 new_pdf
 new_tempfile
@@ -42,26 +44,102 @@ sub get_command ($command) {
 
 sub set_get_test (%args) {
     my $input = $args{input};
+    if (not defined $input) {
+	croak "no input";
+    }
+    
     my $expected = $args{expected};
     if (not defined $expected) {
 	$expected = $input;
     }
-    my $command = $args{command};
-
-    my $pdf = new_pdf();
     
-    # Set
-    pdfout_ok(
-	command => [set_command($command), $pdf],
-	input => $input,
-	);
+    my $command = $args{command};
+    if (not defined $command) {
+	croak "no command";
+    }
+    
+    my $empty = $args{empty};
+    if (not defined $empty) {
+	croak "no empty";
+    }
+    {
+	# Set and get, using stdin/stdout
+	my $pdf = new_pdf();
+	
+	pdfout_ok(
+	    command => [set_command($command), $pdf],
+	    input => $input,
+	    );
 
-    # Get
-    pdfout_ok(
-	command => [get_command($command), $pdf],
-	expected_out => $expected
-	);
+	pdfout_ok(
+	    command => [get_command($command), $pdf],
+	    expected_out => $expected
+	    );
 
+	# remove
+	pdfout_ok(
+	    command => [set_command($command), '--remove', $pdf]
+	    );
+	pdfout_ok(
+	    command => [get_command($command), $pdf],
+	    expected_out => $empty
+	    );
+    }
+    {
+	# Set and get, using default filenames.
+	my $pdf = new_pdf();
+	
+	my $default_filename = $pdf . '.' . $command->[0];
+	open my $fh, '>', $default_filename
+	    or die "open";
+	binmode $fh, ':utf8';
+	print {$fh} $input;
+	close $fh
+	    or die "close";
+
+	pdfout_ok (
+	    command => [set_command($command), $pdf, '-d'],
+	    );
+
+	unlink ($default_filename)
+	    or die "unlink";
+
+	pdfout_ok (
+	    command => [get_command($command), $pdf, '-d'],
+	    );
+
+	file_ok ($default_filename, encode('UTF-8', $expected),
+		 "file matches input");
+    }
+    
+    {
+	# non-incremental update
+	my $pdf = new_pdf ();
+	my $output = new_tempfile ();
+
+	pdfout_ok (
+	    command => [set_command($command), $pdf, '-o', $output],
+	    input => $input,
+	    );
+	pdfout_ok (
+	    command => [get_command($command), $output],
+	    expected_out => $expected,
+	    );
+	
+	compare_ok($pdf, test_data("empty10.pdf"),
+		   "original file is untouched");
+
+	# combination of remove and non-incremental
+	$output = new_tempfile ();
+	pdfout_ok (
+	    command => [set_command($command), $pdf, '--remove', '-o',
+			$output],
+	    );
+	pdfout_ok (
+	    command => [get_command($command), $output],
+	    expected_out => $empty
+	    );
+    }
     # Broken input
     my $broken_input = $args{broken_input};
     if ($broken_input) {

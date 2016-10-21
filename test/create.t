@@ -58,7 +58,7 @@ use Testlib;
 # height and width options
 {
     my $file = new_tempfile ();
-    pdfout_ok (command => [qw/create -w 100 -h 100.1 -o/, $file]);
+    pdfout_ok (command => [qw/create -w 100 --height 100.1 -o/, $file]);
     file_like ($file, qr/0 0 100 100.1/, "height and width options");
 }
 
@@ -67,13 +67,13 @@ use Testlib;
     #invalid size
     my @sizes = qw/A11 a-1/;
     for my $size (@sizes) {
-	pdfout_ok (command => [qw/create -s $size/], status => 64);
+	pdfout_ok (command => [qw/create -s $size/], status => 1);
     }
 
     # no width
-    pdfout_ok (command => [qw/create -w 100/], status => 64);
+    pdfout_ok (command => [qw/create -w 100/], status => 1);
 
     # negative height
-    pdfout_ok (command => [qw/create -w 100 -h -100/], status => 64);
+    pdfout_ok (command => [qw/create -w 100 --height -100/], status => 1);
 }
 	

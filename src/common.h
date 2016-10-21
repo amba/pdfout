@@ -6,7 +6,6 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <argp.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>

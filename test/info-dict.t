@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 11;
+use Test::Pdfout::Command tests => 18;
 use Test::More;
 use Test::Files;
 use Testlib;
@@ -35,23 +35,8 @@ set_get_test (
 	'{"ModDate": "D:20151"}'
     ],
     input => $input,
+    empty => "{}\n",
     ); 
-
-# non-incremental update
-{
-    my $pdf = new_pdf ();
-    my $output = new_tempfile ();
-
-    pdfout_ok (
-	command => ['setinfo', $pdf, '-o', $output],
-	input => $input,
-	);
-    pdfout_ok (
-	command => ['getinfo', $output],
-	expected_out => $input,
-	);
-    compare_ok($pdf, test_data("empty10.pdf"), "original file is untouched");
-}
 
 # append option
 {
