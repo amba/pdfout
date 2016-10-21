@@ -63,6 +63,7 @@ The default build directory is F<build>.
   -c, --cflags=CFLAGS         additional compiler flags
       --cppflags=CPPFLAGS     additional preprocessor flags
       --ldflags=LDFLAGS       additional linker flags
+      --mupdf-cflags=CFLAGS   CFLAGS for mupdf. Defaults to '-O2 -g'
       --prefix=PREFIX         installation prefix
       --install               install pdfout
   -j, --jobs=JOBS             number of jobs used by make
@@ -76,6 +77,7 @@ sub build {
     my $user_cflags = '-O0';
     my $user_cppflags = '';
     my $cflags = '-std=gnu99 -g -Wall';
+    my $mupdf_cflags = '-O2 -g';
     my $cc = 'cc';
     my $out = 'build';
     my $ldflags = '';
@@ -87,6 +89,7 @@ sub build {
 	'jobs|j=i' => \$jobs,
 	'cflags|c=s' => \$user_cflags,
 	'cppflags=s' => \$user_cppflags,
+	'mupdf-cflags=s' => \$mupdf_cflags,
 	'cc=s' => \$cc,
 	'out=s' => \$out,
 	'install|i' => \$install,
@@ -113,6 +116,7 @@ sub build {
 	jobs => $jobs,
 	ldflags => $ldflags,
 	ldlibs => $ldlibs,
+	mupdf_cflags => $mupdf_cflags,
 	mupdf_ldlibs => $mupdf_ldlibs,
 	
 	);
@@ -143,7 +147,7 @@ sub build_mupdf (%args) {
     my @command = (qw/make -C mupdf libs third build=debug
                       SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=/,
 		   "-j$args{jobs}", "verbose=$verbose", "OUT=$out",
-		   "XCFLAGS=$args{cflags}");
+		   "XCFLAGS=$args{mupdf_cflags}");
     
     safe_system("@command", @command);
 }
