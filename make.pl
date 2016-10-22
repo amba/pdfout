@@ -16,16 +16,6 @@ use List::Util qw/max/;
 
 use Data::Dumper;
 
-my $command = shift @ARGV;
-
-if (not defined $command) {
-    $command = 'build';
-}
-elsif (substr($command, 0, 1) eq '-') {
-    unshift @ARGV, $command;
-    $command = 'build';
-}
-
 my %command_sub = (
     'build' => \&build,
     'clean' => \&clean,
@@ -35,6 +25,47 @@ my %command_sub = (
     'submodules' => \&submodules,
     );
 
+
+my $command = shift @ARGV;
+
+if (not defined $command) {
+    $command = 'build';
+}
+else {
+    if ($command eq '--help' || $command eq '-h') {
+	print_help();
+	exit 0;
+    }
+    
+    if ($command =~ /^-/) {
+    unshift @ARGV, $command;
+    $command = 'build';
+    }
+}
+
+
+
+sub print_help {
+    print <<'EOF';
+Usage: ./make.pl SUBCOMMAND [OPTIONS]
+   or: ./make.pl [OPTIONS]
+
+Available subcommands:
+EOF
+    my @commands = sort keys %command_sub;
+    say "  ", join("\n  ", @commands);
+
+    print <<'EOF';
+
+If SUBCOMMAND is not given, it defaults to 'build'.
+
+For a complete description of each subcommand, see
+http://amba.github.io/pdfout/make.html.
+EOF
+}
+
+
+    
 if (not exists $command_sub{$command}) {
         die "unkown command '$command'\n";
 }
@@ -46,7 +77,11 @@ $command_sub{$command}();
 This document describes the details of pdfout's build system.
 
 All build and test tasks are run with the F<make.pl> script. It supports the
-following list of subcommands:
+following list of subcommands, which can also be viewed by running these
+commands:
+
+ ./make.pl --help
+ or: ./make.pl -h
 
 =head2 build
 
@@ -453,6 +488,15 @@ sub safe_chdir ($dir) {
 	or die "cannot chdir to '$dir': $!";
 }
 
+=head2 upload-doc
+
+ ./make.pl upload-doc
+
+Maintainer command to update the docs at L<https://amba.github.io/pdfout>.
+
+=cut
+
+
 sub upload_doc {
     my $out = '/home/simon/amba.github.io/pdfout';
     remove_tree($out);
@@ -463,6 +507,7 @@ sub upload_doc {
     @command = qw/git push/;
     safe_system("@command", @command);
 }
+
 =head2 submodules
 
  ./make.pl submodules
