@@ -48,7 +48,7 @@ parse_options (int argc, char **argv)
 {
   int optc;
   bool use_default_filename = false;
-  while ((optc = getopt_long (argc, argv, "hudo:r", longopts, NULL)) != -1)
+  while ((optc = getopt_long (argc, argv, "hudo:rw", longopts, NULL)) != -1)
     {
       switch (optc)
 	{
