@@ -3,17 +3,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <limits.h>
 #include <time.h>
-#include <sysexits.h>
 #include <math.h>
 #include <stdbool.h>
 #include <error.h>
