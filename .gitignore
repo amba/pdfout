@@ -1,3 +1,6 @@
 *~
 *nytprof*
 /build
+/cover-build
+/cover_db
+/*.gcov

@@ -23,6 +23,7 @@ my %command_sub = (
     'doc'   => \&build_doc,
     'upload-doc' => \&upload_doc,
     'submodules' => \&submodules,
+    'cover' => \&cover,
     );
 
 
@@ -180,12 +181,12 @@ sub install ($binary, $prefix) {
 sub build_mupdf (%args) {
     my $out = catfile('..', $args{out}, 'mupdf');
     my $verbose = verbose_string($args{verbose});
-    my @command = (qw/make -C mupdf libs third build=debug
+    safe_system(
+	command => [qw/make -C mupdf libs third build=debug
                       SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=/,
-		   "-j$args{jobs}", "verbose=$verbose", "OUT=$out",
-		   "XCFLAGS=$args{mupdf_cflags}");
-    
-    safe_system("@command", @command);
+		    "-j$args{jobs}", "verbose=$verbose", "OUT=$out",
+		    "XCFLAGS=$args{mupdf_cflags}"]
+	);
 }
 
 sub build_pdfout (%args) {
@@ -234,7 +235,11 @@ sub build_object_file (%args) {
     else {
 	$msg = "    CC $args{obj}";
     }
-    safe_system($msg, @command);
+    
+    safe_system(
+	msg => $msg,
+	command => \@command
+	);
 }
 
 sub link_object_files (%args) {
@@ -262,7 +267,12 @@ sub link_object_files (%args) {
     else {
 	$msg = "    LD $binary";
     }
-    safe_system($msg, @command);
+    
+    safe_system(
+	msg => $msg,
+	command => \@command
+	);
+    
     return $binary;
 }
 
@@ -296,7 +306,14 @@ sub is_outdated ($target, @deps) {
 }
 
 
-sub safe_system ($msg, @command) {
+sub safe_system (%arg) {
+    my $msg = $arg{msg};
+    my @command = $arg{command}->@*;
+
+    if (not defined $msg) {
+	$msg = "@command";
+    }
+    
     say $msg;
     system(@command) == 0
 	or die "command failed\n";
@@ -509,10 +526,8 @@ sub upload_doc {
     remove_tree($out);
     generate_doc($out);
     safe_chdir $out;
-    my @command = (qw/git commit -am/, "update pdfout docs");
-    safe_system("@command", @command);
-    @command = qw/git push/;
-    safe_system("@command", @command);
+    safe_system(command => [qw/git commit -am/, "update pdfout docs"]);
+    safe_system(command => [qw/git push/]);
 }
 
 =head2 submodules
@@ -526,8 +541,7 @@ Check out the mupdf submodule and mupdf's own submodules.
 sub submodules {
     say 'checking out git submodules';
 
-    my @command = qw/git submodule update --init/;
-    safe_system ("@command", @command);
+    safe_system(command => [qw/git submodule update --init/]);
     
     safe_chdir 'mupdf';
 
@@ -542,8 +556,64 @@ thirdparty/mujs
 thirdparty/harfbuzz
 );
 
-    @command = (qw/git submodule update --init/, @mupdf_submodles);
-    safe_system ("@command", @command);
+    safe_system(
+	command => [qw/git submodule update --init/, @mupdf_submodles]
+	);
 }
 
-	
+=head2 cover
+
+ ./make.pl cover -j4
+
+Requires L<Devel::Cover|https://metacpan.org/pod/Devel::Cover> installed.
+
+Do coverage build with gcov in F<cover-build>.
+
+Open output of gcov2perl in firefox.
+
+ Options:
+  -j, --jobs=JOBS             number of parallel jobs
+
+This requires L<Test::Files|https://metacpan.org/pod/Test::Files>. 
+
+Using valgrind will only work, if the build does not use optimization.
+
+=cut
+
+sub cover {
+    my $jobs = 1;
+        
+    GetOptions (
+	"jobs|j=i" => \$jobs,
+	);
+    
+    safe_system(
+	command => [
+	    './make.pl', 'build', '--cflags=-fprofile-arcs -ftest-coverage',
+	    '--ldflags=-fprofile-arcs -ftest-coverage', '--out=cover-build',
+	    '--mupdf-cflags=-O0 -g',
+	    "-j$jobs"
+	    ]
+	);
+
+
+    safe_system(
+	command => ['./make.pl', 'check', '--out=cover-build', "-j$jobs"]
+	);
+
+    safe_system(
+	command => [
+	    'gcov', '--object-directory=cover-build/src', glob('src/*.c')]
+	);
+
+
+    safe_system(command => ['gcov', '--object-directory=cover-build/src/program', glob('src/program/*.c')]);
+
+    safe_system(command => ['gcov2perl', '-db', 'cover_db', glob('*.gcov')]);
+
+    safe_system(command => ['cover']);
+
+    safe_system(command => [qw(firefox -new-tab cover_db/coverage.html)]);
+}
+    
+    
