@@ -190,10 +190,15 @@ sub build_mupdf (%args) {
 sub build_pdfout (%args) {
     my @sources = glob('src/*.c src/program/*.c');
     my @objects;
+
+    my @headers = glob('src/*.h src/program/*.h');
+    
     for my $src (@sources) {
 	my $obj = $src =~ s/c$/o/r;
 	$obj = catfile($args{out}, $obj);
-	build_object_file(obj => $obj, src => $src, %args);
+	build_object_file(
+	    obj => $obj, headers => \@headers, src => $src, %args
+	);
 	push @objects, $obj;
     }
 
@@ -210,8 +215,9 @@ sub split_on_ws ($scalar) {
 sub build_object_file (%args) {
     my $obj = $args{obj};
     my $src = $args{src};
-
-    if (not is_outdated($obj, $src)) {
+    my @headers = $args{headers}->@*;
+    
+    if (not is_outdated($obj, $src, @headers)) {
 	return;
     }
     
