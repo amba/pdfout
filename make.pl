@@ -124,6 +124,7 @@ sub build {
 	'jobs|j=i' => \$jobs,
 	'cflags|c=s' => \$user_cflags,
 	'cppflags=s' => \$user_cppflags,
+	'ldflags=s' => \$ldflags,
 	'mupdf-cflags=s' => \$mupdf_cflags,
 	'cc=s' => \$cc,
 	'out=s' => \$out,
