@@ -14,14 +14,12 @@ my $input = <<'EOD';
   }
 ]
 EOD
-    
+
 set_get_test(
     command => ['pagelabels'],
-    
-    broken_input => [
-	'"abc"',
-	],
-    input => $input,
-    empty => "[]\n",
-    
-    );
+
+    broken_input => [ '"abc"', ],
+    input        => $input,
+    empty        => "[]\n",
+
+);

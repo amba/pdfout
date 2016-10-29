@@ -22,38 +22,41 @@ my $input = <<'EOD';
   "Trapped": "Unknown"
 }
 EOD
-    
-set_get_test (
+
+set_get_test(
     command => ['info'],
-    
+
     broken_input => [
-	# should be 'Title'
-	'{"Titel": "myfile"}',
-	# should be 'True'
-	'{"Trapped": "true"}',
-	# open not a bool
-	'{"ModDate": "D:20151"}'
+
+        # should be 'Title'
+        '{"Titel": "myfile"}',
+
+        # should be 'True'
+        '{"Trapped": "true"}',
+
+        # open not a bool
+        '{"ModDate": "D:20151"}'
     ],
     input => $input,
     empty => "{}\n",
-    ); 
+);
 
 # append option
 {
-    my $pdf = new_pdf ();
-    pdfout_ok (
-	command => ['setinfo', $pdf],
-	input => $input,
-	);
-    
-    pdfout_ok (
-	command => ['setinfo', '--append', $pdf],
-	input => '{"CreationDate": "D:20150804"}',
-	);
+    my $pdf = new_pdf();
+    pdfout_ok(
+        command => [ 'setinfo', $pdf ],
+        input   => $input,
+    );
 
-    pdfout_ok (
-	command => ['getinfo', $pdf],
-	expected_out => <<'EOD',
+    pdfout_ok(
+        command => [ 'setinfo', '--append', $pdf ],
+        input   => '{"CreationDate": "D:20150804"}',
+    );
+
+    pdfout_ok(
+        command => [ 'getinfo', $pdf ],
+        expected_out => <<'EOD',
 {
   "Title": "pdfout info dict test",
   "Author": "pdfout",
@@ -66,5 +69,5 @@ set_get_test (
   "Trapped": "Unknown"
 }
 EOD
-	);
+    );
 }

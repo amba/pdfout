@@ -6,9 +6,9 @@ use 5.020;
 use Test::Pdfout::Command tests => 1;
 use Testlib;
 
-my $pdf = new_pdf ();
+my $pdf = new_pdf();
 
-pdfout_ok (
-    command => ['pagecount', $pdf],
+pdfout_ok(
+    command      => [ 'pagecount', $pdf ],
     expected_out => "10\n"
-    );
+);

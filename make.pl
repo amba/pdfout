@@ -15,36 +15,35 @@ use Getopt::Long qw/:config gnu_getopt/;
 use List::Util qw/max/;
 
 use Data::Dumper;
+use Perl::Tidy;
 
 my %command_sub = (
-    'build' => \&build,
-    'clean' => \&clean,
-    'check' => \&check,
-    'doc'   => \&build_doc,
+    'build'      => \&build,
+    'clean'      => \&clean,
+    'check'      => \&check,
+    'doc'        => \&build_doc,
     'upload-doc' => \&upload_doc,
     'submodules' => \&submodules,
-    'cover' => \&cover,
-    );
-
+    'cover'      => \&cover,
+    'tidy'       => \&tidy,
+);
 
 my $command = shift @ARGV;
 
-if (not defined $command) {
+if ( not defined $command ) {
     $command = 'build';
 }
 else {
-    if ($command eq '--help' || $command eq '-h') {
-	print_help();
-	exit 0;
+    if ( $command eq '--help' || $command eq '-h' ) {
+        print_help();
+        exit 0;
     }
-    
-    if ($command =~ /^-/) {
-    unshift @ARGV, $command;
-    $command = 'build';
+
+    if ( $command =~ /^-/ ) {
+        unshift @ARGV, $command;
+        $command = 'build';
     }
 }
-
-
 
 sub print_help {
     print <<'EOF';
@@ -54,7 +53,7 @@ Usage: ./make.pl SUBCOMMAND [OPTIONS]
 Available subcommands:
 EOF
     my @commands = sort keys %command_sub;
-    say "  ", join("\n  ", @commands);
+    say "  ", join( "\n  ", @commands );
 
     print <<'EOF';
 
@@ -65,10 +64,8 @@ http://amba.github.io/pdfout/make.html.
 EOF
 }
 
-
-    
-if (not exists $command_sub{$command}) {
-        die "unkown command '$command'\n";
+if ( not exists $command_sub{$command} ) {
+    die "unkown command '$command'\n";
 }
 
 $command_sub{$command}();
@@ -109,84 +106,85 @@ The default build directory is F<build>.
 
 sub build {
     my $verbose;
-    my $jobs = 1;
-    my $user_cflags = '-O0';
+    my $jobs          = 1;
+    my $user_cflags   = '-O0';
     my $user_cppflags = '';
-    my $cflags = '-std=gnu99 -g -Wall';
-    my $mupdf_cflags = '-O2 -g';
-    my $cc = 'cc';
-    my $out = 'build';
-    my $ldflags = '';
+    my $cflags        = '-std=gnu99 -g -Wall';
+    my $mupdf_cflags  = '-O2 -g';
+    my $cc            = 'cc';
+    my $out           = 'build';
+    my $ldflags       = '';
     my $install;
     my $prefix = '/usr/local';
-    
-    GetOptions(
-	'verbose|v' => \$verbose,
-	'jobs|j=i' => \$jobs,
-	'cflags|c=s' => \$user_cflags,
-	'cppflags=s' => \$user_cppflags,
-	'ldflags=s' => \$ldflags,
-	'mupdf-cflags=s' => \$mupdf_cflags,
-	'cc=s' => \$cc,
-	'out=s' => \$out,
-	'install|i' => \$install,
-	'prefix=s' => \$prefix,
-	)
-	or die "invalid option\n";
 
-    my $mupdf_build_dir = catfile($out, 'mupdf');
-    my $mupdf_include_dir = catfile('mupdf', 'include');
+    GetOptions(
+        'verbose|v'      => \$verbose,
+        'jobs|j=i'       => \$jobs,
+        'cflags|c=s'     => \$user_cflags,
+        'cppflags=s'     => \$user_cppflags,
+        'ldflags=s'      => \$ldflags,
+        'mupdf-cflags=s' => \$mupdf_cflags,
+        'cc=s'           => \$cc,
+        'out=s'          => \$out,
+        'install|i'      => \$install,
+        'prefix=s'       => \$prefix,
+    ) or die "invalid option\n";
+
+    my $mupdf_build_dir   = catfile( $out,    'mupdf' );
+    my $mupdf_include_dir = catfile( 'mupdf', 'include' );
 
     my $mupdf_ldlibs = [
-	catfile($mupdf_build_dir, 'libmupdf.a'),
-	catfile($mupdf_build_dir, 'libmupdfthird.a'),
-	];
-	
-    my $ldlibs = ['-lm'];
-    
-    my %args = (
-	out => $out,
-	cc => $cc,
-	verbose => $verbose,
-	cflags =>  "$cflags $user_cflags",
-	cppflags => "-Isrc -I$mupdf_include_dir $user_cppflags",
-	jobs => $jobs,
-	ldflags => $ldflags,
-	ldlibs => $ldlibs,
-	mupdf_cflags => $mupdf_cflags,
-	mupdf_ldlibs => $mupdf_ldlibs,
-	
-	);
+        catfile( $mupdf_build_dir, 'libmupdf.a' ),
+        catfile( $mupdf_build_dir, 'libmupdfthird.a' ),
+    ];
 
-    my @out_dirs = ($out, catfile($out, 'src'),
-		    catfile($out, 'src', 'program'));
+    my $ldlibs = ['-lm'];
+
+    my %args = (
+        out          => $out,
+        cc           => $cc,
+        verbose      => $verbose,
+        cflags       => "$cflags $user_cflags",
+        cppflags     => "-Isrc -I$mupdf_include_dir $user_cppflags",
+        jobs         => $jobs,
+        ldflags      => $ldflags,
+        ldlibs       => $ldlibs,
+        mupdf_cflags => $mupdf_cflags,
+        mupdf_ldlibs => $mupdf_ldlibs,
+
+    );
+
+    my @out_dirs
+        = ( $out, catfile( $out, 'src' ), catfile( $out, 'src', 'program' ) );
 
     make_path(@out_dirs);
-    
+
     build_mupdf(%args);
     my $binary = build_pdfout(%args);
     if ($install) {
-	install($binary, $prefix);
+        install( $binary, $prefix );
     }
 }
 
-sub install ($binary, $prefix) {
-    my $bindir = catfile($prefix, 'bin');
+sub install ( $binary, $prefix ) {
+    my $bindir = catfile( $prefix, 'bin' );
     make_path($bindir);
-    my $target = catfile($bindir, 'pdfout');
-    copy($binary, $target)
-	or die "cannot copy '$binary' to '$target': $!";
+    my $target = catfile( $bindir, 'pdfout' );
+    copy( $binary, $target )
+        or die "cannot copy '$binary' to '$target': $!";
 }
 
 sub build_mupdf (%args) {
-    my $out = catfile('..', $args{out}, 'mupdf');
-    my $verbose = verbose_string($args{verbose});
+    my $out = catfile( '..', $args{out}, 'mupdf' );
+    my $verbose = verbose_string( $args{verbose} );
     safe_system(
-	command => [qw/make -C mupdf libs third build=debug
-                      SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=/,
-		    "-j$args{jobs}", "verbose=$verbose", "OUT=$out",
-		    "XCFLAGS=$args{mupdf_cflags}"]
-	);
+        command => [
+            qw/make -C mupdf libs third build=debug
+                SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=/,
+            "-j$args{jobs}", "verbose=$verbose", "OUT=$out",
+            "XCFLAGS=$args{mupdf_cflags}"
+        ]
+    );
 }
 
 sub build_pdfout (%args) {
@@ -194,131 +192,137 @@ sub build_pdfout (%args) {
     my @objects;
 
     my @headers = glob('src/*.h src/program/*.h');
-    
+
     for my $src (@sources) {
-	my $obj = $src =~ s/c$/o/r;
-	$obj = catfile($args{out}, $obj);
-	build_object_file(
-	    obj => $obj, headers => \@headers, src => $src, %args
-	);
-	push @objects, $obj;
+        my $obj = $src =~ s/c$/o/r;
+        $obj = catfile( $args{out}, $obj );
+        build_object_file(
+            obj     => $obj,
+            headers => \@headers,
+            src     => $src,
+            %args
+        );
+        push @objects, $obj;
     }
 
-    my $binary = catfile($args{out}, 'pdfout');
-    link_object_files (objects => \@objects, binary => $binary, %args);
+    my $binary = catfile( $args{out}, 'pdfout' );
+    link_object_files( objects => \@objects, binary => $binary, %args );
     return $binary;
 }
 
 sub split_on_ws ($scalar) {
+
     # ' ' will emulate awk behavior: remove leading ws and split on /\s+/.
     return split ' ', $scalar;
 }
 
 sub build_object_file (%args) {
-    my $obj = $args{obj};
-    my $src = $args{src};
+    my $obj     = $args{obj};
+    my $src     = $args{src};
     my @headers = $args{headers}->@*;
-    
-    if (not is_outdated($obj, $src, @headers)) {
-	return;
+
+    if ( not is_outdated( $obj, $src, @headers ) ) {
+        return;
     }
-    
-    my @cflags = split_on_ws($args{cflags});
-    my @cppflags = split_on_ws($args{cppflags});
-    
-    my @command = ($args{cc}, '-o', $args{obj}, @cflags, @cppflags, '-c',
-		   $args{src});
+
+    my @cflags   = split_on_ws( $args{cflags} );
+    my @cppflags = split_on_ws( $args{cppflags} );
+
+    my @command = (
+        $args{cc}, '-o', $args{obj}, @cflags, @cppflags, '-c',
+        $args{src}
+    );
     my $msg;
-    if ($args{verbose}) {
-	$msg = "    @command";
+    if ( $args{verbose} ) {
+        $msg = "    @command";
     }
     else {
-	$msg = "    CC $args{obj}";
+        $msg = "    CC $args{obj}";
     }
-    
+
     safe_system(
-	msg => $msg,
-	command => \@command
-	);
+        msg     => $msg,
+        command => \@command
+    );
 }
 
 sub link_object_files (%args) {
-    my $binary = $args{binary};
+    my $binary  = $args{binary};
     my @objects = $args{objects}->@*;
-    if (not @objects) {
-	die "no object files given in link_object_files\n";
+    if ( not @objects ) {
+        die "no object files given in link_object_files\n";
     }
 
     my @mupdf_ldlibs = $args{mupdf_ldlibs}->@*;
-    my @ldlibs = $args{ldlibs}->@*;
-    
-    if (not is_outdated($binary, @objects, @mupdf_ldlibs)) {
-	return;
-    }
-    
-    my @ldflags = split_on_ws($args{ldflags});
+    my @ldlibs       = $args{ldlibs}->@*;
 
-    my @command = ($args{cc}, '-o', $binary, @ldflags, @objects,
-		   @mupdf_ldlibs, @ldlibs);
+    if ( not is_outdated( $binary, @objects, @mupdf_ldlibs ) ) {
+        return;
+    }
+
+    my @ldflags = split_on_ws( $args{ldflags} );
+
+    my @command = (
+        $args{cc}, '-o', $binary, @ldflags, @objects, @mupdf_ldlibs,
+        @ldlibs
+    );
     my $msg;
-    if ($args{verbose}) {
-	$msg = "    @command";
+    if ( $args{verbose} ) {
+        $msg = "    @command";
     }
     else {
-	$msg = "    LD $binary";
+        $msg = "    LD $binary";
     }
-    
+
     safe_system(
-	msg => $msg,
-	command => \@command
-	);
-    
+        msg     => $msg,
+        command => \@command
+    );
+
     return $binary;
 }
 
 # Return true if $file needs update.
-sub is_outdated ($target, @deps) {
-    if (not @deps) {
-	return;
+sub is_outdated ( $target, @deps ) {
+    if ( not @deps ) {
+        return;
     }
-    
-    if (not -f $target) {
-	return 1;
+
+    if ( not -f $target ) {
+        return 1;
     }
-    
+
     my @mtimes;
-    
+
     for my $dep (@deps) {
-	my @stat = stat($dep);
-	push @mtimes, $stat[9];
+        my @stat = stat($dep);
+        push @mtimes, $stat[9];
     }
 
     my $dep_time = max @mtimes;
-    
-    my $target_time = (stat($target))[9];
 
-    if ($dep_time > $target_time) {
-	return 1;
+    my $target_time = ( stat($target) )[9];
+
+    if ( $dep_time > $target_time ) {
+        return 1;
     }
     else {
-	return;
+        return;
     }
 }
-
 
 sub safe_system (%arg) {
-    my $msg = $arg{msg};
+    my $msg     = $arg{msg};
     my @command = $arg{command}->@*;
 
-    if (not defined $msg) {
-	$msg = "@command";
+    if ( not defined $msg ) {
+        $msg = "@command";
     }
-    
+
     say $msg;
     system(@command) == 0
-	or die "command failed\n";
+        or die "command failed\n";
 }
-
 
 sub verbose_string ($verbose) {
     return $verbose ? "yes" : "no";
@@ -341,35 +345,34 @@ you more fine-grained control.
 
 use File::Path 'remove_tree';
 
-sub clean {    
+sub clean {
     my $out = 'build';
     my $mupdf;
     my $pdfout;
     my $html;
-    
-    GetOptions(
-	'out=s' => \$out,
-	'mupdf' => \$mupdf,
-	'pdfout' => \$pdfout,
-	'html' => \$html,
-	) or die "GetOptions";
 
-    
+    GetOptions(
+        'out=s'  => \$out,
+        'mupdf'  => \$mupdf,
+        'pdfout' => \$pdfout,
+        'html'   => \$html,
+    ) or die "GetOptions";
+
     if ($mupdf) {
-	remove_tree(catfile($out, 'mupdf'));
+        remove_tree( catfile( $out, 'mupdf' ) );
     }
-    
+
     if ($pdfout) {
-	unlink(catfile($out, 'pdfout'));
-	remove_tree(catfile($out, 'src'));
+        unlink( catfile( $out, 'pdfout' ) );
+        remove_tree( catfile( $out, 'src' ) );
     }
 
     if ($html) {
-	remove_tree(catfile($out, 'html'));
+        remove_tree( catfile( $out, 'html' ) );
     }
-    
-    if (!($mupdf || $pdfout || $html)) {
-	remove_tree($out);
+
+    if ( !( $mupdf || $pdfout || $html ) ) {
+        remove_tree($out);
     }
 }
 
@@ -400,39 +403,39 @@ sub check {
     my $tests;
     my $out = 'build';
     my $timer;
-    
-    GetOptions (
-	"jobs|j=i" => \$jobs,
-	"valgrind" => \$valgrind,
-	"tests|t=s" => \$tests,
-	"out=s" => \$out,
-	"timer" => \$timer,
-	);
-    
+
+    GetOptions(
+        "jobs|j=i"  => \$jobs,
+        "valgrind"  => \$valgrind,
+        "tests|t=s" => \$tests,
+        "out=s"     => \$out,
+        "timer"     => \$timer,
+    );
+
     my @argv = ($test_dir);
 
     if ($tests) {
-	@argv = split ' ', $tests;
-	@argv = map catfile ($test_dir, $_), @argv;
+        @argv = split ' ', $tests;
+        @argv = map catfile( $test_dir, $_ ), @argv;
     }
 
     my $attributes = {
-	includes => [$test_dir],
-	jobs => $jobs,
-	argv => \@argv,
-	test_args => ['--pdfout', catfile($out, 'pdfout')],
-	timer => $timer
+        includes  => [$test_dir],
+        jobs      => $jobs,
+        argv      => \@argv,
+        test_args => [ '--pdfout', catfile( $out, 'pdfout' ) ],
+        timer     => $timer
     };
 
     if ($valgrind) {
-	push $attributes->{test_args}->@*, '--valgrind';
+        push $attributes->{test_args}->@*, '--valgrind';
     }
     require App::Prove;
     my $prove = App::Prove->new($attributes);
 
-    exit ($prove->run() ? 0 : 1);
+    exit( $prove->run() ? 0 : 1 );
 }
-    
+
 =head2 doc
 
  ./make.pl doc
@@ -452,64 +455,64 @@ use lib 'doc';
 
 sub build_doc {
     my $out = 'build';
-    GetOptions(
-	'out|o=s' => \$out
-	);
+    GetOptions( 'out|o=s' => \$out );
 
-    $out = catfile($out, 'html');
+    $out = catfile( $out, 'html' );
     generate_doc($out);
 }
 
 sub generate_doc ($out) {
     require Pod::Simple::XHTML::Pdfout;
     make_path($out);
-    copy(catfile('doc', 'style.css'), catfile($out, 'style.css'))
-	or die "cannot copy style.css $!";
-    
-    my @files = qw/
-                     make.pl
-                     README.pod
-/;
+    copy( catfile( 'doc', 'style.css' ), catfile( $out, 'style.css' ) )
+        or die "cannot copy style.css $!";
 
-    find({
-	wanted => sub {
-	    my $file = $_;
-	    if (-f $file && $file =~ /\.pod$/) {
-		push @files, $file;
-	    }
-	},
-	no_chdir => 1,
-	 },
-	 'doc');
+    my @files = qw/
+        make.pl
+        README.pod
+        /;
+
+    find(
+        {
+            wanted => sub {
+                my $file = $_;
+                if ( -f $file && $file =~ /\.pod$/ ) {
+                    push @files, $file;
+                }
+            },
+            no_chdir => 1,
+        },
+        'doc'
+    );
 
     for my $file (@files) {
-	pod_to_html($out, $file);
+        pod_to_html( $out, $file );
     }
 }
 
-sub pod_to_html ($out, $file) {
+sub pod_to_html ( $out, $file ) {
     my @split = splitdir $file;
-    if ($split[0] eq 'doc') {
-	shift @split;
+    if ( $split[0] eq 'doc' ) {
+        shift @split;
     }
     $split[-1] =~ s/\.(pl|pm|pod|t)$/.html/;
-    my $html = catfile($out, join('-', @split));
+    my $html = catfile( $out, join( '-', @split ) );
     warn "processing: file: $file, html: $html\n";
 
     open my $fh, '>', $html
-	or die "cannot open '$html': $!";
+        or die "cannot open '$html': $!";
 
     my $parser = Pod::Simple::XHTML::Pdfout->new();
     $parser->output_fh($fh);
     $parser->parse_file($file);
-    if ($parser->any_errata_seen()) {
-	die "file '$file' has pod errors\n";
+    if ( $parser->any_errata_seen() ) {
+        die "file '$file' has pod errors\n";
     }
 }
 
 sub safe_chdir ($dir) {
     chdir $dir
-	or die "cannot chdir to '$dir': $!";
+        or die "cannot chdir to '$dir': $!";
 }
 
 =head2 upload-doc
@@ -520,14 +523,13 @@ Maintainer command to update the docs at L<https://amba.github.io/pdfout>.
 
 =cut
 
-
 sub upload_doc {
     my $out = '/home/simon/amba.github.io/pdfout';
     remove_tree($out);
     generate_doc($out);
     safe_chdir $out;
-    safe_system(command => [qw/git commit -am/, "update pdfout docs"]);
-    safe_system(command => [qw/git push/]);
+    safe_system( command => [ qw/git commit -am/, "update pdfout docs" ] );
+    safe_system( command => [qw/git push/] );
 }
 
 =head2 submodules
@@ -541,24 +543,23 @@ Check out the mupdf submodule and mupdf's own submodules.
 sub submodules {
     say 'checking out git submodules';
 
-    safe_system(command => [qw/git submodule update --init/]);
-    
+    safe_system( command => [qw/git submodule update --init/] );
+
     safe_chdir 'mupdf';
 
     # We do not need the curl submodule.
     my @mupdf_submodles = qw(
-thirdparty/freetype 
-thirdparty/jbig2dec
-thirdparty/jpeg
-thirdparty/openjpeg
-thirdparty/zlib
-thirdparty/mujs
-thirdparty/harfbuzz
-);
+        thirdparty/freetype
+        thirdparty/jbig2dec
+        thirdparty/jpeg
+        thirdparty/openjpeg
+        thirdparty/zlib
+        thirdparty/mujs
+        thirdparty/harfbuzz
+    );
 
     safe_system(
-	command => [qw/git submodule update --init/, @mupdf_submodles]
-	);
+        command => [ qw/git submodule update --init/, @mupdf_submodles ] );
 }
 
 =head2 cover
@@ -582,38 +583,78 @@ Using valgrind will only work, if the build does not use optimization.
 
 sub cover {
     my $jobs = 1;
-        
-    GetOptions (
-	"jobs|j=i" => \$jobs,
-	);
-    
-    safe_system(
-	command => [
-	    './make.pl', 'build', '--cflags=-fprofile-arcs -ftest-coverage',
-	    '--ldflags=-fprofile-arcs -ftest-coverage', '--out=cover-build',
-	    '--mupdf-cflags=-O0 -g',
-	    "-j$jobs"
-	    ]
-	);
 
+    GetOptions( "jobs|j=i" => \$jobs, );
 
     safe_system(
-	command => ['./make.pl', 'check', '--out=cover-build', "-j$jobs"]
-	);
+        command => [
+            './make.pl',
+            'build',
+            '--cflags=-fprofile-arcs -ftest-coverage',
+            '--ldflags=-fprofile-arcs -ftest-coverage',
+            '--out=cover-build',
+            '--mupdf-cflags=-O0 -g',
+            "-j$jobs"
+        ]
+    );
 
     safe_system(
-	command => [
-	    'gcov', '--object-directory=cover-build/src', glob('src/*.c')]
-	);
+        command => [ './make.pl', 'check', '--out=cover-build', "-j$jobs" ] );
 
+    safe_system( command =>
+            [ 'gcov', '--object-directory=cover-build/src', glob('src/*.c') ]
+    );
 
-    safe_system(command => ['gcov', '--object-directory=cover-build/src/program', glob('src/program/*.c')]);
+    safe_system(
+        command => [
+            'gcov', '--object-directory=cover-build/src/program',
+            glob('src/program/*.c')
+        ]
+    );
 
-    safe_system(command => ['gcov2perl', '-db', 'cover_db', glob('*.gcov')]);
+    safe_system(
+        command => [ 'gcov2perl', '-db', 'cover_db', glob('*.gcov') ] );
 
-    safe_system(command => ['cover']);
+    safe_system( command => ['cover'] );
 
-    safe_system(command => [qw(firefox -new-tab cover_db/coverage.html)]);
+    safe_system( command => [qw(firefox -new-tab cover_db/coverage.html)] );
 }
-    
-    
+
+=head2 tidy
+
+ ./make.pl tidy
+
+Run perltidy on all perl files.
+
+=cut
+
+sub tidy {
+
+    # workaround bug in Perl::Tidy.
+    Getopt::Long::ConfigDefaults();
+
+    my @files;
+
+    find(
+        {
+            wanted => sub {
+                my $file = $_;
+                if ( $file =~ /\.(pm|t|pl)$/ ) {
+                    push @files, $file;
+                }
+            },
+            no_chdir => 1,
+        },
+        'test',
+        'doc',
+    );
+
+    push @files, qw(make.pl);
+
+    warn "running perltidy on files: ", join( "\n", @files ), "\n";
+    perltidy(
+        perltidyrc => 'perltidyrc',
+        argv       => [ '-b', '-bext=/', @files ],
+    );
+
+}

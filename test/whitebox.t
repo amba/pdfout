@@ -6,12 +6,12 @@ use 5.020;
 use Test::Pdfout::Command tests => 4;
 
 my @tests = qw/
---incremental-update
---incremental-update-xref
---string-conversions
---json
-/;
+    --incremental-update
+    --incremental-update-xref
+    --string-conversions
+    --json
+    /;
 
 for my $test (@tests) {
-    pdfout_ok (command => ['debug', $test]);
+    pdfout_ok( command => [ 'debug', $test ] );
 }

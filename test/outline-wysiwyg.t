@@ -9,19 +9,19 @@ use Test::More;
 use Testlib;
 
 set_get_test(
-    command => ['outline', '--wysiwyg'],
-    
+    command => [ 'outline', '--wysiwyg' ],
+
     broken_input => [
-	'1',
-	'title1',
-	'd=1 .',
-	'title 1 .',
-	'title 2147483648', # INT_MAX overflow
-	'    abc 1', # too mutch indent
-	"abc 1\n        def 2",
-	'. . . . . . 1', # empty title
+        '1',
+        'title1',
+        'd=1 .',
+        'title 1 .',
+        'title 2147483648',    # INT_MAX overflow
+        '    abc 1',           # too mutch indent
+        "abc 1\n        def 2",
+        '. . . . . . 1',       # empty title
     ],
-    
+
     input => <<"EOD",
 title1 1 
 ζβσ \t2
@@ -48,4 +48,4 @@ title1 1
     9 10
 EOD
     empty => "",
-    );
+);

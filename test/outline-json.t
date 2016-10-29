@@ -10,14 +10,18 @@ use Testlib;
 
 set_get_test(
     command => ['outline'],
-    
+
     broken_input => [
-    # no title
-    '[{"page": 1}]',
-    # page number too big
-    '[{"title": "abc", "page": 11}]',
-    # open not a bool
-	'[{"title": "abc", "page": 1, "open": "a"}]'],
+
+        # no title
+        '[{"page": 1}]',
+
+        # page number too big
+        '[{"title": "abc", "page": 11}]',
+
+        # open not a bool
+        '[{"title": "abc", "page": 1, "open": "a"}]'
+    ],
     empty => "[]\n",
     input => <<'EOD'
 [
@@ -114,18 +118,18 @@ set_get_test(
   }
 ]
 EOD
-); 
+);
 
 # default destination is [XYZ null null null]
 {
-    my $pdf = new_pdf ();
-    pdfout_ok (
-	command => ['setoutline', $pdf],
-	input => '[{"title": 1,  "page": 1}]'
-	);
-    pdfout_ok (
-	command => ['getoutline', $pdf],
-	expected_out => <<'EOD'
+    my $pdf = new_pdf();
+    pdfout_ok(
+        command => [ 'setoutline', $pdf ],
+        input   => '[{"title": 1,  "page": 1}]'
+    );
+    pdfout_ok(
+        command => [ 'getoutline', $pdf ],
+        expected_out => <<'EOD'
 [
   {
     "title": 1,
@@ -139,5 +143,5 @@ EOD
   }
 ]
 EOD
-   );
-} 
+    );
+}
