@@ -11,12 +11,9 @@ use File::Copy;
 use File::Find;
 use File::Path qw/make_path remove_tree/;
 use Getopt::Long qw/:config gnu_getopt/;
-
 use List::Util qw/max/;
 
 use Data::Dumper;
-use Perl::Tidy;
-
 my %command_sub = (
     'build'      => \&build,
     'clean'      => \&clean,
@@ -25,7 +22,6 @@ my %command_sub = (
     'upload-doc' => \&upload_doc,
     'submodules' => \&submodules,
     'cover'      => \&cover,
-    'tidy'       => \&tidy,
 );
 
 my $command = shift @ARGV;
@@ -620,41 +616,3 @@ sub cover {
     safe_system( command => [qw(firefox -new-tab cover_db/coverage.html)] );
 }
 
-=head2 tidy
-
- ./make.pl tidy
-
-Run perltidy on all perl files.
-
-=cut
-
-sub tidy {
-
-    # workaround bug in Perl::Tidy.
-    Getopt::Long::ConfigDefaults();
-
-    my @files;
-
-    find(
-        {
-            wanted => sub {
-                my $file = $_;
-                if ( $file =~ /\.(pm|t|pl)$/ ) {
-                    push @files, $file;
-                }
-            },
-            no_chdir => 1,
-        },
-        'test',
-        'doc',
-    );
-
-    push @files, qw(make.pl);
-
-    warn "running perltidy on files: ", join( "\n", @files ), "\n";
-    perltidy(
-        perltidyrc => 'perltidyrc',
-        argv       => [ '-b', '-bext=/', @files ],
-    );
-
-}
