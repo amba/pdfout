@@ -22,6 +22,7 @@ my %command_sub = (
     'upload-doc' => \&upload_doc,
     'submodules' => \&submodules,
     'cover'      => \&cover,
+    'perltidy'   => \&perltidy,
 );
 
 my $command = shift @ARGV;
@@ -609,15 +610,53 @@ sub cover {
     );
 
     my @gcovs = glob('*.gcov');
-    safe_system(
-        command => [ 'gcov2perl', '-db', 'cover_db', @gcovs ] );
+    safe_system( command => [ 'gcov2perl', '-db', 'cover_db', @gcovs ] );
 
     safe_system( command => ['cover'] );
 
     safe_system( command => [qw(firefox -new-tab cover_db/coverage.html)] );
 
     for my $gcov (@gcovs) {
-	unlink($gcov);
+        unlink($gcov);
     }
 }
 
+=head2 perltidy
+
+ ./make.pl perltidy
+
+Run L<Perl::Tidy|https://metacpan.org/pod/Perl::Tidy> on all of our perl
+sources.
+
+=cut
+
+sub perltidy {
+
+    # Workaround rt.cpan #118558.
+    Getopt::Long::ConfigDefaults();
+    require Perl::Tidy;
+    my @files;
+
+    find(
+        {
+            wanted => sub {
+                my $file = $_;
+                if ( $file =~ /\.(pm|t|pl)$/ ) {
+                    push @files, $file;
+                }
+            },
+            no_chdir => 1,
+        },
+        'test',
+        'doc',
+    );
+
+    push @files, qw(make.pl);
+
+    warn "running perltidy on files: ", join( "\n", @files ), "\n";
+    Perl::Tidy::perltidy(
+        perltidyrc => 'perltidyrc',
+        argv       => [ '-b', '-bext=/', @files ],
+    );
+
+}
