@@ -410,11 +410,13 @@ sub check {
     my $jobs = 1;
     my $tests;
     my $out = 'build';
+    my $verbose;
     my $timer;
 
     GetOptions(
         "jobs|j=i"  => \$jobs,
         "valgrind"  => \$valgrind,
+	"verbose|v" => \$verbose,
         "tests|t=s" => \$tests,
         "out|o=s"     => \$out,
         "timer"     => \$timer,
@@ -432,7 +434,8 @@ sub check {
         jobs      => $jobs,
         argv      => \@argv,
         test_args => [ '--pdfout', catfile( $out, 'pdfout' ) ],
-        timer     => $timer
+        timer     => $timer,
+	verbose => $verbose,
     };
 
     if ($valgrind) {

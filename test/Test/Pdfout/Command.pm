@@ -141,7 +141,7 @@ sub command_subtest (%args) {
 
     my $input = $args{input};
     if ($input) {
-        $tb->diag("sending input...");
+        $tb->diag("sending input:\n$input");
     }
     if ($input) {
         print {$in_fh} $input;

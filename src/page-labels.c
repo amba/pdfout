@@ -23,41 +23,50 @@ assert_c_string(fz_context *ctx, const char *s, int len)
     pdfout_throw (ctx, "unexpected string with embedded null bytes");
 }
 
+static char *
+scalar_to_string (fz_context *ctx, pdfout_data *scalar)
+{
+  int value_len;
+  char *value = pdfout_data_scalar_get (ctx, scalar, &value_len);
+  assert_c_string (ctx, value, value_len);
+  return value;
+}
+static int
+scalar_to_int (fz_context *ctx, pdfout_data *scalar)
+{
+  char *string = scalar_to_string (ctx, scalar);
+  return pdfout_strtoint_null (ctx, string);
+}
+
 /* Return page number.  */
 static int
 check_hash (fz_context *ctx, pdfout_data *hash, int previous_page)
 {
-  int len = pdfout_data_hash_len (ctx, hash);
-  int page;
-  for (int i = 0; i < len; ++i)
+
+  pdfout_data *scalar = pdfout_data_hash_gets (ctx, hash, "page");
+  if (scalar == NULL)
+    pdfout_throw (ctx, "missing 'page' in pagelabels hash");
+
+  int page = scalar_to_int (ctx, scalar);
+
+  scalar = pdfout_data_hash_gets (ctx, hash, "first");
+  if (scalar)
     {
-      char *key, *value;
-      int value_len;
-      
-      pdfout_data_hash_get_key_value (ctx, hash, &key, &value, &value_len, i);
-      
-      if (streq (key, "page"))
-	{
-	  assert_c_string (ctx, value, value_len);
-	  page = pdfout_strtoint_null (ctx, value);
-	}
-      else if (streq (key, "first"))
-	{
-	  assert_c_string (ctx, value, value_len);
-	  int first = pdfout_strtoint_null (ctx, value);
-	  if (first < 1)
+      int first = scalar_to_int (ctx, scalar);
+      if (first < 1)
 	    pdfout_throw (ctx, "value of key 'first' must be >= 1");
-	}
-      else if (streq (key, "style"))
-	{
-	  assert_c_string (ctx, value, value_len);
-	  if (strneq (value, "arabic") && strneq (value, "Roman")
-	      && strneq (value, "roman") && strneq (value, "Letters")
-	      && strneq (value, "letters"))
-	    pdfout_throw (ctx, "invalid style '%s'", value);
-	}
-      /* prefix is arbitrary -> no check. */
     }
+
+  scalar = pdfout_data_hash_gets (ctx, hash, "style");
+  if (scalar)
+    {
+      char *style = scalar_to_string (ctx, scalar);
+       if (strneq (style, "arabic") && strneq (style, "Roman")
+	      && strneq (style, "roman") && strneq (style, "Letters")
+	      && strneq (style, "letters"))
+	    pdfout_throw (ctx, "invalid style '%s'", style);
+    }
+  
   if (previous_page == 0 && page != 1)
     pdfout_throw (ctx, "first page must be 1");
   if (page <= previous_page)
@@ -235,6 +244,7 @@ parse_dict (fz_context *ctx, pdf_obj *dict, pdfout_data *hash)
       int utf8_len;
       char *utf8 = pdfout_str_obj_to_utf8 (ctx, prefix, &utf8_len);
       pdfout_data_hash_push_key_value (ctx, hash, "prefix", utf8, utf8_len);
+      free (utf8);
     }
 }  
       

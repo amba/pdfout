@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 20;
+use Test::Pdfout::Command tests => 21;
 use Testlib;
 
 my $input = <<'EOD';
@@ -48,7 +48,8 @@ set_get_test(
 	'[{"style": "arabic"}]',
 	'[{"page": 1, "style": "goofy"}]',
 	'[{"page": 1, "first": -1}]',
-	'[{"page": 1}, {"page": 3}, {"page": 2}]'
+	'[{"page": 1}, {"page": 3}, {"page": 2}]',
+	'[{"page": 1, "prefix": []}]'
     ],
 	
     input        => $input,
