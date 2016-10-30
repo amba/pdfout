@@ -565,16 +565,12 @@ sub submodules {
 
 Requires L<Devel::Cover|https://metacpan.org/pod/Devel::Cover> installed.
 
-Do coverage build with gcov in F<cover-build>.
+Do coverage build with gcov. Uses output directory F<cover-build>.
 
 Open output of gcov2perl in firefox.
 
  Options:
   -j, --jobs=JOBS             number of parallel jobs
-
-This requires L<Test::Files|https://metacpan.org/pod/Test::Files>. 
-
-Using valgrind will only work, if the build does not use optimization.
 
 =cut
 
