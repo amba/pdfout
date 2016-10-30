@@ -92,9 +92,6 @@ int pdfout_uctomb (fz_context *ctx, uint8_t *buf, uint32_t uc, int n);
 
 char *pdfout_check_utf8 (const char *s, size_t n);
   
-/* On error, return -1.  */
-int pdfout_strtoui (fz_context *ctx, const char *string);
-
 /* sets *endptr to nptr on overflow */
 int pdfout_strtoint (fz_context *ctx, const char *nptr, char **endptr);
 
@@ -141,17 +138,6 @@ int pdfout_vsnprintf_imp (fz_context *ctx, char *buf, int size, const char *fmt,
 
 #define pdfout_vsnprintf(ctx, buff, fmt, ap)		\
   pdfout_vsnprintf_imp (ctx, buff, sizeof buff, fmt, ap)
-
-
-/* dies if result would be truncated */
-int pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
-  PDFOUT_PRINTFLIKE (3);
-
-/* buff must be of type char[N].  */
-#define PDFOUT_SNPRINTF_OLD(buff, fmt, args...)		\
-  pdfout_snprintf_old (buff, sizeof buff, fmt, ## args)
-
-#define PDFOUT_X2NREALLOC(p, pn, t) ((t *) x2nrealloc (p, pn, sizeof (t)))
 
 
 #endif	/* !PDFOUT_COMMON_H */

@@ -1,18 +1,6 @@
 #include "common.h"
 
 int
-pdfout_strtoui (fz_context *ctx, const char *s)
-{
-  char *tailptr;
-  long rv = strtol (s, &tailptr, 10);
-  if (rv < 0 || tailptr[0] != 0 || tailptr == s)
-    pdfout_throw (ctx, "not a positive int: '%s'", s);
-  if (rv > INT_MAX)
-    pdfout_throw (ctx, "integer overflow: '%s'", s);
-  return rv;
-}
-
-int
 pdfout_strtoint (fz_context *ctx, const char *nptr, char **endptr)
 {
   long rv = strtol (nptr, endptr, 10);
@@ -167,31 +155,6 @@ pdfout_vsnprintf_imp (fz_context *ctx, char *buf, int size,
   if (ret >= size)
     pdfout_throw (ctx, "string truncated in pdfout_snprintf");
   return ret;
-}
-
-
-int
-pdfout_snprintf_old (char *str, size_t size, const char *fmt, ...)
-{
-  va_list ap;
-  int ret;
-  va_start (ap, fmt);
-  errno = 0;
-  ret = vsnprintf (str, size, fmt, ap);
-  if (ret < 0)
-    {
-      pdfout_errno_msg (errno, "pdfout_snprintf_old: output error");
-      goto error;
-    }
-  if ((size_t) ret >= size)
-    {
-      pdfout_msg ("pdfout_snprintf_old: string truncated");
-      goto error;
-    }
-  
-  return ret;
- error:
-  exit (1);
 }
 
 static void zero_term_buffer (fz_context *ctx, fz_buffer *buf)

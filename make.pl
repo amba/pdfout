@@ -608,11 +608,16 @@ sub cover {
         ]
     );
 
+    my @gcovs = glob('*.gcov');
     safe_system(
-        command => [ 'gcov2perl', '-db', 'cover_db', glob('*.gcov') ] );
+        command => [ 'gcov2perl', '-db', 'cover_db', @gcovs ] );
 
     safe_system( command => ['cover'] );
 
     safe_system( command => [qw(firefox -new-tab cover_db/coverage.html)] );
+
+    for my $gcov (@gcovs) {
+	unlink($gcov);
+    }
 }
 
