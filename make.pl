@@ -122,7 +122,7 @@ sub build {
         'ldflags=s'      => \$ldflags,
         'mupdf-cflags=s' => \$mupdf_cflags,
         'cc=s'           => \$cc,
-        'out=s'          => \$out,
+        'out|o=s'          => \$out,
         'install|i'      => \$install,
         'prefix=s'       => \$prefix,
     ) or die "invalid option\n";
@@ -167,6 +167,7 @@ sub install ( $binary, $prefix ) {
     my $bindir = catfile( $prefix, 'bin' );
     make_path($bindir);
     my $target = catfile( $bindir, 'pdfout' );
+    warn "copy $binary to $target\n";
     copy( $binary, $target )
         or die "cannot copy '$binary' to '$target': $!";
 }
@@ -349,26 +350,36 @@ sub clean {
     my $html;
 
     GetOptions(
-        'out=s'  => \$out,
-        'mupdf'  => \$mupdf,
-        'pdfout' => \$pdfout,
-        'html'   => \$html,
+        'out|o=s'  => \$out,
+        'mupdf|m'  => \$mupdf,
+        'pdfout|p' => \$pdfout,
+        'html|h'   => \$html,
     ) or die "GetOptions";
 
     if ($mupdf) {
-        remove_tree( catfile( $out, 'mupdf' ) );
+	my $tree = catfile( $out, 'mupdf' );
+	warn "removing tree: $tree\n";
+        remove_tree($tree);
     }
 
     if ($pdfout) {
-        unlink( catfile( $out, 'pdfout' ) );
-        remove_tree( catfile( $out, 'src' ) );
+	my $binary = catfile($out, 'pdfout');
+	warn "removing $binary\n";
+        unlink($binary );
+	
+	my $tree = catfile($out, 'src');
+	warn "removing tree: $tree\n";
+        remove_tree($tree);
     }
 
     if ($html) {
-        remove_tree( catfile( $out, 'html' ) );
+	my $tree =  catfile( $out, 'html' );
+	warn "removing tree: $tree\n";
+        remove_tree($tree);
     }
 
     if ( !( $mupdf || $pdfout || $html ) ) {
+	warn "removing tree: $out\n";
         remove_tree($out);
     }
 }
@@ -405,7 +416,7 @@ sub check {
         "jobs|j=i"  => \$jobs,
         "valgrind"  => \$valgrind,
         "tests|t=s" => \$tests,
-        "out=s"     => \$out,
+        "out|o=s"     => \$out,
         "timer"     => \$timer,
     );
 
