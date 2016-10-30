@@ -11,7 +11,6 @@
 #include <time.h>
 #include <math.h>
 #include <stdbool.h>
-#include <error.h>
 
 #include <getopt.h>
 
@@ -19,12 +18,24 @@
 #include <mupdf/pdf.h>
 
 #include "tmp-stream.h"
-#include "shared-with-tests.h"
 #include "data.h"
 #include "charset-conversion.h"
 #include "page-labels.h"
 #include "info-dict.h"
 #include "outline.h"
+
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7)
+# define PDFOUT_PRINTFLIKE(index)			\
+  __attribute__ ((format (printf, index, index + 1)))
+# define PDFOUT_WUR __attribute__ ((warn_unused_result))
+# define PDFOUT_UNUSED __attribute__ ((__unused__))
+# define PDFOUT_NORETURN __attribute__ ((__noreturn__))
+#else
+# define PDFOUT_PRINTFLIKE(index) /* empty */
+# define PDFOUT_WUR
+# define PDFOUT_UNUSED
+# define PDFOUT_NORETURN
+#endif
 
 static inline bool
 pdfout_isspace (char c)
@@ -99,8 +110,6 @@ int pdfout_strtoint_old (const char *nptr, char **endptr);
 
 /* dies on all errors */
 int pdfout_strtoint_null (fz_context *ctx, const char *string);
-
-int pdfout_strtoint_null_old (const char *string);
 
 /* returns NaN on all errors */
 float pdfout_strtof_nan (const char *string);

@@ -83,13 +83,13 @@ pdfout_command_repair (fz_context *ctx_arg, int argc, char **argv)
 
   if (doc->repair_attempted == 0)
     {
-      pdfout_msg ("file '%s' is ok", pdf_filename);
+      pdfout_warn (ctx, "file '%s' is ok", pdf_filename);
       exit (0);
     }
   
   if (check == true)
     {
-      pdfout_msg ("file '%s' is broken", pdf_filename);
+      pdfout_warn (ctx, "file '%s' is broken", pdf_filename);
       exit (1);
     }
   

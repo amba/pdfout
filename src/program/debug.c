@@ -61,7 +61,7 @@ open_pdf (pdfout_tmp_stream *handle)
   fz_stream *stream = pdfout_tmp_stream_stream (ctx, handle);
   pdf_document *doc = pdf_open_document_with_stream (ctx, stream);
   if (doc->repair_attempted || doc->freeze_updates)
-    error (1, 0, "pdf_open_document: broken_pdf");
+    pdfout_throw (ctx, "pdf_open_document: broken_pdf");
   return doc;
 }
 

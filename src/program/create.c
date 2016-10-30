@@ -85,7 +85,7 @@ parse_options (int argc, char **argv)
 	  output_filename = optarg;
 	  break;
 	case 'p':
-	  page_count = pdfout_strtoint_null_old (optarg);
+	  page_count = pdfout_strtoint_null (ctx, optarg);
 	  break;
 	case 's':
 	  paper_size = optarg;
@@ -94,10 +94,10 @@ parse_options (int argc, char **argv)
 	  landscape = true;
 	  break;
 	case HEIGHT_OPTION:
-	  height = pdfout_strtof_old (optarg);
+	  height = pdfout_strtof (ctx, optarg);
 	  break;
 	case 'w':
-	  width = pdfout_strtof_old (optarg);
+	  width = pdfout_strtof (ctx, optarg);
 	  break;
 	  
 	default:
@@ -190,7 +190,7 @@ get_size (const char *paper_size, float *width, float *height)
     {
       char *tailptr;
       int width0, height0;	/* size of A0/B0/C0 in mm */
-      int n = pdfout_strtoint_old (size_copy + 1, &tailptr);
+      int n = pdfout_strtoint (ctx, size_copy + 1, &tailptr);
       if (tailptr[0] != '\0' || n < 0 || n > 10)
 	pdfout_throw (ctx, "unknown paper size '%s'", paper_size);
       if (size_copy[0] == 'A')

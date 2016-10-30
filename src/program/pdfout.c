@@ -131,9 +131,9 @@ main (int argc, char **argv)
   int result = strmatch (argv[1], command_name_list);
   
   if (result < 0)
-    error (1, 0, "invalid command '%s'.\n"
-	   "Try '%s -l' for the list of allowed commands.", argv[1],
-	   argv[0]);
+    pdfout_throw (ctx, "invalid command '%s'.\n"
+		  "Try '%s -l' for the list of allowed commands.", argv[1],
+		  argv[0]);
 
   argv[1] = pdfout_program_name;
   command_list[result].function (ctx, --argc, ++argv);

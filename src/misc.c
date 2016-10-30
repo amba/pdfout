@@ -10,19 +10,6 @@ pdfout_strtoint (fz_context *ctx, const char *nptr, char **endptr)
 }
 
 int
-pdfout_strtoint_old (const char *nptr, char **endptr)
-{
-  long rv = strtol (nptr, endptr, 10);
-  if (rv > INT_MAX || rv < INT_MIN)
-    {
-      if (endptr)
-	*endptr = (char *) nptr;
-      return rv > 0 ? INT_MAX : INT_MIN;
-    }
-  return rv;
-}
-
-int
 pdfout_strtoint_null (fz_context *ctx, const char *string)
 {
   int result;
@@ -33,16 +20,6 @@ pdfout_strtoint_null (fz_context *ctx, const char *string)
   return result;
 }
 
-int
-pdfout_strtoint_null_old( const char *string)
-{
-  int result;
-  char *endptr;
-  result = pdfout_strtoint_old (string, &endptr);
-  if (endptr == string || endptr[0] != '\0')
-    error (1, 0, "pdfout_strtoint_null: invalid int: '%s'", string);
-  return result;
-}
 
 float
 pdfout_strtof (fz_context *ctx, const char *string)
@@ -57,37 +34,6 @@ pdfout_strtof (fz_context *ctx, const char *string)
   if (errno || endptr == string || endptr[0] != '\0')
     pdfout_throw_errno (ctx, "pdfout_strtof: invalid float: '%s'", string);
   
-  return result;
-}
-
-float
-pdfout_strtof_old (const char *string)
-{
-  float result;
-  char *endptr;
-
-  errno = 0;
-
-  result = strtof (string, &endptr);
-
-  if (errno || endptr == string || endptr[0] != '\0')
-    error (1, errno, "pdfout_strtof: invalid float: '%s'", string);
-  
-  return result;
-}
-
-float
-pdfout_strtof_nan (const char *string)
-{
-  float result;
-  char *endptr;
-  errno = 0;
-  result = strtof (string, &endptr);
-  if (errno || endptr == string || endptr[0] != '\0')
-    {
-      error (1, 0,  "pdfout_strtof_nan: invalid float: '%s'", string);
-      result = nanf ("");
-    }
   return result;
 }
 

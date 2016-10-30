@@ -69,8 +69,8 @@ check_sequence_numbers (fz_context *ctx, pdfout_data *dest)
       const char *num = data_array_get_string (ctx, dest, i);
       if (streq (num, "null"))
 	continue;
-      else if (isnan (pdfout_strtof_nan (num)))
-	pdfout_throw (ctx, "not a float: '%s'", num);
+
+      pdfout_strtof(ctx, num);
     }
 }
 			

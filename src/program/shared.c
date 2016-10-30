@@ -23,8 +23,11 @@ pdfout_new_context (void)
   fz_context *ctx = fz_new_context (NULL, NULL, FZ_STORE_DEFAULT);
 
   if (ctx == NULL)
-    error (1, errno, "cannot create context");
-
+    {
+      fprintf (stderr, "cannot create context");
+      exit (1);
+    }
+  
   return ctx;
 }
 
@@ -77,11 +80,11 @@ open_default_write_file (fz_context *ctx, const char *filename,
   return open_default_file (ctx, filename, suffix, "w");
 }
 
-#define MSG(fmt, args...) \
-  pdfout_msg ("parsing page range: " fmt, ## args)
+#define MSG(ctx, fmt, args...)					\
+  pdfout_warn (ctx, "parsing page range: " fmt, ## args)
 
 static int
-get_range (int *result, char *ranges, int page_count)
+get_range (fz_context *ctx, int *result, char *ranges, int page_count)
 {
   char *range_token;
   int pos = 0;
@@ -98,26 +101,26 @@ get_range (int *result, char *ranges, int page_count)
 
       if (number_token[0] == '\0')
 	{
-	  MSG ("empty page number");
+	  MSG (ctx, "empty page number");
 	  return 1;
 	}
 
-      number = pdfout_strtoint_old (number_token, &tailptr);
+      number = pdfout_strtoint(ctx, number_token, &tailptr);
       if (tailptr[0] != '\0')
 	{
-	  MSG ("not part of an integer: '%s'", tailptr);
+	  MSG (ctx, "not part of an integer: '%s'", tailptr);
 	  return 1;
 	}
 
       if (number < 1)
 	{
-	  MSG ("page %d is not positive", number);
+	  MSG (ctx, "page %d is not positive", number);
 	  return 1;
 	}
       
       if (number > page_count)
       	{
-	  MSG ("%d is greater than page count %d", number, page_count);
+	  MSG (ctx, "%d is greater than page count %d", number, page_count);
 	  return 1;
 	}
       
@@ -131,28 +134,28 @@ get_range (int *result, char *ranges, int page_count)
 	}
       
       /* parse second number after the hyphen*/
-      number = pdfout_strtoint_old (range_token, &tailptr);
+      number = pdfout_strtoint (ctx, range_token, &tailptr);
       if (tailptr[0] != '\0')
 	{
-	  MSG ("not part of an integer: '%s'", tailptr);
+	  MSG (ctx, "not part of an integer: '%s'", tailptr);
 	  return 1;
 	}
       
       if (number < 1)
 	{
-	  MSG ("page %d is not positive", number);
+	  MSG (ctx, "page %d is not positive", number);
 	  return 1;
 	}
       
       if (number > page_count)
 	{
-	  MSG ("%d is greater than page count %d", number, page_count);
+	  MSG (ctx, "%d is greater than page count %d", number, page_count);
 	  return 1;
 	}
       
       if (number < result[pos])
 	{
-	  MSG ("%d is smaller than %d", number, result[pos]);
+	  MSG (ctx, "%d is smaller than %d", number, result[pos]);
 	  return 1;
 	}
       
@@ -181,7 +184,7 @@ pdfout_parse_page_range (fz_context *ctx, const char *ranges, int page_count)
 
   result = fz_malloc (ctx, 2 * result_len * sizeof (int));
   
-  if (get_range (result, ranges_copy, page_count))
+  if (get_range (ctx, result, ranges_copy, page_count))
     exit (1);
 
   free (ranges_copy);

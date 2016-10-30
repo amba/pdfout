@@ -606,6 +606,7 @@ sub cover {
     );
 
     my @gcovs = glob('*.gcov');
+    safe_system( command => [qw/cover -delete/] );
     safe_system( command => [ 'gcov2perl', '-db', 'cover_db', @gcovs ] );
 
     safe_system( command => ['cover'] );
