@@ -25,6 +25,7 @@ print_help ()
   puts ("\
 Dump page labels as JSON to standard output.\n\
 \n\
+ Options:\n\
   -d, --default-filename     Write output to PDF_FILE.pagelabels\n\
 \n\
  general options:\n\

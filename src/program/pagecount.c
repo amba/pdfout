@@ -21,6 +21,7 @@ print_help ()
   puts ("\
 Print page count of PDF_FILE to standard output.\n\
 \n\
+ Options:\n\
  general options:\n\
   -h, --help                 Give this help list\n\
   -u, --usage                Give a short usage message\n\

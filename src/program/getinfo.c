@@ -26,6 +26,7 @@ print_help ()
   puts ("\
 Dump info dict as JSON to standard output.\n\
 \n\
+ Options:\n\
   -d, --default-filename     Write output to PDF_FILE.info\n\
 \n\
  general options:\n\

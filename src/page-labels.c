@@ -17,7 +17,7 @@ strneq (const char *a, const char *b)
 }
 
 static void
-assert_c_string(fz_context *ctx, const char *s, int len)
+assert_c_string (fz_context *ctx, const char *s, int len)
 {
   if (strlen(s) != len)
     pdfout_throw (ctx, "unexpected string with embedded null bytes");

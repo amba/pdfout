@@ -4,7 +4,8 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 21;
+use Test::Pdfout::Command;
+use Test::More;
 use Testlib;
 
 my $input = <<'EOD';
@@ -56,3 +57,5 @@ set_get_test(
     empty        => "[]\n",
 
 );
+
+done_testing();

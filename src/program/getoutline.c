@@ -27,6 +27,7 @@ print_help ()
   puts ("\
 Dump outline as JSON to standard output.\n\
 \n\
+ Options:\n\
   -d, --default-filename     Write output to PDF_FILE.outline\n\
   -w, --wysiwyg              Use wysiwyg format\n\
 \n\

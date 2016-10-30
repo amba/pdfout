@@ -27,7 +27,7 @@ print_help ()
   puts ("\
 Overwrite PDF_FILE with the repaired file.\n\
 \n\
- options:\n\
+ Options:\n\
   -c, --check                only check PDF_FILE's integrity.\n\
                              Exit with non-zero status, if broken\n\
   -o, --output=FILE          write output to FILE\n\

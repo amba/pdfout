@@ -3,7 +3,9 @@ use warnings;
 use strict;
 use 5.020;
 
-use Test::Pdfout::Command tests => 3;
+use Test::Pdfout::Command;
+use Test::More;
+
 use Testlib;
 use File::Copy qw/cp/;
 
@@ -34,4 +36,7 @@ pdfout_ok(
     expected_out => $expected
 );
 
+test_usage_help('gettxt');
+
+done_testing();
 # FIXME: test page range parser in whitebox tests?

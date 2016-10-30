@@ -3,7 +3,8 @@ use warnings;
 use strict;
 use 5.020;
 
-use Test::Pdfout::Command tests => 22;
+use Test::Pdfout::Command;
+use Test::More;
 use Testlib;
 
 # pagecount
@@ -70,3 +71,5 @@ use Testlib;
     pdfout_ok( command => [qw/create -w 100 --height -100/], status => 1 );
 }
 
+test_usage_help('create');
+done_testing();

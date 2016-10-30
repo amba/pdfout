@@ -550,6 +550,8 @@ enum {
 };
 
 static struct option longopts[] = {
+  {"help", no_argument, NULL, 'h'},
+  {"usage", no_argument, NULL, 'u'},
   {"incremental-update", no_argument, NULL, INCREMENTAL_UPDATE},
   {"incremental-update-xref", no_argument, NULL, INCREMENTAL_UPDATE_XREF},
   {"string-conversions", no_argument, NULL, STRING_CONVERSIONS},
@@ -571,7 +573,7 @@ print_help (void)
   puts("\
 Run whitebox test.\n\
 \n\
- Tests:\n\\n\
+ Options:\n\
       --incremental-update\n\
       --incremental-update-xref\n\
       --string-conversions\n\

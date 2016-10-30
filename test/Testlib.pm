@@ -23,6 +23,7 @@ our @EXPORT = qw/
     new_tempfile
     set_get_test
     test_data
+    test_usage_help
     /;
 
 my $tempdir = tempdir(    # CLEANUP => 1
@@ -151,6 +152,22 @@ sub set_get_test (%args) {
             );
         }
     }
+
+    test_usage_help ((set_command($command))[0]);
+    test_usage_help ((get_command($command))[0]);
+
+    
+}
+
+sub test_usage_help ($command) {
+    pdfout_ok(
+	command => [$command, '--usage'],
+	expected_out => qr/^Usage:/
+	);
+    pdfout_ok(
+	command => [$command, '--help'],
+	expected_out => qr/^Usage:.*^ Options:\n/ms
+	);
 }
 
 sub test_data ($file) {

@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 20;
+use Test::Pdfout::Command;
 use Test::More;
 use Testlib;
 
@@ -49,3 +49,5 @@ title1 1
 EOD
     empty => "",
 );
+
+done_testing();

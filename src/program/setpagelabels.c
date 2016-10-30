@@ -29,6 +29,7 @@ print_help ()
   puts ("\
 Modify page labels. Reads JSON from stdin\n\
 \n\
+ Options:\n\
   -d, --default-filename     Write output to PDF_FILE.pagelabels\n\
   -o, --output=FILE          Write modified document to FILE\n\
   -r, --remove               Remove page labels\n\

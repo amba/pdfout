@@ -4,7 +4,7 @@ use strict;
 use utf8;
 use 5.020;
 
-use Test::Pdfout::Command tests => 18;
+use Test::Pdfout::Command;
 use Test::More;
 use Test::Files;
 use Testlib;
@@ -71,3 +71,5 @@ set_get_test(
 EOD
     );
 }
+
+done_testing();

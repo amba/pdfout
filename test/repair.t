@@ -3,7 +3,9 @@ use warnings;
 use strict;
 use 5.020;
 
-use Test::Pdfout::Command tests => 5;
+use Test::Pdfout::Command;
+use Test::More;
+
 use Testlib;
 use File::Copy qw/cp/;
 
@@ -30,3 +32,6 @@ my $output = new_tempfile();
 pdfout_ok( command => [ 'repair', $pdf, '-o', $output ] );
 pdfout_ok( command => [ 'repair', '--check', $output ] );
 
+test_usage_help('repair');
+
+done_testing();

@@ -31,6 +31,7 @@ print_help ()
   puts ("\
 Modify outline. Reads JSON from stdin\n\
 \n\
+ Options:\n\
   -d, --default-filename     Write output to PDF_FILE.outline\n\
   -o, --output=FILE          Write modified document to FILE\n\
   -r, --remove               Remove outline\n\
