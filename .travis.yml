@@ -3,6 +3,10 @@ sudo: false
 # get perlbrew environment
 language: perl
 
+# install only the required submodules
+git:
+  submodules: false
+  
 addons:
   apt:
     packages:
