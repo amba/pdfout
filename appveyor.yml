@@ -1,4 +1,4 @@
 build_script:
   - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl submodules"
-  - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl"
+  - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl --verbose"
   - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl check"
