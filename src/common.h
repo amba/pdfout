@@ -81,8 +81,7 @@ void pdfout_copy_stream (fz_context *ctx, fz_stream *from, fz_output *too);
 pdf_document *
 pdfout_create_blank_pdf (fz_context *ctx, int page_count, fz_rect *rect);
 
-pdf_obj *pdfout_resolve_dest(fz_context *ctx, pdf_document *doc, pdf_obj *dest,
-			     fz_link_kind kind);
+pdf_obj *pdfout_resolve_dest(fz_context *ctx, pdf_document *doc, pdf_obj *dest);
 
 
 #define pdfout_x2nrealloc(ctx, p, pn, t) \

@@ -121,13 +121,6 @@ static void push_byte (fz_context *ctx, scanner *scanner, int byte)
   scanner_read (ctx, scanner);			
 }
 
-static void zero_term (fz_context *ctx, fz_buffer *buf)
-{
-  fz_write_buffer_byte (ctx, buf, 0);
-  --buf->len;
-}
-
-
 static const char *json_check_number (const char *number, int len)
 {
 
@@ -191,20 +184,22 @@ static const char *json_check_number (const char *number, int len)
 static token
 scanner_scan_number (fz_context *ctx, scanner *scanner)
 {
-  scanner->value->len = 0;
+  fz_resize_buffer (ctx, scanner->value, 0);
   char c;
   while (c = scanner->lookahead, pdfout_isdigit (c) || c == 'e' || c == 'E'
 	 || c == '-' || c == '+' || c == '.')
     push_byte (ctx, scanner, scanner->lookahead);
 
-  char *num = (char *) scanner->value->data;
-  int value_len = scanner->value->len;
-  const char *error = json_check_number (num, value_len);
+  char *num;
+  int num_len = fz_buffer_storage(ctx, scanner->value,
+                                  (unsigned char **) &num);
+  
+  const char *error = json_check_number (num, num_len);
   if (error)
-    scanner_error (ctx, scanner, "Invalid number '%.*s': %s", value_len, num,
+    scanner_error (ctx, scanner, "Invalid number '%.*s': %s", num_len, num,
 		   error);
 
-  zero_term (ctx, scanner->value);
+  fz_terminate_buffer (ctx, scanner->value);
   
   return TOK_NUMBER;
 }
@@ -290,15 +285,19 @@ static void
 utf8_sequence (fz_context *ctx, scanner *scanner)
 {
   fz_buffer *value = scanner->value;
-  int start_len = value->len;
+  int start_len = fz_buffer_storage (ctx, value, NULL);
   while (1)
     {
       int lah = scanner->lookahead;
       
       if (lah <= 0x1f || lah == '\\' || lah == '"')
 	{
-	  char *problem = pdfout_check_utf8 ((char *) value->data + start_len,
-					     value->len - start_len);
+          char *utf8_string;
+          int value_len = fz_buffer_storage (ctx, value,
+                                             (unsigned char **) &utf8_string);
+          utf8_string += start_len;
+	  char *problem = pdfout_check_utf8 (utf8_string,
+                                             value_len - start_len);
 	  if (problem)
 	    scanner_error (ctx, scanner, "Invalid UTF-8.");
 	  
@@ -313,7 +312,7 @@ static token
 scanner_scan_string (fz_context *ctx, scanner *scanner)
 {
   assert (scanner->lookahead == '"');
-  scanner->value->len = 0;
+  fz_resize_buffer (ctx, scanner->value, 0);
   
   scanner_read (ctx, scanner);
   while (1)
@@ -335,7 +334,7 @@ scanner_scan_string (fz_context *ctx, scanner *scanner)
 	utf8_sequence (ctx, scanner);
     }
 
-  zero_term (ctx, scanner->value);
+  fz_terminate_buffer (ctx, scanner->value);
   
   return TOK_STRING;
 }
@@ -491,7 +490,9 @@ parse_string (fz_context *ctx, json_parser *parser, token tok)
 {
   parse_terminal (ctx, parser, tok);
   fz_buffer *buf = parser->scanner->value;
-  return pdfout_data_scalar_new (ctx, (char *) buf->data, buf->len);
+  unsigned char *data;
+  int len = fz_buffer_storage (ctx, buf, &data);
+  return pdfout_data_scalar_new (ctx, (char *) data, len);
 }
 
 static pdfout_data *

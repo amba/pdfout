@@ -195,8 +195,8 @@ static void
 add_line (fz_context *ctx, pdfout_data *lines, fz_buffer *line_buf, parser *p)
 {
   ++p->line_number;
-  const char *line = (const char *) line_buf->data;
-  int len = line_buf->len;
+  char *line;
+  int len = fz_buffer_storage (ctx, line_buf, (unsigned char **) &line);
 
   if (line_is_ws (ctx, line, len))
     return;

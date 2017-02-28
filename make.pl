@@ -178,7 +178,7 @@ sub build_mupdf (%args) {
     safe_system(
         command => [
             qw/make -C mupdf libs third build=debug
-                SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=/,
+               HAVE_LIBCRYPTO= SYS_OPENSSL_CFLAGS= SYS_OPENSSL_LIBS=/,
             "-j$args{jobs}", "verbose=$verbose", "OUT=$out",
             "XCFLAGS=$args{mupdf_cflags}"
         ]

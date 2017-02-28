@@ -426,12 +426,12 @@ static void json_emitter_test (fz_context *ctx, pdfout_data *data,
   pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
   pdfout_emitter_emit (ctx, emitter, data);
 
-  if (strlen (expected) != out_buf->len
-      || memcmp (expected, out_buf->data, out_buf->len))
+  unsigned char *out_data;
+  int len = fz_buffer_storage (ctx, out_buf, &out_data);
+  if (strlen (expected) != len || memcmp (expected, out_data, len))
     {
       fprintf (stderr, "json_emitter_test: expected:\n%s"
-	       "got:\n%.*s\n", expected, (int) out_buf->len,
-	       (char *) out_buf->data);
+	       "got:\n%.*s\n", expected, len, (char *) out_data);
       abort ();
     }
       

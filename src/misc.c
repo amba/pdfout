@@ -103,12 +103,6 @@ pdfout_vsnprintf_imp (fz_context *ctx, char *buf, int size,
   return ret;
 }
 
-static void zero_term_buffer (fz_context *ctx, fz_buffer *buf)
-{
-  fz_write_buffer_byte (ctx, buf, 0);
-  --buf->len;
-}
-
 ssize_t
 pdfout_getline (fz_context *ctx, fz_buffer **buffer_ptr, fz_stream *stm)
 {
@@ -116,8 +110,8 @@ pdfout_getline (fz_context *ctx, fz_buffer **buffer_ptr, fz_stream *stm)
     *buffer_ptr = fz_new_buffer(ctx, 0);
 
   fz_buffer *buffer = *buffer_ptr;
-  
-  buffer->len = 0;
+
+  fz_resize_buffer (ctx, buffer, 0);
   ssize_t len = 0;
   while (1)
     {
@@ -126,14 +120,14 @@ pdfout_getline (fz_context *ctx, fz_buffer **buffer_ptr, fz_stream *stm)
 	{
 	  if (len == 0)
 	    return -1;
-	  zero_term_buffer(ctx, buffer);
+          fz_terminate_buffer (ctx, buffer);
 	  return len;
 	}
       fz_write_buffer_byte(ctx, buffer, c);
       ++len;
       if (c == '\n')
 	{
-	  zero_term_buffer (ctx, buffer);
+          fz_terminate_buffer (ctx, buffer);
 	  return len;
 	}
     }

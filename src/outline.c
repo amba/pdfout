@@ -391,7 +391,7 @@ pdfout_outline_set (fz_context *ctx, pdf_document *doc, pdfout_data *outline)
 static void
 check_dest (fz_context *ctx, pdf_document *doc, pdf_obj *dest)
 {
-  dest = pdfout_resolve_dest(ctx, doc, dest, FZ_LINK_GOTO);
+  dest = pdfout_resolve_dest(ctx, doc, dest);
   if (dest == NULL)
     pdfout_throw (ctx, "undefined link kind");
   if (pdf_is_array (ctx, dest) == false)
@@ -469,7 +469,7 @@ data_scalar_from_int (fz_context *ctx, int number)
 static pdfout_data *
 get_view_array (fz_context *ctx, pdf_document *doc, pdf_obj *dest, int *page)
 {
-  dest = pdfout_resolve_dest(ctx, doc, dest, FZ_LINK_GOTO);
+  dest = pdfout_resolve_dest(ctx, doc, dest);
 
   pdf_obj *page_ref = pdf_array_get (ctx, dest, 0);
   *page = pdf_lookup_page_number (ctx, doc, page_ref);
