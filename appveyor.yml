@@ -1,4 +1,13 @@
+environment:
+  matrix:
+    - cygwin: c:\cygwin64\bin\sh -lc
+
+install
+  # Get cpanm
+  - %cygwin% "cd /usr/bin && wget http://cpanmin.us -O cpanm && chmod u+x cpanm"
+  - %cygwin% "cpanm Test::Files"
+  
 build_script:
-  - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl submodules"
-  - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl --verbose"
-  - c:\cygwin64\bin\sh -lc "cd $APPVEYOR_BUILD_FOLDER && ./make.pl check"
+  - %cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl submodules"
+  - %cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl --verbose"
+  - %cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl check"
