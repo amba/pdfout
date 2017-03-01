@@ -2,7 +2,7 @@ environment:
   matrix:
     - cygwin: c:\cygwin64\bin\sh -lc
 
-install
+install:
   # Get cpanm
   - %cygwin% "cd /usr/bin && wget http://cpanmin.us -O cpanm && chmod u+x cpanm"
   - %cygwin% "cpanm Test::Files"
