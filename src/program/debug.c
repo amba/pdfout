@@ -147,7 +147,7 @@ check_incremental_update_xref (void)
 
 static void print_string (const char *string, size_t len)
 {
-  fprintf (stderr, "length: %zu, string:\n", len);
+  fprintf (stderr, "length: %lu, string:\n", (long unsigned) len);
   for (size_t i = 0; i < len; ++i)
     fprintf (stderr, " %02x", (unsigned char) string[i]);
   fprintf (stderr, "\n");
