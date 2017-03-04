@@ -83,20 +83,45 @@ open_default_write_file (fz_context *ctx, const char *filename,
 #define MSG(ctx, fmt, args...)					\
   pdfout_warn (ctx, "parsing page range: " fmt, ## args)
 
+/* No strsep on windows :(. The following is a simplified version of the glibc
+   implementation.  */
+char *
+pdfout_strsep (fz_context *ctx, char **string_ptr, char delimiter)
+{
+  if (delimiter == '\0')
+    pdfout_throw (ctx, "delimiter may not be null char");
+  
+  char *end, *begin = *string_ptr;
+
+  if (begin == NULL)
+    return NULL;
+  
+  if (begin[0] == '\0')
+    end = NULL;
+  else
+    end = strchr (begin, delimiter);
+
+  if (end)
+    {
+      *end++ = '\0';
+      *string_ptr = end;
+    }
+  else
+    *string_ptr = NULL;
+  
+  return begin;
+}
+
 static int
 get_range (fz_context *ctx, int *result, char *ranges, int page_count)
 {
   char *range_token;
   int pos = 0;
   
-  /* strsep is documented in
-   www.gnu.org/software/libc/manual/html_node/Finding-Tokens-in-a-String.html
-  */
-  
-  for (range_token = strsep (&ranges, ","); range_token;
-       range_token = strsep (&ranges, ","), pos += 2)
+  for (range_token = pdfout_strsep (ctx, &ranges, ','); range_token;
+       range_token = pdfout_strsep (ctx, &ranges, ','), pos += 2)
     {
-      char *tailptr, *number_token = strsep (&range_token, "-");
+      char *tailptr, *number_token = pdfout_strsep (ctx, &range_token, '-');
       int number;
 
       if (number_token[0] == '\0')

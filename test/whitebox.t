@@ -13,6 +13,7 @@ my @tests = qw/
     --string-conversions
     --json
     --data
+    --strsep
     /;
 
 for my $test (@tests) {

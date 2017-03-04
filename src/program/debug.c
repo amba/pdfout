@@ -541,12 +541,35 @@ static void check_data (void)
   pdfout_data_drop (ctx, hash);
   exit (0);
 }
+
+static void check_strsep (void)
+{
+  char *s = fz_strdup(ctx, "abc.def..ghi");
+
+  char *token = pdfout_strsep(ctx, &s, '.');
+  test_assert(!strcmp(token, "abc"));
+
+  token = pdfout_strsep(ctx, &s, '.');
+  test_assert(!strcmp(token, "def"));
+  
+  token = pdfout_strsep(ctx, &s, '.');
+  test_assert(!strcmp(token, ""));
+
+  token = pdfout_strsep(ctx, &s, '.');
+  test_assert(!strcmp(token, "ghi"));
+
+  token = pdfout_strsep(ctx, &s, '.');
+  test_assert(token == NULL);
+
+  exit(0);
+}
 enum {
   INCREMENTAL_UPDATE = CHAR_MAX + 1,
   INCREMENTAL_UPDATE_XREF,
   STRING_CONVERSIONS,
   JSON,
   DATA,
+  STRSEP,
 };
 
 static struct option longopts[] = {
@@ -557,6 +580,7 @@ static struct option longopts[] = {
   {"string-conversions", no_argument, NULL, STRING_CONVERSIONS},
   {"json", no_argument, NULL, JSON},
   {"data", no_argument, NULL, DATA},
+  {"strsep", no_argument, NULL, STRSEP},
   {NULL, 0 , NULL, 0}
 };
 
@@ -579,6 +603,7 @@ Run whitebox test.\n\
       --string-conversions\n\
       --json\n\
       --data\n\
+      --strsep\n\
 \n\
  general options:\n\
   -h, --help                 Give this help list\n\
@@ -601,6 +626,7 @@ parse_options (int argc, char **argv)
 	case STRING_CONVERSIONS: check_string_conversions (); break;
 	case JSON: check_json (); break;
 	case DATA: check_data (); break;
+        case STRSEP: check_strsep(); break;
 	default:
 	  print_usage ();
 	  exit (1);

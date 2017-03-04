@@ -31,6 +31,7 @@ FILE *open_default_read_file (fz_context *ctx, const char *filename,
 FILE *open_default_write_file (fz_context *ctx, const char *filename,
 			       const char *suffix);
 
+char * pdfout_strsep (fz_context *ctx, char **string_ptr, char delimiter);
 
 int *pdfout_parse_page_range (fz_context *ctx, const char *range,
 			      int page_count);
