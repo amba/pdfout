@@ -34,7 +34,7 @@ pdfout_new_context (void)
 static FILE *
 fopen_throw (fz_context *ctx, const char *filename, const char *mode)
 {
-  FILE *result = fopen (filename, mode);
+  FILE *result = fz_fopen (filename, mode);
 
   if (result == NULL)
       pdfout_throw_errno (ctx, "cannot open '%s'", filename);
@@ -70,14 +70,14 @@ FILE *
 open_default_read_file (fz_context *ctx, const char *filename,
 			const char *suffix)
 {
-  return open_default_file (ctx, filename, suffix, "r");
+  return open_default_file (ctx, filename, suffix, "rb");
 }
 
 FILE *
 open_default_write_file (fz_context *ctx, const char *filename,
 			 const char *suffix)
 {
-  return open_default_file (ctx, filename, suffix, "w");
+  return open_default_file (ctx, filename, suffix, "wb");
 }
 
 #define MSG(ctx, fmt, args...)					\
