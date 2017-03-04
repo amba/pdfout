@@ -544,8 +544,9 @@ static void check_data (void)
 
 static void check_strsep (void)
 {
-  char *s = fz_strdup(ctx, "abc.def..ghi");
-
+  char *string = fz_strdup(ctx, "abc.def..ghi");
+  char *s = string;
+  
   char *token = pdfout_strsep(ctx, &s, '.');
   test_assert(!strcmp(token, "abc"));
 
@@ -560,7 +561,7 @@ static void check_strsep (void)
 
   token = pdfout_strsep(ctx, &s, '.');
   test_assert(token == NULL);
-
+  free (string);
   exit(0);
 }
 enum {
