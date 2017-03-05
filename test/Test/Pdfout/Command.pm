@@ -38,9 +38,9 @@ if ( not $pdfout ) {
 
 my $class   = __PACKAGE__;
 my $builder = $class->builder;
-binmode $builder->output,         ":encoding(utf8)";
-binmode $builder->failure_output, ":encoding(utf8)";
-binmode $builder->todo_output,    ":encoding(utf8)";
+binmode $builder->output;
+binmode $builder->failure_output;
+binmode $builder->todo_output;
 
 sub close_fh ($fh) {
     close $fh
@@ -135,9 +135,9 @@ sub command_subtest (%args) {
     $err_fh = gensym;
 
     my $pid = open3( $in_fh, $out_fh, $err_fh, $args{command}->@* );
-    binmode( $in_fh,  ':utf8' );
-    binmode( $out_fh, ':utf8' );
-    binmode( $err_fh, ':utf8' );
+    binmode $in_fh;
+    binmode $out_fh;
+    binmode $err_fh;
 
     my $input = $args{input};
     if ($input) {

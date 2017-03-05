@@ -13,9 +13,8 @@ use File::Copy;
 use File::Basename;
 
 use Exporter 'import';
-use utf8;
-use Test::Files;
 use Test::Pdfout::Command;
+use Test::Files;
 use Carp;
 use Encode 'encode';
 our @EXPORT = qw/
@@ -91,7 +90,7 @@ sub set_get_test (%args) {
         my $default_filename = $pdf . '.' . $command->[0];
         open my $fh, '>', $default_filename
             or die "open";
-        binmode $fh, ':utf8';
+        binmode $fh;
         print {$fh} $input;
         close $fh
             or die "close";
@@ -102,12 +101,8 @@ sub set_get_test (%args) {
             or die "unlink";
 
         pdfout_ok( command => [ get_command($command), $pdf, '-d' ], );
-
-        file_ok(
-            $default_filename,
-            encode( 'UTF-8', $expected ),
-            "file matches input"
-        );
+        
+        file_ok($default_filename, $expected, "file matches input");
     }
 
     {
@@ -124,11 +119,8 @@ sub set_get_test (%args) {
             expected_out => $expected,
         );
 
-        compare_ok(
-            $pdf,
-            test_data("empty10.pdf"),
-            "original file is untouched"
-        );
+        compare_ok($pdf, test_data("empty10.pdf"),
+                   "original file is untouched");
 
         # combination of remove and non-incremental
         $output = new_tempfile();

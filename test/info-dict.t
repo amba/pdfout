@@ -6,7 +6,6 @@ use 5.020;
 
 use Test::Pdfout::Command;
 use Test::More;
-use Test::Files;
 use Testlib;
 
 my $input = <<'EOD';
