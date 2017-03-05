@@ -11,7 +11,8 @@ use Data::Dumper;
 use Carp;
 use IPC::Open3;
 use Text::Diff;
-use File::Spec::Functions qw/catfile/;
+use File::Slurper 'read_binary';
+use File::Spec::Functions 'catfile';
 
 use Test::Builder 1.001014;
 
@@ -22,6 +23,8 @@ use Getopt::Long qw/:config gnu_compat/;
 our @EXPORT = qw/
     pdfout_ok
     file_like
+    file_ok
+    compare_ok
     /;
 
 my $use_valgrind;
@@ -198,6 +201,55 @@ sub pdfout_ok (%args) {
 
     $args{command} = $command;
     return command_ok(%args);
+}
+
+sub file_ok {
+    my ( $file, $expected, $name ) = @_;
+    my $tb = $class->builder();
+    if ( not -f $file ) {
+        return $tb->ok( 0, "-f $file" )
+            || $tb->diag("file '$file' does not exist");
+    }
+    my $contents = read_binary($file);
+
+    if ( $tb->ok( $contents eq $expected, $name ) ) {
+        return 1;
+    }
+
+    # Fail.
+    my $diff = get_text_diff( $contents, $expected, $file );
+    return $tb->diag($diff);
+}
+
+sub compare_ok {
+    my ( $file1, $file2, $name ) = @_;
+    my $tb = $class->builder();
+
+    for my $file ( $file1, $file2 ) {
+        if ( not -f $file ) {
+            return $tb->ok( 0, "-f $file" )
+                || $tb->diag("file '$file' does not exist");
+        }
+    }
+
+    my $contents1 = read_binary($file1);
+    my $contents2 = read_binary($file2);
+
+    if ( $tb->ok( $contents1 eq $contents2, $name ) ) {
+        return 1;
+    }
+
+    # Fail.
+    my $diff = diff(
+        \$contents1,
+        \$contents2,
+        {
+            STYLE      => 'Table',
+            FILENAME_A => $file1,
+            FILENAME_B => $file2,
+        }
+    );
+    return $tb->diag($diff);
 }
 
 1;

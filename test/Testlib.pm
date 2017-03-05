@@ -14,7 +14,6 @@ use File::Basename;
 
 use Exporter 'import';
 use Test::Pdfout::Command;
-use Test::Files;
 use Carp;
 use Encode 'encode';
 our @EXPORT = qw/
