@@ -27,7 +27,7 @@ pdfout_new_context (void)
       fprintf (stderr, "cannot create context");
       exit (1);
     }
-  
+  pdfout_ensure_binary_io (ctx);
   return ctx;
 }
 

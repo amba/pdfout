@@ -24,6 +24,8 @@ int strmatch (const char *key, const char *const *list);
 /* Calls 'exit (exit_failure)' on error.  */
 fz_context *pdfout_new_context (void);
 
+void pdfout_ensure_binary_io (fz_context *ctx);
+  
 /* Append SUFFIX to FILENAME and call fopen on the resulting filename. */
 FILE *open_default_read_file (fz_context *ctx, const char *filename,
 			      const char *suffix);
