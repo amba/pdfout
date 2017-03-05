@@ -12,17 +12,12 @@ addons:
     packages:
       valgrind
 
-perl:
-  - "5.24"
-  - "5.20"
-
-env:
-  - VALGRIND=
-  
 matrix:
   include:
     - perl: "5.24"
-    - env: VALGRIND=--valgrind
+      env: VALGRIND=--valgrind
+    - perl: "5.20"
+      env: VALGRIND=
     
 install:
   - cpanm File::Slurper
