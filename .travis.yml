@@ -21,7 +21,8 @@ env:
   
 matrix:
   include:
-    - VALGRIND=--valgrind
+    - perl: "5.24"
+    - env: VALGRIND=--valgrind
     
 install:
   - cpanm File::Slurper
