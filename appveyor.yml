@@ -4,11 +4,12 @@ environment:
     - cygwin: c:\cygwin\bin\sh -lc
 
 install:
-  # Get cpanm
-  - '%cygwin% "cd /usr/bin && wget http://cpanmin.us -O cpanm && chmod u+x cpanm"'
-  - '%cygwin% "cpanm Test::Files"'
+  - |
+    %cygwin% "cd /usr/bin && wget http://cpanmin.us -O cpanm && chmod u+x cpanm"
+    %cygwin% "cpanm File::Slurper Text::Diff"
   
 build_script:
-  - '%cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl submodules"'
-  - '%cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl --verbose"'
-  - '%cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl check"'
+  - |
+    %cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl submodules"
+    %cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl --verbose"
+    %cygwin% "cd $APPVEYOR_BUILD_FOLDER && ./make.pl check"
