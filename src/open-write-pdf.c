@@ -40,6 +40,9 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc,
   fz_output *tmp_out = pdfout_tmp_stream_output (ctx, tmp);
   pdf_write_document (ctx, doc, tmp_out, &opts);
 
+  /* On windows, we need to close the file handles, before we can delete it.  */
+  pdf_drop_document (ctx, doc);
+  
   fz_stream *input = pdfout_tmp_stream_stream (ctx, tmp);
   fz_output *output = fz_new_output_with_path (ctx, output_filename, false);
 

@@ -13,5 +13,6 @@ fz_stream *pdfout_tmp_stream_stream (fz_context *ctx,
 fz_output *pdfout_tmp_stream_output (fz_context *ctx,
 				     pdfout_tmp_stream *stream);
 
+FILE *pdfout_tmpfile(fz_context *ctx);
 
 #endif	/* HAVE_PDFOUT_TMP_STREAM_H */
