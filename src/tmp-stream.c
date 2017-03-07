@@ -11,9 +11,7 @@ pdfout_tmp_stream *
 pdfout_tmp_stream_new (fz_context *ctx)
 {
   pdfout_tmp_stream *handle = fz_malloc_struct (ctx, pdfout_tmp_stream);
-  FILE *tmp = tmpfile();
-  if (tmp == NULL)
-    pdfout_throw_errno (ctx, "tmpfile failed");
+  FILE *tmp = pdfout_tmpfile(ctx);
   handle->stream = fz_open_file_ptr (ctx, tmp);
   handle->output = fz_new_output_with_file_ptr (ctx, tmp, false);
   handle->tmp = tmp;
