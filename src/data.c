@@ -192,6 +192,9 @@ static void drop_hash (fz_context *ctx, data_hash *h)
 void
 pdfout_data_drop (fz_context *ctx, pdfout_data *data)
 {
+  if (data == NULL)
+    return;
+  
   switch (data->type)
     {
     case SCALAR: drop_scalar (ctx, to_scalar (ctx, data)); break;
@@ -558,7 +561,15 @@ pdfout_parser_drop (fz_context *ctx, pdfout_parser *parser)
 pdfout_data *
 pdfout_parser_parse (fz_context *ctx, pdfout_parser *parser)
 {
-  return parser->parse (ctx, parser);
+  pdfout_data *result;
+  fz_try(ctx)
+    result = parser->parse (ctx, parser);
+  fz_always(ctx)
+    pdfout_parser_drop (ctx, parser);
+  fz_catch(ctx)
+    fz_rethrow (ctx);
+  
+  return result;
 }
 
 void
@@ -571,6 +582,11 @@ void
 pdfout_emitter_emit (fz_context *ctx, pdfout_emitter *emitter,
 		     pdfout_data *data)
 {
-  return emitter->emit (ctx, emitter, data);
+  fz_try (ctx)
+    emitter->emit (ctx, emitter, data);
+  fz_always (ctx)
+    emitter->drop (ctx, emitter);
+  fz_catch(ctx)
+    fz_rethrow (ctx);
 }
 

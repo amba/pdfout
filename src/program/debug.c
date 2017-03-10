@@ -263,8 +263,6 @@ static void check_json_parser_value (fz_context *ctx, const char *json,
       test_equal (result, value, len, strlen (value));
       pdfout_data_drop (ctx, data);
     }
-  
-  pdfout_parser_drop (ctx, parser);
   fz_drop_stream (ctx, stm);
       
 }
@@ -365,7 +363,6 @@ json_parser_test (fz_context *ctx, const char *json, pdfout_data *result)
       pdfout_data_drop (ctx, result);
       pdfout_data_drop (ctx, data);
     }
-  pdfout_parser_drop (ctx, parser);
   fz_drop_stream (ctx, stm);
 }
 
@@ -435,7 +432,6 @@ static void json_emitter_test (fz_context *ctx, pdfout_data *data,
       abort ();
     }
       
-  pdfout_emitter_drop (ctx, emitter);
   fz_drop_output (ctx, out);
   fz_drop_buffer (ctx, out_buf);
   pdfout_data_drop (ctx, data);

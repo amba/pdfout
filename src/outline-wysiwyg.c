@@ -255,13 +255,22 @@ add_line (fz_context *ctx, pdfout_data *lines, fz_buffer *line_buf, parser *p)
   pdfout_data *hash = pdfout_data_hash_new(ctx);
   pdfout_data_hash_push_key_value (ctx, hash, "title", title,
 				   separator - title);
-  int page = pdfout_strtoint (ctx, number, NULL);
-  page += p->difference;
-  data_hash_push_int (ctx, hash, "page", page);
+  fz_try (ctx)
+  {
+    /* Throws on overflow.  */
+    int page = pdfout_strtoint (ctx, number, NULL);
+    page += p->difference;
+    data_hash_push_int (ctx, hash, "page", page);
+    
+    data_hash_push_int (ctx, hash, "level", indent_level);
 
-  data_hash_push_int (ctx, hash, "level", indent_level);
-
-  pdfout_data_array_push (ctx, lines, hash);
+    pdfout_data_array_push (ctx, lines, hash);
+  }
+  fz_catch (ctx)
+  {
+    pdfout_data_drop (ctx, hash);
+    fz_rethrow (ctx);
+  }
 }
 
 static pdfout_data *
@@ -269,11 +278,21 @@ get_lines (fz_context *ctx, parser *p)
 {
   fz_buffer *line_buf = NULL;
   pdfout_data *lines = pdfout_data_array_new (ctx);
-  
-  while (pdfout_getline (ctx, &line_buf, p->stream) != -1)
-    add_line (ctx, lines, line_buf, p);
 
-  fz_drop_buffer (ctx, line_buf);
+  fz_try (ctx)
+  {
+    while (pdfout_getline (ctx, &line_buf, p->stream) != -1)
+      add_line (ctx, lines, line_buf, p);
+  }
+  fz_always (ctx)
+  {
+    fz_drop_buffer (ctx, line_buf);
+  }
+  fz_catch (ctx)
+  {
+    pdfout_data_drop (ctx, lines);
+    fz_rethrow (ctx);
+  }
   return lines;
 }
 

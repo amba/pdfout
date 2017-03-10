@@ -29,7 +29,9 @@ pdfout_write_document (fz_context *ctx, pdf_document *doc,
     {
       /* Incremental update.  */
       opts.do_incremental = 1;
-      return pdf_save_document (ctx, doc, pdf_filename, &opts);
+      pdf_save_document (ctx, doc, pdf_filename, &opts);
+      pdf_drop_document (ctx, doc);
+      return;
     }
 
   /* Write new pdf to a temporary file, then copy it to the destination.
@@ -67,7 +69,9 @@ pdfout_create_blank_pdf (fz_context *ctx, int page_count, fz_rect *rect)
     {
       pdf_obj *page = pdf_add_page (ctx, doc, rect, 0, resources, contents);
       pdf_insert_page (ctx, doc, i, page);
+      pdf_drop_obj (ctx, page);
     }
-
+  fz_drop_buffer (ctx, contents);
+  pdf_drop_obj (ctx, resources);
   return doc;
 }

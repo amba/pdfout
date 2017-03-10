@@ -108,16 +108,15 @@ pdfout_command_setoutline (fz_context *ctx_arg, int argc, char **argv)
 	parser = pdfout_parser_outline_wysiwyg_new (ctx, stm);
       else
 	parser = pdfout_parser_json_new (ctx, stm);
-      
       outline = pdfout_parser_parse (ctx, parser);
+      fz_drop_stream (ctx, stm);
+      fz_drop_stream (ctx, stm);
     }
   else
     outline = NULL;
   
 
   pdfout_outline_set (ctx, doc, outline);
-  
+  pdfout_data_drop (ctx, outline);
   pdfout_write_document (ctx, doc, pdf_filename, output_filename);
-
-  exit (0);
 }

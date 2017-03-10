@@ -87,7 +87,8 @@ pdfout_command_getoutline (fz_context *ctx_arg, int argc, char **argv)
   pdf_document *doc = pdf_open_document (ctx, pdf_filename);
 
   pdfout_data *outline = pdfout_outline_get (ctx, doc);
-
+  pdf_drop_document (ctx, doc);
+  
   fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
 
   pdfout_emitter *emitter;
@@ -95,9 +96,9 @@ pdfout_command_getoutline (fz_context *ctx_arg, int argc, char **argv)
     emitter = pdfout_emitter_outline_wysiwyg_new (ctx, out);
   else
     emitter = pdfout_emitter_json_new (ctx, out);
-  
+
   pdfout_emitter_emit (ctx, emitter, outline);
-  
-  exit (0);
+  pdfout_data_drop (ctx, outline);
+  fz_drop_output (ctx, out);
 }
 

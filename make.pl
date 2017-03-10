@@ -94,6 +94,7 @@ The default build directory is F<build>.
       --cppflags=CPPFLAGS     additional preprocessor flags
       --ldflags=LDFLAGS       additional linker flags
       --mupdf-cflags=CFLAGS   CFLAGS for mupdf. Defaults to '-O2 -g'
+      --debug                 Shortcut to set all CFLAGS to "-O0 -g"
       --prefix=PREFIX         installation prefix
       --install               install pdfout
   -j, --jobs=JOBS             number of jobs used by make
@@ -111,6 +112,7 @@ sub build {
     my $cc            = 'cc';
     my $out           = 'build';
     my $ldflags       = '';
+    my $debug;
     my $install;
     my $prefix = '/usr/local';
 
@@ -125,8 +127,14 @@ sub build {
         'out|o=s'          => \$out,
         'install|i'      => \$install,
         'prefix=s'       => \$prefix,
+        'debug'          => \$debug,
     ) or die "invalid option\n";
 
+    if ($debug) {
+        $mupdf_cflags = "-O0 -g";
+        $user_cflags = "-O0 -g";
+    }
+    
     my $mupdf_build_dir   = catfile( $out,    'mupdf' );
     my $mupdf_include_dir = catfile( 'mupdf', 'include' );
 
