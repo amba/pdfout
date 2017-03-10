@@ -99,14 +99,14 @@ pdfout_command_setpagelabels (fz_context *ctx_arg, int argc, char **argv)
       fz_stream *stm = fz_open_file_ptr (ctx, input);
       pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
       labels = pdfout_parser_parse (ctx, parser);
+      fz_drop_stream (ctx, stm);
     }
   else
     labels = NULL;
   
 
   pdfout_page_labels_set (ctx, doc, labels);
+  pdfout_data_drop (ctx, labels);
   
   pdfout_write_document (ctx, doc, pdf_filename, output_filename);
-
-  exit (0);
 }

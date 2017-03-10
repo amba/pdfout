@@ -81,11 +81,13 @@ pdfout_command_getpagelabels (fz_context *ctx_arg, int argc, char **argv)
   pdf_document *doc = pdf_open_document (ctx, pdf_filename);
 
   pdfout_data *labels = pdfout_page_labels_get (ctx, doc);
-
+  pdf_drop_document (ctx, doc);
+  
   fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
   pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
 
   pdfout_emitter_emit (ctx, emitter, labels);
 
-  exit (0);
+  pdfout_data_drop (ctx, labels);
+  fz_drop_output (ctx, out);
 }
