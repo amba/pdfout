@@ -98,6 +98,7 @@ pdfout_command_getoutline (fz_context *ctx_arg, int argc, char **argv)
     emitter = pdfout_emitter_json_new (ctx, out);
 
   pdfout_emitter_emit (ctx, emitter, outline);
+  
   pdfout_data_drop (ctx, outline);
   fz_drop_output (ctx, out);
 }

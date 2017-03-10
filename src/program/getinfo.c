@@ -85,11 +85,13 @@ pdfout_command_getinfo (fz_context *ctx_arg, int argc, char **argv)
   doc = pdf_open_document (ctx, pdf_filename);
 
   hash = pdfout_info_dict_get (ctx, doc);
-
+  pdf_drop_document (ctx, doc);
+  
   fz_output *out = fz_new_output_with_file_ptr (ctx, output, false);
   pdfout_emitter *emitter = pdfout_emitter_json_new (ctx, out);
     
   pdfout_emitter_emit (ctx, emitter, hash);
 
-  exit (0);
+  fz_drop_output (ctx, out);
+  pdfout_data_drop (ctx, hash);
 }

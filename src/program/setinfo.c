@@ -106,10 +106,11 @@ pdfout_command_setinfo (fz_context *ctx_arg, int argc, char **argv)
       fz_stream *stm = fz_open_file_ptr (ctx, input);
       pdfout_parser *parser = pdfout_parser_json_new (ctx, stm);
       info = pdfout_parser_parse (ctx, parser);
+      fz_drop_stream (ctx, stm);
     }
 
   pdfout_info_dict_set (ctx, doc, info, append);
+  pdfout_data_drop (ctx, info);
   
   pdfout_write_document (ctx, doc, pdf_filename, pdf_output_filename);
-  exit (0);
 }
