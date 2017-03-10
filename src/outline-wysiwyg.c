@@ -513,9 +513,11 @@ parser_parse (fz_context *ctx, pdfout_parser *parse)
 }
 
 static void
-parser_drop(fz_context *ctx, pdfout_parser *parser)
+parser_drop(fz_context *ctx, pdfout_parser *parse)
 {
-  free (parser);
+  parser *p = (parser *) parse;
+  fz_drop_stream (ctx, p->stream);
+  free (p);
 }
 
 pdfout_parser *

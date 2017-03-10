@@ -15,11 +15,11 @@ addons:
 matrix:
   include:
     - perl: "5.24"
-      env: VALGRIND=
     - perl: "5.20"
-      env: VALGRIND=
     - perl: "5.24"
-      env: VALGRIND=--valgrind
+      env:
+        - VALGRIND=--valgrind
+        - DEBUG=--debug
     
 install:
   - cpanm File::Slurper
@@ -27,7 +27,7 @@ install:
 
 script:
   - ./make.pl submodules
-  - ./make.pl
+  - ./make.pl $DEBUG --verbose
   - ./make.pl check $VALGRIND
 
 notifications:

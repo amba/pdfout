@@ -253,7 +253,7 @@ convert_dest_array (fz_context *ctx, pdf_document *doc, pdfout_data *view,
 	{
 	  null_or_real = pdfout_data_scalar_to_pdf_real (ctx, doc, scalar);
 	}
-      pdf_array_push (ctx, dest_array, null_or_real);
+      pdf_array_push_drop (ctx, dest_array, null_or_real);
     }
 
   return dest_array;

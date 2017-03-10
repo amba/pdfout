@@ -110,7 +110,6 @@ pdfout_command_setoutline (fz_context *ctx_arg, int argc, char **argv)
 	parser = pdfout_parser_json_new (ctx, stm);
       outline = pdfout_parser_parse (ctx, parser);
       fz_drop_stream (ctx, stm);
-      fz_drop_stream (ctx, stm);
     }
   else
     outline = NULL;

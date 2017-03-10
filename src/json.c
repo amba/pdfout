@@ -63,7 +63,7 @@ scanner_new (fz_context *ctx, fz_stream *stream)
     result = fz_malloc_struct (ctx, scanner);
   
     result->stream = fz_keep_stream (ctx, stream);
-
+    fz_warn (ctx, "stream refs in scanner_new: %d", stream->refs);
     result->value = fz_new_buffer (ctx, 1);
   
     result->line_count = 1;
@@ -629,7 +629,6 @@ pdfout_parser_json_new (fz_context *ctx, fz_stream *stm)
     parser_drop (ctx, result);
     fz_rethrow (ctx);
   }
-  
   return &result->super;
 }
 
