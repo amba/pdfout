@@ -97,5 +97,4 @@ pdfout_command_repair (fz_context *ctx_arg, int argc, char **argv)
     output_filename = pdf_filename;
 
   pdfout_write_document (ctx, doc, pdf_filename, output_filename);
-  exit (0);
 }

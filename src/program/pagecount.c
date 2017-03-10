@@ -67,6 +67,6 @@ pdfout_command_pagecount (fz_context *ctx, int argc, char **argv)
 
   
   printf ("%d\n", pdf_count_pages (ctx, doc));
-  
-  exit (0);
+
+  pdf_drop_document (ctx, doc);
 }

@@ -106,6 +106,7 @@ pdfout_command_gettxt (fz_context *ctx_arg, int argc, char **argv)
   for (pages_ptr = pages; pages_ptr[0]; pages_ptr += 2)
     for (i = pages_ptr[0]; i <= pages_ptr[1]; ++i)
       pdfout_text_get_page (output, ctx, doc, i - 1);
-    
-  exit (0);
+
+  free (pages);
+  pdf_drop_document (ctx, doc);
 }

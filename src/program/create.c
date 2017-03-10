@@ -145,8 +145,6 @@ pdfout_command_create (fz_context *ctx_arg, int argc, char **argv)
   pdf_document *doc = pdfout_create_blank_pdf (ctx, page_count, &rect);
   
   pdfout_write_document (ctx, doc, NULL, output_filename);
-
-  exit (0);
 }
 
 static float mm_to_pt (float mm)
