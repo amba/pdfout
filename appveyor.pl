@@ -19,7 +19,7 @@ verbose_system(qw(wget http://cpanmin.us -O /usr/bin/cpanm));
 verbose_system(qw(chmod u+x /usr/bin/cpanm));
 
 verbose_system(qw(./make.pl submodules));
-verbose_system(qw(./make.pl --debug --verbose));
+verbose_system(qw(./make.pl --debug --verbose -j2));
 
 # Install test requirements.
 verbose_system(qw(cpanm File::Slurper Text::Diff));
