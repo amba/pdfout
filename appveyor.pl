@@ -22,6 +22,8 @@ verbose_system(qw(chmod u+x /usr/bin/cpanm));
 verbose_system(qw(./make.pl submodules));
 verbose_system(qw(./make.pl --debug --verbose -j2));
 
+verbose_system(qw(ldd build/pdfout));
+
 # Install test requirements.
 verbose_system(qw(cpanm File::Slurper Text::Diff));
 
