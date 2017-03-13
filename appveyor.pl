@@ -15,6 +15,7 @@ safe_chdir($build_folder);
 
 verbose_system(qw(perl --version));
 verbose_system(qw(make --version));
+verbose_system(qw(gcc -v));
 verbose_system(qw(wget http://cpanmin.us -O /usr/bin/cpanm));
 verbose_system(qw(chmod u+x /usr/bin/cpanm));
 
